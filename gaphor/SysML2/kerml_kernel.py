@@ -1,22 +1,20 @@
 """KerML minimal kernel: behaviour layer over the generated structural classes.
 
-`kerml.py` is generated from the normative MOF XMI and carries the structural
-shape (classes, attributes, references) and persistence. It does not implement
-KerML's *derived* features, which the spec defines operationally. This module
-adds that behaviour as functions over the generated elements, so generated
-structure and hand-written semantics stay cleanly separated.
+`kerml.py` is generated from the normative MOF XMI and carries only the
+*stored* (non-derived) structure: the Relationship containment spine
+(`Element.ownedRelationship` / `Relationship.ownedRelatedElement`, both
+composite), relationship back-pointers, and non-owning references such as
+`Membership.memberElement` and `Specialization.general`/`specific`.
 
-Derivations are ported from the normative KerML 1.0 abstract syntax
-(docs/sysml-v2/omg/20250201/KerML.xmi), not from intuition:
+KerML's *derived* features (owner, owningNamespace, ownedMembership, member,
+importedElement, featuringType, qualifiedName, ...) are NOT persisted -- the XMI
+marks them `isDerived=true`, so storing them would create stale state. This
+module computes them from the stored structure, ported from the normative
+derivations in the XMI (not intuition). Each derivation that is not yet
+implemented raises `NotImplementedError` rather than returning a wrong default.
 
-- `owner` = the `owningRelatedElement` of the Element's `owningRelationship`.
-- effective `name` = `declaredName` by default.
-- `qualified_name` = the ownership-qualified name, composed by walking the
-  owning-namespace chain.
-
-Name resolution here is the M1b minimum: same-namespace lookup plus simple
-qualified-name resolution from a root namespace. Richer KerML resolution
-(imports visibility, inheritance, aliases) is layered in later milestones.
+Wiring helper `add_owned_member` establishes the stored containment spine the
+generated model expects; the derived accessors then read back through it.
 """
 
 from __future__ import annotations
@@ -25,35 +23,52 @@ from collections.abc import Iterator
 
 from gaphor.SysML2.kerml import (
     Element,
+    Feature,
     Import,
     Membership,
     Namespace,
     OwningMembership,
+    Relationship,
 )
 
 QUALIFIED_NAME_SEPARATOR = "::"
 
 
+# --- wiring the stored containment spine -------------------------------------
+
+
 def add_owned_member(
     namespace: Namespace, member: Element, membership: OwningMembership
 ) -> OwningMembership:
-    """Wire `member` into `namespace` through `membership`, both directions.
+    """Make `member` an owned member of `namespace` through `membership`.
 
-    The generated structural model emits each reference as a one-directional
-    association (the normative XMI does not declare opposite-end pairings, so
-    they cannot be derived without hand-authoring assumptions). KerML's
-    owner/member navigation is bidirectional, so that semantic relationship is
-    established here, in the behaviour layer: the owning side and the member's
-    back-reference are both set, keeping the structural model faithful to the
-    XMI while the kernel exposes correct navigation.
+    Establishes the stored spine the generated model persists:
+    `namespace` owns `membership` (`ownedRelationship`, composite), `membership`
+    owns `member` (`ownedRelatedElement`, composite) and references it
+    (`memberElement`), with the relationship back-pointers set. The derived
+    accessors below read this structure; nothing derived is stored.
     """
-    membership.ownedMemberElement = member
-    membership.membershipOwningNamespace = namespace
-    namespace.ownedMembership = membership
-    # Back-references for navigation from the member/membership outward.
-    member.owningMembership = membership
-    member.owningNamespace = namespace
+    namespace.ownedRelationship = membership
+    membership.owningRelatedElement = namespace
+    membership.ownedRelatedElement = member
+    membership.memberElement = member
+    # Back-pointer: the member's owningRelationship is this membership. The
+    # generated associations are one-directional (the XMI declares no opposite
+    # ends), so the navigation edge owning_namespace() reads is set explicitly.
+    member.owningRelationship = membership
     return membership
+
+
+def add_import(namespace: Namespace, imported: Element, imp: Import) -> Import:
+    """Make `imported` imported into `namespace` through `imp` (stored spine)."""
+    namespace.ownedRelationship = imp
+    imp.owningRelatedElement = namespace
+    # The imported element is a non-owning target (must NOT cascade on delete).
+    imp.target = imported
+    return imp
+
+
+# --- derived surface (computed from stored structure) ------------------------
 
 
 def effective_name(element: Element) -> str | None:
@@ -61,10 +76,17 @@ def effective_name(element: Element) -> str | None:
     return element.declaredName
 
 
+def owned_memberships(namespace: Namespace) -> Iterator[Membership]:
+    """Owned relationships of the namespace that are Memberships (KerML)."""
+    for relationship in namespace.ownedRelationship:
+        if isinstance(relationship, Membership):
+            yield relationship
+
+
 def members(namespace: Namespace) -> Iterator[Element]:
-    """The member elements of a namespace, via its memberships."""
-    for membership in namespace.ownedMembership:
-        member = _membership_element(membership)
+    """Member elements: the memberElements of the namespace's memberships."""
+    for membership in owned_memberships(namespace):
+        member = _single(membership.memberElement)
         if member is not None:
             yield member
 
@@ -78,17 +100,28 @@ def owned_member_named(namespace: Namespace, name: str) -> Element | None:
 
 
 def owning_namespace(element: Element) -> Namespace | None:
-    """The namespace that owns this element, via its owning membership."""
-    for membership in element.owningMembership:
-        if isinstance(membership, OwningMembership):
-            ns = _membership_namespace(membership)
-            if ns is not None:
-                return ns
+    """The namespace owning this element: the owner of its owning Membership.
+
+    Derived per KerML: an element's owningNamespace is the owningRelatedElement
+    of the Membership that owns it.
+    """
+    for relationship in element.owningRelationship:
+        if isinstance(relationship, Membership):
+            owner = _single(relationship.owningRelatedElement)
+            if isinstance(owner, Namespace):
+                return owner
     return None
 
 
+def owned_elements(element: Element) -> Iterator[Element]:
+    """Elements owned by this element via its owned relationships (KerML)."""
+    for relationship in element.ownedRelationship:
+        for owned in relationship.ownedRelatedElement:
+            yield owned
+
+
 def qualified_name(element: Element) -> str:
-    """Ownership-qualified name: owning-namespace qualified names joined by `::`.
+    """Ownership-qualified name: owning-namespace names joined by `::`.
 
     Composed by walking the owning-namespace chain (KerML). Falls back to the
     effective name when there is no owner.
@@ -107,17 +140,10 @@ def qualified_name(element: Element) -> str:
 
 
 def resolve_qualified_name(root: Namespace, qualified: str) -> Element | None:
-    """Resolve a `A::B::C` qualified name starting from `root`.
-
-    `root` matches the first segment; each remaining segment is resolved as a
-    member of the previously resolved namespace.
-    """
+    """Resolve a `A::B::C` qualified name starting from `root`."""
     segments = qualified.split(QUALIFIED_NAME_SEPARATOR)
-    if not segments:
+    if not segments or effective_name(root) != segments[0]:
         return None
-    if effective_name(root) != segments[0]:
-        return None
-
     current: Element | None = root
     for segment in segments[1:]:
         if not isinstance(current, Namespace):
@@ -129,31 +155,31 @@ def resolve_qualified_name(root: Namespace, qualified: str) -> Element | None:
 
 
 def imported_elements(namespace: Namespace) -> Iterator[Element]:
-    """Elements brought in by the namespace's owned imports."""
-    for imp in namespace.ownedImport:
-        target = _import_element(imp)
-        if target is not None:
-            yield target
+    """Elements imported by the namespace's owned Imports.
+
+    Derived per KerML; for this M1b minimum the imported element is the Import's
+    (non-owning) target.
+    """
+    for relationship in namespace.ownedRelationship:
+        if isinstance(relationship, Import):
+            target = _single(relationship.target)
+            if target is not None:
+                yield target
 
 
-# --- internal single-valued accessors over the generated relations -----------
-#
-# The generated references are `relation_many` (association ends), so these
-# helpers take the single expected value where KerML semantics are single-valued.
+def featuring_types(feature: Feature) -> Iterator[Element]:  # noqa: ARG001
+    """The types that feature this feature (derived).
+
+    Not yet implemented for the M1b minimum: it derives from TypeFeaturing
+    relationships, which this kernel slice does not yet wire. Raising keeps the
+    derived surface honest rather than returning a misleading empty result.
+    """
+    raise NotImplementedError(
+        "featuring_types is not implemented in the M1b kernel minimum"
+    )
 
 
-def _membership_element(membership: Membership) -> Element | None:
-    if isinstance(membership, OwningMembership):
-        return _single(membership.ownedMemberElement)
-    return _single(membership.memberElement)
-
-
-def _membership_namespace(membership: Membership) -> Namespace | None:
-    return _single(membership.membershipOwningNamespace)
-
-
-def _import_element(imp: Import) -> Element | None:
-    return _single(imp.importedElement)
+# --- internal helpers --------------------------------------------------------
 
 
 def _single(relation) -> Element | None:

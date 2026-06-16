@@ -60,10 +60,11 @@ class Attribute:
 
 @dataclass
 class Reference:
-    """A class-typed owned attribute (becomes a Python reference)."""
+    """A stored class-typed owned attribute (becomes a Python association)."""
 
     name: str
     target: str  # name of the target class within the slice
+    composite: bool = False  # only the containment whitelist cascades on delete
 
 
 @dataclass
@@ -80,6 +81,26 @@ class EnumType:
 
     name: str
     literals: list[str] = field(default_factory=list)
+
+
+@dataclass
+class DerivedAttribute:
+    """A derived primitive/enum property: classified for audit, NOT persisted.
+
+    KerML marks these `isDerived=true`; the behaviour layer computes them, so
+    persisting them would create stale state. Kept as metadata so tests and docs
+    can prove the exclusion is intentional.
+    """
+
+    name: str
+
+
+@dataclass
+class DerivedReference:
+    """A derived class-typed property: classified for audit, NOT persisted."""
+
+    name: str
+    target: str
 
 
 @dataclass
@@ -405,6 +426,18 @@ KERNEL_SEED = (
 )
 
 
+# Containment whitelist: the only references that own their target's lifetime
+# (composite, cascade-on-delete). KerML's containment spine. The XMI carries no
+# aggregation metadata, so this is an explicit, tested mapping decision rather
+# than a heuristic; extend it only with a new tested decision.
+COMPOSITE_REFS: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("Element", "ownedRelationship"),
+        ("Relationship", "ownedRelatedElement"),
+    }
+)
+
+
 @dataclass
 class KernelClass:
     name: str
@@ -412,6 +445,9 @@ class KernelClass:
     attributes: list[Attribute] = field(default_factory=list)
     references: list[Reference] = field(default_factory=list)
     enum_attributes: list[EnumAttribute] = field(default_factory=list)
+    # Derived properties (isDerived=true): classified for audit, NOT persisted.
+    derived_attributes: list[DerivedAttribute] = field(default_factory=list)
+    derived_references: list[DerivedReference] = field(default_factory=list)
 
 
 @dataclass
@@ -464,39 +500,65 @@ def extract_kernel(xmi_path: Path, seed: tuple[str, ...] = KERNEL_SEED) -> Kerne
         if _xmi(elem, "type") == "uml:Class" and elem.get("name"):
             by_name.setdefault(elem.get("name"), elem)
 
+    # Fail fast: every seed name must be a real class in the XMI. A typo or spec
+    # rename must not silently shrink the kernel.
+    missing_seed = sorted(n for n in seed if n not in by_name)
+    if missing_seed:
+        raise ValueError(
+            f"seed classes not found in {xmi_path}: {missing_seed}"
+        )
+
     def index_name(idref: str) -> tuple[str | None, str | None]:
         info = index.get(idref)
         return (info[0], info[1]) if info else (None, None)
 
-    # Raw three-way per-class extraction. `enum_targets` accumulates the enum
-    # ids reached from in-scope classes so their literals can be emitted.
-    def raw(
-        class_elem: ET.Element, enum_targets: set[str]
-    ) -> tuple[list[Attribute], list[tuple[str, str]], list[EnumAttribute]]:
-        attrs: list[Attribute] = []
-        refs: list[tuple[str, str]] = []  # (name, target_class_name)
-        enum_attrs: list[EnumAttribute] = []
+    @dataclass
+    class _Raw:
+        attrs: list[Attribute] = field(default_factory=list)
+        refs: list[Reference] = field(default_factory=list)
+        enum_attrs: list[EnumAttribute] = field(default_factory=list)
+        derived_attrs: list[DerivedAttribute] = field(default_factory=list)
+        derived_refs: list[DerivedReference] = field(default_factory=list)
+
+    # Per-class extraction. `isDerived=true` properties are classified into
+    # `derived_*` (audit metadata, NOT persisted); only non-derived properties
+    # become persisted structure. `enum_targets` accumulates enum ids reached
+    # from NON-derived enum attributes (the only enums actually emitted).
+    def raw(class_elem: ET.Element, enum_targets: set[str]) -> _Raw:
+        out = _Raw()
         for owned in class_elem:
             if not owned.tag.endswith("ownedAttribute"):
                 continue
             pname = owned.get("name")
             if not pname:
                 continue
+            derived = owned.get("isDerived") == "true"
             type_value, idref = _owned_type_idref(owned)
+
             if type_value is not None:
-                attrs.append(Attribute(pname, type_value))
+                if derived:
+                    out.derived_attrs.append(DerivedAttribute(pname))
+                else:
+                    out.attrs.append(Attribute(pname, type_value))
                 continue
             if idref is None:
-                continue  # untyped/derived-without-type: nothing to emit
+                continue  # untyped (e.g. derived with no declared type): nothing
             target_type, target_name = index_name(idref)
+
             if target_type == "uml:Class" and target_name:
-                refs.append((pname, target_name))
+                if derived:
+                    out.derived_refs.append(DerivedReference(pname, target_name))
+                else:
+                    composite = (class_elem.get("name"), pname) in COMPOSITE_REFS
+                    out.refs.append(Reference(pname, target_name, composite=composite))
             elif target_type == "uml:Enumeration" and target_name:
-                enum_targets.add(idref)
-                enum_attrs.append(EnumAttribute(pname, target_name))
+                if derived:
+                    out.derived_attrs.append(DerivedAttribute(pname))
+                else:
+                    enum_targets.add(idref)
+                    out.enum_attrs.append(EnumAttribute(pname, target_name))
             elif target_type is None:
-                # Unresolvable href to an external primitive we don't map (e.g.
-                # a UML PrimitiveType not in _PRIMITIVE_SUFFIXES) -> skip.
+                # Unresolvable href to an external primitive we don't map -> skip.
                 continue
             else:
                 raise ValueError(
@@ -504,10 +566,11 @@ def extract_kernel(xmi_path: Path, seed: tuple[str, ...] = KERNEL_SEED) -> Kerne
                     f"{target_type!r} (target {target_name!r}); add an explicit "
                     f"handling/deferral rule rather than dropping it silently"
                 )
-        return attrs, refs, enum_attrs
+        return out
 
-    # Compute the class closure (follows generalizations + class references only).
-    enum_targets: set[str] = set()
+    # Compute the class closure. Follows generalizations and STORED class refs
+    # only -- derived refs are semantic views and must not extend the closure.
+    scratch: set[str] = set()
     closure: set[str] = set()
     frontier = set(seed)
     while frontier:
@@ -520,35 +583,34 @@ def extract_kernel(xmi_path: Path, seed: tuple[str, ...] = KERNEL_SEED) -> Kerne
         for s in _generalizations(elem, index):
             if s not in closure:
                 frontier.add(s)
-        _, refs, _ = raw(elem, enum_targets)
-        for _, target in refs:
-            if target not in closure:
-                frontier.add(target)
+        for ref in raw(elem, scratch).refs:
+            if ref.target not in closure:
+                frontier.add(ref.target)
 
     present = sorted(n for n in closure if n in by_name)
 
     classes: list[KernelClass] = []
-    final_enum_targets: set[str] = set()
+    enum_targets: set[str] = set()
     for name in present:
         elem = by_name[name]
-        attrs, refs, enum_attrs = raw(elem, final_enum_targets)
+        r = raw(elem, enum_targets)
         supers = [s for s in _generalizations(elem, index) if s in closure]
-        kept_refs = [
-            Reference(pname, target) for (pname, target) in refs if target in closure
-        ]
+        kept_refs = [ref for ref in r.refs if ref.target in closure]
         classes.append(
             KernelClass(
                 name=name,
                 supers=supers,
-                attributes=attrs,
+                attributes=r.attrs,
                 references=kept_refs,
-                enum_attributes=enum_attrs,
+                enum_attributes=r.enum_attrs,
+                derived_attributes=r.derived_attrs,
+                derived_references=r.derived_refs,
             )
         )
 
     enums: list[EnumType] = []
-    for eid in sorted(final_enum_targets, key=lambda i: index[i][1] or ""):
-        etype, ename, eelem = index[eid]
+    for eid in sorted(enum_targets, key=lambda i: index[i][1] or ""):
+        _etype, ename, eelem = index[eid]
         enums.append(EnumType(name=ename, literals=_enum_literals(eelem)))
 
     return Kernel(classes=classes, enums=enums)
@@ -629,9 +691,16 @@ def emit_gaphor_kernel_model(kernel: Kernel, package_name: str) -> str:
             opposite_id = _id(package_name, c.name, "ref", ref.name, "opposite")
             assoc_id = _id(package_name, c.name, "assoc", ref.name)
             owned_attr_ids.append(end_id)
+            # Composite only for the containment whitelist (cascade on delete);
+            # all other references are plain (non-owning) and must not cascade.
+            aggregation = (
+                "<aggregation><val>composite</val></aggregation>\n"
+                if ref.composite
+                else ""
+            )
             property_blocks.append(
                 f'<UML:Property id="{end_id}">\n'
-                f"<aggregation><val>composite</val></aggregation>\n"
+                f"{aggregation}"
                 f'<association><ref refid="{assoc_id}"/></association>\n'
                 f"<name><val>{escape(ref.name)}</val></name>\n"
                 f'<structuredClassifier><ref refid="{class_ids[c.name]}"/></structuredClassifier>\n'

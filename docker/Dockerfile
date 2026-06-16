@@ -40,10 +40,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Pin Poetry via pipx (decoupled from the project venv). virtualenvs.in-project
 # keeps the resolved environment next to the checkout for transparency.
 ENV PATH="/root/.local/bin:${PATH}"
+# Make pip resilient to transient network blips during the build (the install
+# layer otherwise fails the whole image build on a single dropped download,
+# which made docker/run-tests.sh non-deterministic).
+ENV PIP_RETRIES=5 \
+    PIP_TIMEOUT=60 \
+    PIP_DEFAULT_TIMEOUT=60
 # Poetry pinned to match the project's existing pin in
 # .github/github-requirements.txt and the version that resolved poetry.lock.
 RUN pipx install poetry==2.4.1 \
-    && poetry config virtualenvs.in-project true
+    && poetry config virtualenvs.in-project true \
+    && poetry config installer.max-workers 4
 
 WORKDIR /workspace
 

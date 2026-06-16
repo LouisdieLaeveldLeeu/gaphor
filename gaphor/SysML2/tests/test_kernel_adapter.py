@@ -24,6 +24,73 @@ def _kernel():
     return xmi_adapter.extract_kernel(KERML_XMI)
 
 
+# --- derived properties are classified, not persisted ------------------------
+
+
+def test_derived_properties_are_classified_as_metadata():
+    """isDerived=true properties are captured as derived_* metadata (auditable),
+    not as stored attributes/references."""
+    kernel = _kernel()
+    element = next(c for c in kernel.classes if c.name == "Element")
+    derived_names = {d.name for d in element.derived_references} | {
+        d.name for d in element.derived_attributes
+    }
+    # These are derived in the XMI and must be classified as such.
+    for name in ("owner", "ownedElement", "owningNamespace", "qualifiedName", "name"):
+        assert name in derived_names
+
+
+def test_derived_properties_are_not_stored_structure():
+    """Derived properties must not appear as stored attributes/references on the
+    classes that declare them (no stale persisted state)."""
+    kernel = _kernel()
+    element = next(c for c in kernel.classes if c.name == "Element")
+    stored = {a.name for a in element.attributes} | {r.name for r in element.references}
+    for name in ("owner", "ownedElement", "owningNamespace", "qualifiedName"):
+        assert name not in stored
+
+
+def test_derived_properties_absent_from_generated_module_and_model():
+    """The exclusion is intentional: derived names do not appear as generated
+    associations/attributes in kerml.py or as references in models/KerML.gaphor."""
+    module = KERNEL_MODULE.read_text(encoding="utf-8")
+    model = KERNEL_MODEL.read_text(encoding="utf-8")
+    for name in ("ownedElement", "owningNamespace", "qualifiedName"):
+        assert f'association("{name}"' not in module
+        assert f'_attribute("{name}"' not in module
+        assert f"<val>{name}</val>" not in model
+
+
+# --- composite is restricted to the containment whitelist --------------------
+
+
+def test_only_whitelisted_references_are_composite():
+    kernel = _kernel()
+    composite = {
+        (c.name, r.name)
+        for c in kernel.classes
+        for r in c.references
+        if r.composite
+    }
+    assert composite == {
+        ("Element", "ownedRelationship"),
+        ("Relationship", "ownedRelatedElement"),
+    }
+
+
+def test_generated_module_has_exactly_two_composite_associations():
+    module = KERNEL_MODULE.read_text(encoding="utf-8")
+    assert module.count("composite=True") == 2
+
+
+# --- fail-fast on a missing seed class ---------------------------------------
+
+
+def test_missing_seed_class_fails_fast():
+    with pytest.raises(ValueError, match="seed classes not found"):
+        xmi_adapter.extract_kernel(KERML_XMI, seed=("Element", "NoSuchClass"))
+
+
 # --- enums are value-domain types, not classes -------------------------------
 
 

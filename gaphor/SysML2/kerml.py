@@ -37,45 +37,14 @@ class Element(_Base):
     aliasIds: _attribute[str] = _attribute("aliasIds", str)
     declaredName: _attribute[str] = _attribute("declaredName", str)
     declaredShortName: _attribute[str] = _attribute("declaredShortName", str)
-    documentation: relation_many[Documentation]
     elementId: _attribute[str] = _attribute("elementId", str)
     isImpliedIncluded: _attribute[bool] = _attribute("isImpliedIncluded", bool)
-    isLibraryElement: _attribute[bool] = _attribute("isLibraryElement", bool)
-    name: _attribute[str] = _attribute("name", str)
-    ownedAnnotation: relation_many[Annotation]
-    ownedElement: relation_many[Element]
     ownedRelationship: relation_many[Relationship]
-    owner: relation_many[Element]
-    owningMembership: relation_many[OwningMembership]
-    owningNamespace: relation_many[Namespace]
     owningRelationship: relation_many[Relationship]
-    qualifiedName: _attribute[str] = _attribute("qualifiedName", str)
-    shortName: _attribute[str] = _attribute("shortName", str)
-    textualRepresentation: relation_many[TextualRepresentation]
 
 
 class AnnotatingElement(Element):
-    annotatedElement: relation_many[Element]
-    annotation: relation_many[Annotation]
-    ownedAnnotatingRelationship: relation_many[Annotation]
-    owningAnnotatingRelationship: relation_many[Annotation]
-
-
-class Relationship(Element):
-    isImplied: _attribute[bool] = _attribute("isImplied", bool)
-    ownedRelatedElement: relation_many[Element]
-    owningRelatedElement: relation_many[Element]
-    relatedElement: relation_many[Element]
-    source: relation_many[Element]
-    target: relation_many[Element]
-
-
-class Annotation(Relationship):
-    annotatedElement: relation_many[Element]
-    annotatingElement: relation_many[AnnotatingElement]
-    ownedAnnotatingElement: relation_many[AnnotatingElement]
-    owningAnnotatedElement: relation_many[Element]
-    owningAnnotatingElement: relation_many[AnnotatingElement]
+    pass
 
 
 class Comment(AnnotatingElement):
@@ -83,87 +52,21 @@ class Comment(AnnotatingElement):
     locale: _attribute[str] = _attribute("locale", str)
 
 
-class Conjugation(Relationship):
-    conjugatedType: relation_many[Type]
-    originalType: relation_many[Type]
-    owningType: relation_many[Type]
-
-
-class Specialization(Relationship):
-    general: relation_many[Type]
-    owningType: relation_many[Type]
-    specific: relation_many[Type]
-
-
-class Subsetting(Specialization):
-    owningFeature: relation_many[Feature]
-    subsettedFeature: relation_many[Feature]
-    subsettingFeature: relation_many[Feature]
-
-
-class CrossSubsetting(Subsetting):
-    crossedFeature: relation_many[Feature]
-    crossingFeature: relation_many[Feature]
-
-
-class Differencing(Relationship):
-    differencingType: relation_many[Type]
-    typeDifferenced: relation_many[Type]
-
-
-class Disjoining(Relationship):
-    disjoiningType: relation_many[Type]
-    owningType: relation_many[Type]
-    typeDisjoined: relation_many[Type]
-
-
 class Documentation(Comment):
-    documentedElement: relation_many[Element]
+    pass
 
 
 class Namespace(Element):
-    importedMembership: relation_many[Membership]
-    member: relation_many[Element]
-    membership: relation_many[Membership]
-    ownedImport: relation_many[Import]
-    ownedMember: relation_many[Element]
-    ownedMembership: relation_many[Membership]
+    pass
 
 
 class Type(Namespace):
-    differencingType: relation_many[Type]
-    directedFeature: relation_many[Feature]
-    endFeature: relation_many[Feature]
-    feature: relation_many[Feature]
-    featureMembership: relation_many[FeatureMembership]
-    inheritedFeature: relation_many[Feature]
-    inheritedMembership: relation_many[Membership]
-    input: relation_many[Feature]
-    intersectingType: relation_many[Type]
     isAbstract: _attribute[bool] = _attribute("isAbstract", bool)
-    isConjugated: _attribute[bool] = _attribute("isConjugated", bool)
     isSufficient: _attribute[bool] = _attribute("isSufficient", bool)
-    multiplicity: relation_many[Multiplicity]
-    output: relation_many[Feature]
-    ownedConjugator: relation_many[Conjugation]
-    ownedDifferencing: relation_many[Differencing]
-    ownedDisjoining: relation_many[Disjoining]
-    ownedEndFeature: relation_many[Feature]
-    ownedFeature: relation_many[Feature]
-    ownedFeatureMembership: relation_many[FeatureMembership]
-    ownedIntersecting: relation_many[Intersecting]
-    ownedSpecialization: relation_many[Specialization]
-    ownedUnioning: relation_many[Unioning]
-    unioningType: relation_many[Type]
 
 
 class Feature(Type):
-    chainingFeature: relation_many[Feature]
-    crossFeature: relation_many[Feature]
     direction = _enumeration("direction", FeatureDirectionKind, FeatureDirectionKind.in_)
-    endOwningType: relation_many[Type]
-    featureTarget: relation_many[Feature]
-    featuringType: relation_many[Type]
     isComposite: _attribute[bool] = _attribute("isComposite", bool)
     isConstant: _attribute[bool] = _attribute("isConstant", bool)
     isDerived: _attribute[bool] = _attribute("isDerived", bool)
@@ -172,209 +75,45 @@ class Feature(Type):
     isPortion: _attribute[bool] = _attribute("isPortion", bool)
     isUnique: _attribute[bool] = _attribute("isUnique", bool)
     isVariable: _attribute[bool] = _attribute("isVariable", bool)
-    ownedCrossSubsetting: relation_many[CrossSubsetting]
-    ownedFeatureChaining: relation_many[FeatureChaining]
-    ownedFeatureInverting: relation_many[FeatureInverting]
-    ownedRedefinition: relation_many[Redefinition]
-    ownedReferenceSubsetting: relation_many[ReferenceSubsetting]
-    ownedSubsetting: relation_many[Subsetting]
-    ownedTypeFeaturing: relation_many[TypeFeaturing]
-    ownedTyping: relation_many[FeatureTyping]
-    owningFeatureMembership: relation_many[FeatureMembership]
-    owningType: relation_many[Type]
-    type: relation_many[Type]
 
 
-class FeatureChaining(Relationship):
-    chainingFeature: relation_many[Feature]
-    featureChained: relation_many[Feature]
-
-
-class FeatureInverting(Relationship):
-    featureInverted: relation_many[Feature]
-    invertingFeature: relation_many[Feature]
-    owningFeature: relation_many[Feature]
-
-
-class Membership(Relationship):
-    memberElement: relation_many[Element]
-    memberElementId: _attribute[str] = _attribute("memberElementId", str)
-    memberName: _attribute[str] = _attribute("memberName", str)
-    memberShortName: _attribute[str] = _attribute("memberShortName", str)
-    membershipOwningNamespace: relation_many[Namespace]
-    visibility = _enumeration("visibility", VisibilityKind, VisibilityKind.private)
-
-
-class OwningMembership(Membership):
-    ownedMemberElement: relation_many[Element]
-    ownedMemberElementId: _attribute[str] = _attribute("ownedMemberElementId", str)
-    ownedMemberName: _attribute[str] = _attribute("ownedMemberName", str)
-    ownedMemberShortName: _attribute[str] = _attribute("ownedMemberShortName", str)
-
-
-class FeatureMembership(OwningMembership):
-    ownedMemberFeature: relation_many[Feature]
-    owningType: relation_many[Type]
-
-
-class FeatureTyping(Specialization):
-    owningFeature: relation_many[Feature]
-    type: relation_many[Type]
-    typedFeature: relation_many[Feature]
+class Relationship(Element):
+    isImplied: _attribute[bool] = _attribute("isImplied", bool)
+    ownedRelatedElement: relation_many[Element]
+    owningRelatedElement: relation_many[Element]
+    source: relation_many[Element]
+    target: relation_many[Element]
 
 
 class Import(Relationship):
-    importOwningNamespace: relation_many[Namespace]
-    importedElement: relation_many[Element]
     isImportAll: _attribute[bool] = _attribute("isImportAll", bool)
     isRecursive: _attribute[bool] = _attribute("isRecursive", bool)
     visibility = _enumeration("visibility", VisibilityKind, VisibilityKind.private)
 
 
-class Intersecting(Relationship):
-    intersectingType: relation_many[Type]
-    typeIntersected: relation_many[Type]
+class Membership(Relationship):
+    memberElement: relation_many[Element]
+    memberName: _attribute[str] = _attribute("memberName", str)
+    memberShortName: _attribute[str] = _attribute("memberShortName", str)
+    visibility = _enumeration("visibility", VisibilityKind, VisibilityKind.private)
 
 
-class Multiplicity(Feature):
+class OwningMembership(Membership):
     pass
 
 
-class Redefinition(Subsetting):
-    redefinedFeature: relation_many[Feature]
-    redefiningFeature: relation_many[Feature]
-
-
-class ReferenceSubsetting(Subsetting):
-    referencedFeature: relation_many[Feature]
-    referencingFeature: relation_many[Feature]
-
-
-class TextualRepresentation(AnnotatingElement):
-    body: _attribute[str] = _attribute("body", str)
-    language: _attribute[str] = _attribute("language", str)
-    representedElement: relation_many[Element]
-
-
-class TypeFeaturing(Relationship):
-    featureOfType: relation_many[Feature]
-    featuringType: relation_many[Type]
-    owningFeatureOfType: relation_many[Feature]
-
-
-class Unioning(Relationship):
-    typeUnioned: relation_many[Type]
-    unioningType: relation_many[Type]
+class Specialization(Relationship):
+    general: relation_many[Type]
+    specific: relation_many[Type]
 
 
 
-Element.owningMembership = association("owningMembership", OwningMembership, composite=True)
-Element.owningRelationship = association("owningRelationship", Relationship, composite=True)
-Element.owningNamespace = association("owningNamespace", Namespace, composite=True)
+Element.owningRelationship = association("owningRelationship", Relationship)
 Element.ownedRelationship = association("ownedRelationship", Relationship, composite=True)
-Element.owner = association("owner", Element, composite=True)
-Element.ownedElement = association("ownedElement", Element, composite=True)
-Element.documentation = association("documentation", Documentation, composite=True)
-Element.ownedAnnotation = association("ownedAnnotation", Annotation, composite=True)
-Element.textualRepresentation = association("textualRepresentation", TextualRepresentation, composite=True)
-AnnotatingElement.annotatedElement = association("annotatedElement", Element, composite=True)
-AnnotatingElement.ownedAnnotatingRelationship = association("ownedAnnotatingRelationship", Annotation, composite=True)
-AnnotatingElement.owningAnnotatingRelationship = association("owningAnnotatingRelationship", Annotation, composite=True)
-AnnotatingElement.annotation = association("annotation", Annotation, composite=True)
-Relationship.relatedElement = association("relatedElement", Element, composite=True)
-Relationship.target = association("target", Element, composite=True)
-Relationship.source = association("source", Element, composite=True)
-Relationship.owningRelatedElement = association("owningRelatedElement", Element, composite=True)
+Relationship.target = association("target", Element)
+Relationship.source = association("source", Element)
+Relationship.owningRelatedElement = association("owningRelatedElement", Element)
 Relationship.ownedRelatedElement = association("ownedRelatedElement", Element, composite=True)
-Annotation.annotatingElement = association("annotatingElement", AnnotatingElement, composite=True)
-Annotation.annotatedElement = association("annotatedElement", Element, composite=True)
-Annotation.owningAnnotatedElement = association("owningAnnotatedElement", Element, composite=True)
-Annotation.owningAnnotatingElement = association("owningAnnotatingElement", AnnotatingElement, composite=True)
-Annotation.ownedAnnotatingElement = association("ownedAnnotatingElement", AnnotatingElement, composite=True)
-Conjugation.originalType = association("originalType", Type, composite=True)
-Conjugation.conjugatedType = association("conjugatedType", Type, composite=True)
-Conjugation.owningType = association("owningType", Type, composite=True)
-Specialization.owningType = association("owningType", Type, composite=True)
-Specialization.general = association("general", Type, composite=True)
-Specialization.specific = association("specific", Type, composite=True)
-Subsetting.subsettedFeature = association("subsettedFeature", Feature, composite=True)
-Subsetting.subsettingFeature = association("subsettingFeature", Feature, composite=True)
-Subsetting.owningFeature = association("owningFeature", Feature, composite=True)
-CrossSubsetting.crossedFeature = association("crossedFeature", Feature, composite=True)
-CrossSubsetting.crossingFeature = association("crossingFeature", Feature, composite=True)
-Differencing.typeDifferenced = association("typeDifferenced", Type, composite=True)
-Differencing.differencingType = association("differencingType", Type, composite=True)
-Disjoining.typeDisjoined = association("typeDisjoined", Type, composite=True)
-Disjoining.disjoiningType = association("disjoiningType", Type, composite=True)
-Disjoining.owningType = association("owningType", Type, composite=True)
-Documentation.documentedElement = association("documentedElement", Element, composite=True)
-Namespace.membership = association("membership", Membership, composite=True)
-Namespace.ownedImport = association("ownedImport", Import, composite=True)
-Namespace.member = association("member", Element, composite=True)
-Namespace.ownedMember = association("ownedMember", Element, composite=True)
-Namespace.ownedMembership = association("ownedMembership", Membership, composite=True)
-Namespace.importedMembership = association("importedMembership", Membership, composite=True)
-Type.ownedSpecialization = association("ownedSpecialization", Specialization, composite=True)
-Type.ownedFeatureMembership = association("ownedFeatureMembership", FeatureMembership, composite=True)
-Type.feature = association("feature", Feature, composite=True)
-Type.ownedFeature = association("ownedFeature", Feature, composite=True)
-Type.input = association("input", Feature, composite=True)
-Type.output = association("output", Feature, composite=True)
-Type.inheritedMembership = association("inheritedMembership", Membership, composite=True)
-Type.endFeature = association("endFeature", Feature, composite=True)
-Type.ownedEndFeature = association("ownedEndFeature", Feature, composite=True)
-Type.ownedConjugator = association("ownedConjugator", Conjugation, composite=True)
-Type.inheritedFeature = association("inheritedFeature", Feature, composite=True)
-Type.multiplicity = association("multiplicity", Multiplicity, composite=True)
-Type.unioningType = association("unioningType", Type, composite=True)
-Type.ownedIntersecting = association("ownedIntersecting", Intersecting, composite=True)
-Type.intersectingType = association("intersectingType", Type, composite=True)
-Type.ownedUnioning = association("ownedUnioning", Unioning, composite=True)
-Type.ownedDisjoining = association("ownedDisjoining", Disjoining, composite=True)
-Type.featureMembership = association("featureMembership", FeatureMembership, composite=True)
-Type.differencingType = association("differencingType", Type, composite=True)
-Type.ownedDifferencing = association("ownedDifferencing", Differencing, composite=True)
-Type.directedFeature = association("directedFeature", Feature, composite=True)
-Feature.owningType = association("owningType", Type, composite=True)
-Feature.type = association("type", Type, composite=True)
-Feature.ownedRedefinition = association("ownedRedefinition", Redefinition, composite=True)
-Feature.ownedSubsetting = association("ownedSubsetting", Subsetting, composite=True)
-Feature.owningFeatureMembership = association("owningFeatureMembership", FeatureMembership, composite=True)
-Feature.endOwningType = association("endOwningType", Type, composite=True)
-Feature.ownedTyping = association("ownedTyping", FeatureTyping, composite=True)
-Feature.featuringType = association("featuringType", Type, composite=True)
-Feature.ownedTypeFeaturing = association("ownedTypeFeaturing", TypeFeaturing, composite=True)
-Feature.chainingFeature = association("chainingFeature", Feature, composite=True)
-Feature.ownedFeatureInverting = association("ownedFeatureInverting", FeatureInverting, composite=True)
-Feature.ownedFeatureChaining = association("ownedFeatureChaining", FeatureChaining, composite=True)
-Feature.ownedReferenceSubsetting = association("ownedReferenceSubsetting", ReferenceSubsetting, composite=True)
-Feature.featureTarget = association("featureTarget", Feature, composite=True)
-Feature.crossFeature = association("crossFeature", Feature, composite=True)
-Feature.ownedCrossSubsetting = association("ownedCrossSubsetting", CrossSubsetting, composite=True)
-FeatureChaining.chainingFeature = association("chainingFeature", Feature, composite=True)
-FeatureChaining.featureChained = association("featureChained", Feature, composite=True)
-FeatureInverting.featureInverted = association("featureInverted", Feature, composite=True)
-FeatureInverting.invertingFeature = association("invertingFeature", Feature, composite=True)
-FeatureInverting.owningFeature = association("owningFeature", Feature, composite=True)
-Membership.membershipOwningNamespace = association("membershipOwningNamespace", Namespace, composite=True)
-Membership.memberElement = association("memberElement", Element, composite=True)
-OwningMembership.ownedMemberElement = association("ownedMemberElement", Element, composite=True)
-FeatureMembership.owningType = association("owningType", Type, composite=True)
-FeatureMembership.ownedMemberFeature = association("ownedMemberFeature", Feature, composite=True)
-FeatureTyping.typedFeature = association("typedFeature", Feature, composite=True)
-FeatureTyping.type = association("type", Type, composite=True)
-FeatureTyping.owningFeature = association("owningFeature", Feature, composite=True)
-Import.importOwningNamespace = association("importOwningNamespace", Namespace, composite=True)
-Import.importedElement = association("importedElement", Element, composite=True)
-Intersecting.typeIntersected = association("typeIntersected", Type, composite=True)
-Intersecting.intersectingType = association("intersectingType", Type, composite=True)
-Redefinition.redefiningFeature = association("redefiningFeature", Feature, composite=True)
-Redefinition.redefinedFeature = association("redefinedFeature", Feature, composite=True)
-ReferenceSubsetting.referencedFeature = association("referencedFeature", Feature, composite=True)
-ReferenceSubsetting.referencingFeature = association("referencingFeature", Feature, composite=True)
-TextualRepresentation.representedElement = association("representedElement", Element, composite=True)
-TypeFeaturing.featureOfType = association("featureOfType", Feature, composite=True)
-TypeFeaturing.featuringType = association("featuringType", Type, composite=True)
-TypeFeaturing.owningFeatureOfType = association("owningFeatureOfType", Feature, composite=True)
-Unioning.typeUnioned = association("typeUnioned", Type, composite=True)
-Unioning.unioningType = association("unioningType", Type, composite=True)
+Membership.memberElement = association("memberElement", Element)
+Specialization.general = association("general", Type)
+Specialization.specific = association("specific", Type)
