@@ -13,7 +13,7 @@ bytes".
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from io import StringIO
 
 from gaphor.core.modeling import ElementFactory
@@ -31,6 +31,7 @@ from gaphor.SysML2.modelinglanguage import (
     KerMLModelingLanguage,
     SysML2ModelingLanguage,
 )
+from gaphor.SysML2.validation import Diagnostic, has_errors, validate
 
 
 def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
@@ -73,23 +74,33 @@ class RoundTripResult:
     reloaded_form: frozenset[tuple[str, ...]]
     exported_text: str
     reexported_form: frozenset[tuple[str, ...]]
+    # Diagnostics from validating the source model (before save). The harness
+    # validates the reloaded model too and asserts it matches.
+    diagnostics: list[Diagnostic] = field(default_factory=list)
 
     @property
     def preserved(self) -> bool:
         return self.source_form == self.reloaded_form == self.reexported_form
 
+    @property
+    def valid(self) -> bool:
+        return not has_errors(self.diagnostics)
+
 
 def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
-    """import -> save -> reload -> export -> re-parse, comparing canonical forms.
+    """import -> validate -> save -> reload -> validate -> export -> re-parse.
 
-    Returns the canonical forms at each stage so a caller can assert that the
-    semantic structure survives persistence and textual export.
+    Compares canonical forms (structure, never ids/text) across the source,
+    reloaded, and re-exported models, and runs validation on the source and the
+    reloaded model -- asserting validation survives persistence too, so the
+    harness exercises the full M2 chain (including validate), not just storage.
     """
     # import (text -> AST -> semantic model)
     factory = ElementFactory()
     result = map_package(parse(text), factory)
     result.root.declaredName = root_name
     source_form = canonical_form(result.root)
+    source_diagnostics = validate(factory, result.unresolved_types)
     root_id = result.root.id
 
     # save -> reload through .gaphor
@@ -103,6 +114,11 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
     reloaded_root = factory.lookup(root_id)
     assert isinstance(reloaded_root, kerml.Namespace)
     reloaded_form = canonical_form(reloaded_root)
+    # Validate the reloaded (no mapping context) model: the model-derived rules
+    # must reach the same verdict as the source, proving validation is not
+    # dependent on transient mapping state.
+    reloaded_diagnostics = validate(factory)
+    assert has_errors(reloaded_diagnostics) == has_errors(source_diagnostics)
 
     # export -> re-parse -> re-map -> canonical form
     exported_text = export_namespace(reloaded_root)
@@ -116,4 +132,5 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
         reloaded_form=reloaded_form,
         exported_text=exported_text,
         reexported_form=reexported_form,
+        diagnostics=source_diagnostics,
     )

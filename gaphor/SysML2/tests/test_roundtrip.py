@@ -59,3 +59,18 @@ def test_untyped_usage_round_trips():
     result = round_trip("part def Engine;\npart wheel;")
     assert result.preserved
     assert ("PartUsage", "Root::wheel", "") in result.source_form
+
+
+def test_round_trip_includes_validation():
+    # The harness runs validation as part of the chain; the valid tracer is
+    # both preserved and valid.
+    result = round_trip(TRACER)
+    assert result.preserved
+    assert result.valid
+
+
+def test_round_trip_surfaces_validation_errors():
+    # A duplicate-name model still round-trips structurally, but the harness
+    # reports it as invalid -- preservation and validity are distinct.
+    result = round_trip("part def Engine;\npart def Engine;")
+    assert not result.valid

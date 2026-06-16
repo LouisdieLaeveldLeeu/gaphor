@@ -74,6 +74,21 @@ def test_missing_owner_is_reported(element_factory):
     assert has_errors(diagnostics)
 
 
+def test_broken_typing_in_persisted_model_is_reported(element_factory):
+    # Model-derived rule (no mapping context): deleting the definition leaves an
+    # orphaned FeatureTyping with an empty `type`, which must be reported.
+    result = map_package(
+        parse("part def Engine;\npart vehicleEngine : Engine;"), element_factory
+    )
+    engine = result.elements_by_name["Engine"]
+    engine.unlink()
+
+    # No mapping context passed -- this must be caught from the model alone.
+    diagnostics = validate(element_factory)
+    assert "usage-without-valid-type" in _rules(diagnostics)
+    assert has_errors(diagnostics)
+
+
 def test_untyped_usage_is_not_an_error(element_factory):
     result = map_package(parse("part p;"), element_factory)
     diagnostics = validate(element_factory, result.unresolved_types)

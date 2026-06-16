@@ -54,6 +54,7 @@ def validate(
     diagnostics.extend(_check_missing_owner(factory))
     diagnostics.extend(_check_duplicate_names(factory))
     diagnostics.extend(_check_unresolved_imports(factory))
+    diagnostics.extend(_check_broken_typing(factory))
     diagnostics.extend(
         _check_usage_without_valid_type(factory, unresolved_types or {})
     )
@@ -108,6 +109,36 @@ def _check_unresolved_imports(factory: ElementFactory) -> Iterator[Diagnostic]:
                 "unresolved-import",
                 "import does not reference a resolvable element",
                 imp.id,
+            )
+
+
+def _check_broken_typing(factory: ElementFactory) -> Iterator[Diagnostic]:
+    """A FeatureTyping must reference both a typed feature and a type.
+
+    This is model-derived (needs no mapping context), so it catches a typing
+    that became broken in a persisted or mutated model -- e.g. after its type
+    element was deleted, leaving an orphaned FeatureTyping with an empty `type`.
+    """
+    for typing in factory.select(kerml.FeatureTyping):
+        feature = kk._single(typing.typedFeature)
+        type_ = kk._single(typing.type)
+        if type_ is None:
+            owner = kk._single(typing.owningRelatedElement)
+            name = owner.declaredName if owner is not None else None
+            yield Diagnostic(
+                Severity.ERROR,
+                "usage-without-valid-type",
+                f"feature typing on {name!r} has no resolved type"
+                if name
+                else "feature typing has no resolved type",
+                (feature.id if feature is not None else typing.id),
+            )
+        elif feature is None:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-typing",
+                "feature typing has a type but no typed feature",
+                typing.id,
             )
 
 

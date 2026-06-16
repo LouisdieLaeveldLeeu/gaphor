@@ -1,32 +1,140 @@
-"""Command-line stubs for the SysML v2 textual workflow."""
+"""Command-line entry points for the SysML v2 textual workflow.
+
+These wire the real M2 pipeline (parse -> map -> validate -> persist -> export
+-> round-trip) so the CLI is a genuine path, not a stub. Scope matches the M2
+tracer: PartDefinition/PartUsage. Unsupported input surfaces as a diagnostic or
+a parse error, never a silent success.
+"""
 
 from __future__ import annotations
 
 import argparse
 import sys
 from collections.abc import Sequence
+from io import StringIO
+from pathlib import Path
 
 NOT_IMPLEMENTED_EXIT_CODE = 1
+ERROR_EXIT_CODE = 2
 
 
-def _stub_command(name: str):
-    def run(_args: argparse.Namespace) -> int:
-        print(
-            f"SysML v2 {name} is scaffolded, "
-            "but no SysML v2 semantics are implemented yet.",
-            file=sys.stderr,
+def _modeling_language():
+    from gaphor.core.modeling.modelinglanguage import (
+        CoreModelingLanguage,
+        MockModelingLanguage,
+    )
+    from gaphor.SysML2.modelinglanguage import (
+        KerMLModelingLanguage,
+        SysML2ModelingLanguage,
+    )
+
+    return MockModelingLanguage(
+        CoreModelingLanguage(),
+        KerMLModelingLanguage(),
+        SysML2ModelingLanguage(),
+    )
+
+
+def _run_validate(args: argparse.Namespace) -> int:
+    from gaphor.core.modeling import ElementFactory
+    from gaphor.SysML2.grammar.parser import parse
+    from gaphor.SysML2.mapping import map_package
+    from gaphor.SysML2.validation import has_errors, validate
+
+    text = Path(args.source).read_text(encoding="utf-8")
+    try:
+        pkg = parse(text)
+    except SyntaxError as exc:
+        print(f"parse error: {exc}", file=sys.stderr)
+        return ERROR_EXIT_CODE
+
+    factory = ElementFactory()
+    result = map_package(pkg, factory)
+    diagnostics = validate(factory, result.unresolved_types)
+    for d in diagnostics:
+        print(f"{d.severity}: {d.rule}: {d.message}", file=sys.stderr)
+    return ERROR_EXIT_CODE if has_errors(diagnostics) else 0
+
+
+def _run_import(args: argparse.Namespace) -> int:
+    """Parse + map SysML text and save it as a `.gaphor` model."""
+    import gaphor.storage as storage
+    from gaphor.core.modeling import ElementFactory
+    from gaphor.SysML2.grammar.parser import parse
+    from gaphor.SysML2.mapping import map_package
+
+    text = Path(args.source).read_text(encoding="utf-8")
+    try:
+        pkg = parse(text)
+    except SyntaxError as exc:
+        print(f"parse error: {exc}", file=sys.stderr)
+        return ERROR_EXIT_CODE
+
+    factory = ElementFactory()
+    map_package(pkg, factory)
+    with open(args.model, "w", encoding="utf-8") as f:
+        storage.save(f, factory)
+    return 0
+
+
+def _run_export(args: argparse.Namespace) -> int:
+    """Load a `.gaphor` model and emit SysML v2 text."""
+    import gaphor.storage as storage
+    from gaphor.core.modeling import ElementFactory
+    from gaphor.SysML2 import kerml
+    from gaphor.SysML2.export import export_namespace
+
+    factory = ElementFactory()
+    with open(args.model, encoding="utf-8") as f:
+        storage.load(
+            f, element_factory=factory, modeling_language=_modeling_language()
         )
-        return NOT_IMPLEMENTED_EXIT_CODE
 
-    return run
+    namespaces = [
+        ns
+        for ns in factory.select(kerml.Namespace)
+        if kerml_kernel_owning_namespace(ns) is None
+    ]
+    text = "".join(export_namespace(ns) for ns in namespaces)
+    if args.output:
+        Path(args.output).write_text(text, encoding="utf-8")
+    else:
+        sys.stdout.write(text)
+    return 0
+
+
+def kerml_kernel_owning_namespace(ns):
+    from gaphor.SysML2 import kerml_kernel as kk
+
+    return kk.owning_namespace(ns)
+
+
+def _run_round_trip(args: argparse.Namespace) -> int:
+    """Run the canonical round-trip on a SysML text file and report."""
+    from gaphor.SysML2.roundtrip import round_trip
+
+    text = Path(args.source).read_text(encoding="utf-8")
+    try:
+        result = round_trip(text)
+    except SyntaxError as exc:
+        print(f"parse error: {exc}", file=sys.stderr)
+        return ERROR_EXIT_CODE
+
+    if result.preserved:
+        print("round-trip: canonical form preserved")
+    else:
+        print("round-trip: canonical form NOT preserved", file=sys.stderr)
+    for d in result.diagnostics:
+        print(f"{d.severity}: {d.rule}: {d.message}", file=sys.stderr)
+    return 0 if (result.preserved and result.valid) else ERROR_EXIT_CODE
 
 
 def validate_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Validate SysML v2 text without importing it."
     )
-    parser.add_argument("source", nargs="*", help="SysML v2 source file(s)")
-    parser.set_defaults(command=_stub_command("validation"))
+    parser.add_argument("source", help="SysML v2 source file")
+    parser.set_defaults(command=_run_validate)
     return parser
 
 
@@ -34,19 +142,33 @@ def import_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Import SysML v2 text into a Gaphor model."
     )
-    parser.add_argument("source", nargs="?", help="SysML v2 source file")
-    parser.add_argument("model", nargs="?", help="target .gaphor model")
-    parser.set_defaults(command=_stub_command("import"))
+    parser.add_argument("source", help="SysML v2 source file")
+    parser.add_argument("model", help="target .gaphor model")
+    parser.set_defaults(command=_run_import)
     return parser
 
 
 def export_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Export a Gaphor model as SysML v2.")
-    parser.add_argument("model", nargs="?", help="source .gaphor model")
+    parser.add_argument("model", help="source .gaphor model")
     parser.add_argument("-o", "--output", help="output SysML v2 file")
-    parser.set_defaults(command=_stub_command("export"))
+    parser.set_defaults(command=_run_export)
+    return parser
+
+
+def round_trip_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Round-trip SysML v2 text and compare canonical forms."
+    )
+    parser.add_argument("source", help="SysML v2 source file")
+    parser.set_defaults(command=_run_round_trip)
     return parser
 
 
 def parser_names() -> Sequence[str]:
-    return ("sysml2-validate", "sysml2-import", "sysml2-export")
+    return (
+        "sysml2-validate",
+        "sysml2-import",
+        "sysml2-export",
+        "sysml2-round-trip",
+    )
