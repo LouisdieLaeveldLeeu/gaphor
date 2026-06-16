@@ -81,6 +81,19 @@ Tests (`test_m1b_kernel.py`, `test_kernel_adapter.py`): the five required behavi
 
 Scope honesty: this is `Create-API`+`Persist` plus the five behaviours. There is no grammar/parse, text import, scoped validation, export, or round-trip yet; those are M2. The support matrix marks the kernel classes `internal-only`, never `supported`.
 
+### M2 Outcome (verified 2026-06-16): PartDefinition/PartUsage vertical tracer
+
+`part def Engine;` and `part vehicleEngine : Engine;` were driven through the entire chain, committed at each green sub-step:
+
+- Text -> AST: a Lark grammar slice (`grammar/sysml2.lark`, `grammar/parser.py`) parses the two constructs to a small AST.
+- AST -> semantic: `mapping.py` builds `sysml2.PartDefinition`/`PartUsage` (generated from SysML.xmi on the KerML kernel supermodel) owned by a root Namespace, with the usage typed by the definition via a KerML `FeatureTyping`. PartUsage is a `kerml.Feature`; PartDefinition's MRO runs through Structure/Class/Classifier/Type to Base.
+- Persistence: the model save/reloads through `.gaphor` with the typing relation intact. The usage owns its FeatureTyping (containment spine), so deleting the usage cascades to the typing while the non-owning `type` target (the definition) survives; deleting the definition leaves usage and typing intact.
+- Validation + resolution (scoped): four ERROR-class rules (missing-owner, duplicate-name, unresolved-import, usage-without-valid-type) with conformance severities; resolution is same-namespace + simple qualified-name only.
+- Textual export: re-emits valid SysML (definition stays a definition, usage stays a usage, typing preserved), re-parseable by the grammar.
+- Round-trip: `roundtrip.py` runs import -> save -> reload -> export -> re-parse and compares CANONICAL forms (kind + qualified name + resolved type name), never ids or raw text. PartDefinition/PartUsage are the first rows of the coverage metric.
+
+Support matrix: PartDefinition and PartUsage advance to `alpha` with Parse/Import/Create-API/Persist/Validate/Export/Round-trip all `yes`; Diagram and UI-edit stay `no`. They are `alpha`, not `supported`, because resolution is minimal and the diagram/UI surface is unimplemented. The required deliverable is the CLI/Python round-trip; diagram projection was deferred (optional stretch) and not built.
+
 ### Deferred: versioned spec-ingestion pipeline (post-M2)
 
 The adapter already produces a normalized in-memory IR (`Kernel`: classes, properties, target kind, derived/stored, composite, enum literals) and applies a reviewed mapping policy (`COMPOSITE_REFS`; derived-refs-computed-in-behaviour-layer; fail-fast on unknown non-derived targets). A natural extension is a full versioned spec-ingestion pipeline for future OMG XMI releases:

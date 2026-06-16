@@ -27,10 +27,27 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | KerML Specialization | no | no | yes | yes | no | no | no | no | no | internal-only |
 | KerML Import | no | no | yes | yes | no | no | no | no | no | internal-only |
 | KerML Documentation | no | no | yes | yes | no | no | no | no | no | internal-only |
-| SysML PartDefinition | no | no | no | no | no | no | no | no | no | not-started |
-| SysML PartUsage | no | no | no | no | no | no | no | no | no | not-started |
+| SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
+| SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML ActionUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML RequirementUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML AttributeUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML PortUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML ConnectionUsage | no | no | no | no | no | no | no | no | no | not-started |
+
+## Round-Trip Coverage Metric
+
+The growing coverage metric is the project's north-star dashboard: a construct
+counts as covered only when it passes the canonical-form round-trip
+(import -> save -> reload -> export -> re-parse, comparing structure and resolved
+references, never ids or raw text). M2 establishes the harness
+(`gaphor/SysML2/roundtrip.py`) and the first rows.
+
+| Construct | Round-trip covered | Harness test |
+| --- | --- | --- |
+| SysML PartDefinition | yes | `test_roundtrip.py::test_tracer_round_trip_preserves_canonical_form` |
+| SysML PartUsage (typed + untyped) | yes | `test_roundtrip.py` |
+
+Coverage: 2 constructs round-trip-covered. `alpha`, not `supported`: resolution
+is same-namespace + simple qualified-name only, and Diagram/UI-edit are not yet
+implemented (diagram projection is the optional deferred stretch).
