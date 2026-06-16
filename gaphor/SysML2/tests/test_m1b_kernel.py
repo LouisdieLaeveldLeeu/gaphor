@@ -194,8 +194,8 @@ def test_delete_import_does_not_delete_imported_element(element_factory):
 def test_delete_specializing_type_does_not_delete_general(element_factory):
     # A Feature is a Type; a Specialization relates specific->general via
     # non-owning refs, so deleting the specific type must not delete the general
-    # one. (FeatureTyping is outside the minimal closure; Specialization proves
-    # the same non-owning-reference property with in-kernel classes.)
+    # one. (Specialization is the M1b-era relationship used here; FeatureTyping
+    # also proves this property and is covered by the M2 persistence tests.)
     general = element_factory.create(kerml.Type)
     specific = element_factory.create(kerml.Feature)
     spec = element_factory.create(kerml.Specialization)
