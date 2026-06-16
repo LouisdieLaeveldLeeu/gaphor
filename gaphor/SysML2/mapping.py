@@ -73,7 +73,17 @@ def _resolve_type(
 def _set_type(
     factory: ElementFactory, usage: kerml.Feature, definition: kerml.Type
 ) -> None:
-    """Record that `usage` is typed by `definition` via a KerML FeatureTyping."""
+    """Record that `usage` is typed by `definition` via a KerML FeatureTyping.
+
+    Ownership follows KerML: the FeatureTyping is owned by the typed feature
+    (its `owningFeature` is "a typedFeature that is also the owningRelatedElement
+    of this FeatureTyping"). So the usage owns the typing through the containment
+    spine -- deleting the usage cascades to the typing -- while the definition is
+    only the non-owning `type` target and is never cascade-deleted.
+    """
     typing = factory.create(kerml.FeatureTyping)
     typing.typedFeature = usage
     typing.type = definition
+    # The usage owns the typing relationship (composite containment spine).
+    usage.ownedRelationship = typing
+    typing.owningRelatedElement = usage
