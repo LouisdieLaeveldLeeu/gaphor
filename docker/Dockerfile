@@ -9,7 +9,10 @@
 # is the source of truth for the runtime; poetry.lock is the source of truth for
 # Python dependencies. Both CI and local dev run THIS image so "verified" means
 # the same thing everywhere.
-FROM ubuntu:25.10
+# Pinned by digest for reproducibility. Refresh the digest deliberately when
+# picking up security updates (tag `25.10` would otherwise drift silently):
+#   docker pull ubuntu:25.10 && docker images --digests ubuntu:25.10
+FROM ubuntu:25.10@sha256:4a9232cc47bf99defcc8860ef6222c99773330367fcecbf21ba2edb0b810a31e
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
@@ -37,7 +40,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Pin Poetry via pipx (decoupled from the project venv). virtualenvs.in-project
 # keeps the resolved environment next to the checkout for transparency.
 ENV PATH="/root/.local/bin:${PATH}"
-RUN pipx install poetry \
+# Poetry pinned to match the project's existing pin in
+# .github/github-requirements.txt and the version that resolved poetry.lock.
+RUN pipx install poetry==2.4.1 \
     && poetry config virtualenvs.in-project true
 
 WORKDIR /workspace

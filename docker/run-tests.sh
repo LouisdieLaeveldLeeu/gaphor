@@ -27,10 +27,18 @@ if [[ ${#PYTEST_ARGS[@]} -eq 0 ]]; then
 fi
 
 echo "Running pytest headless (xvfb): ${PYTEST_ARGS[*]}"
+# --init runs tini as PID 1 so xvfb-run's child reaping and Xvfb readiness
+# signalling work correctly (xvfb-run can hang as PID 1 in a container).
+#
 # --no-root was used at build time; install the project itself now (cheap) so
 # `import gaphor.SysML2` resolves against the bind-mounted source.
-docker run --rm \
+#
+# pytest args are passed as positional parameters ("$@") into the inner shell,
+# not interpolated into the command string, so quoted args (e.g. -k "a or b")
+# survive intact.
+docker run --rm --init \
     --volume "$REPO_ROOT:/workspace:Z" \
     --workdir /workspace \
     "$IMAGE" \
-    bash -lc "poetry install --with dev >/dev/null && xvfb-run -a poetry run pytest ${PYTEST_ARGS[*]}"
+    bash -lc 'poetry install --with dev >/dev/null && xvfb-run -a poetry run pytest "$@"' \
+    _ "${PYTEST_ARGS[@]}"

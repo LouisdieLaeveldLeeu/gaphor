@@ -35,10 +35,13 @@ trap 'xhost -local: >/dev/null 2>&1 || true' EXIT
 
 # GPU is optional. Default to software rendering (GSK_RENDERER=cairo, baked into
 # the image) for reliability. To try hardware accel, add: --device /dev/dri .
-docker run --rm -it \
+# --init runs tini as PID 1 for correct signal handling / child reaping.
+# gaphor args pass as positional parameters ("$@"), not string-interpolated.
+docker run --rm -it --init \
     --volume "$REPO_ROOT:/workspace:Z" \
     --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
     --env "DISPLAY=$DISPLAY" \
     --workdir /workspace \
     "$IMAGE" \
-    bash -lc "poetry install --with dev >/dev/null && poetry run gaphor $*"
+    bash -lc 'poetry install --with dev >/dev/null && poetry run gaphor "$@"' \
+    _ "$@"

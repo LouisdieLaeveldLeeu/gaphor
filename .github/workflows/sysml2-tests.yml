@@ -45,9 +45,11 @@ jobs:
       - name: Build the SysML v2 test image
         run: docker build -t gaphor-sysml2-test -f docker/Dockerfile .
 
+      # --init runs tini as PID 1 so xvfb-run's child reaping and Xvfb readiness
+      # signalling work correctly (xvfb-run can hang as PID 1 in a container).
       - name: Run SysML v2 tests (headless)
         run: |
-          docker run --rm \
+          docker run --rm --init \
             --volume "$PWD:/workspace" \
             --workdir /workspace \
             gaphor-sysml2-test \
@@ -55,7 +57,7 @@ jobs:
 
       - name: Smoke-check the broader suite collects
         run: |
-          docker run --rm \
+          docker run --rm --init \
             --volume "$PWD:/workspace" \
             --workdir /workspace \
             gaphor-sysml2-test \
