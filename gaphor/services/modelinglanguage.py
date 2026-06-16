@@ -81,7 +81,12 @@ class ModelingLanguageService(Service, ActionProvider, ModelingLanguage):
                 raise ValueError(
                     f"Invalid namespace '{ns}', should be one of {list(self._modeling_languages.keys())}"
                 )
-            return self._modeling_languages[ns].lookup_element(name)
+            # Pass ns through so the provider can distinguish an explicitly
+            # routed lookup from an unqualified fallback poll (below). Without
+            # this, a language whose class names collide with another's (e.g.
+            # KerML/SysML2 vs UML: Class, Type, ...) cannot apply a correct
+            # collision policy.
+            return self._modeling_languages[ns].lookup_element(name, ns=ns)
 
         return next(
             filter(

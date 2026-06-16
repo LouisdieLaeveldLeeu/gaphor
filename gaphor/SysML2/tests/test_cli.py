@@ -18,6 +18,35 @@ def test_cli_stub_parsers_are_registered_by_name():
     )
 
 
+def test_kerml_sysml2_do_not_hijack_unqualified_lookup():
+    # Regression: KerML/SysML2 generated class names (Class, Type, Feature, ...)
+    # collide with legacy UML storage that persists names unqualified (ns=None).
+    # An unqualified lookup of a COLLIDING name must still resolve to UML.
+    from gaphor.services.modelinglanguage import ModelingLanguageService
+
+    svc = ModelingLanguageService()
+    cls = svc.lookup_element("Class")
+    assert cls is not None and cls.__module__ == "gaphor.UML.uml"
+
+    # SysML2/KerML do not participate in the unqualified fallback at all, so even
+    # a non-colliding SysML2 name does not resolve without an explicit ns. This
+    # is intentional: SysML2/KerML always persist and look up with a ns.
+    assert svc.lookup_element("PartDefinition") is None
+
+
+def test_qualified_lookup_reaches_kerml_and_sysml2_through_service():
+    # The service now passes ns through to the routed provider, so a colliding
+    # name resolves to the generated class when explicitly qualified -- while
+    # the unqualified form (above) still goes to UML.
+    from gaphor.services.modelinglanguage import ModelingLanguageService
+
+    svc = ModelingLanguageService()
+    kerml_cls = svc.lookup_element("Class", ns="KerML")
+    assert kerml_cls is not None and kerml_cls.__module__ == "gaphor.SysML2.kerml"
+    sysml2_type = svc.lookup_element("Type", ns="SysML2")
+    assert sysml2_type is not None and sysml2_type.__module__ == "gaphor.SysML2.kerml"
+
+
 def test_every_cli_command_has_a_packaged_entry_point():
     # Guard against drift: every command in parser_names() must be wired as a
     # gaphor.argparsers console entry point, or it is unreachable when packaged

@@ -17,6 +17,16 @@ from __future__ import annotations
 
 from gaphor.abc import ModelingLanguage
 
+# The SysML2/KerML generated classes share many names with legacy UML/Core
+# (Class, Type, Feature, ...), and legacy `.gaphor` models persist those names
+# unqualified (ns=None). To avoid hijacking legacy loads, these languages answer
+# ONLY their explicit namespace and never participate in the unqualified
+# fallback. This is sufficient: SysML2/KerML elements always persist with an
+# explicit ns, and the code generator always passes a ns to lookup_element, so
+# no SysML2/KerML resolution ever relies on the ns=None path. (The
+# ModelingLanguageService passes ns through to the routed provider, so an
+# explicit ns="SysML2"/"KerML" lookup reaches here intact.)
+
 
 class KerMLModelingLanguage(ModelingLanguage):
     @property
@@ -40,7 +50,7 @@ class KerMLModelingLanguage(ModelingLanguage):
         raise ValueError("No model browser model for KerML yet.")
 
     def lookup_element(self, name, ns=None):
-        if ns in (None, "KerML"):
+        if ns == "KerML":
             from gaphor.SysML2 import kerml
 
             return getattr(kerml, name, None)
@@ -69,12 +79,10 @@ class SysML2ModelingLanguage(ModelingLanguage):
         raise ValueError("No model browser model for SysML2 yet.")
 
     def lookup_element(self, name, ns=None):
-        # Everything under the gaphor.SysML2 package persists in the single
-        # "SysML2" runtime namespace (its `__modeling_language__`), so this
-        # resolver spans the SysML user concepts, the KerML kernel, and the M1a
-        # slice. (The "KerML" supermodel name is a code-generation concern, not a
-        # persistence namespace.)
-        if ns in (None, "SysML2"):
+        # Everything under gaphor.SysML2 persists in the single "SysML2" runtime
+        # namespace, so this resolver spans the SysML user concepts, the KerML
+        # kernel, and the M1a slice -- but only under an explicit ns.
+        if ns == "SysML2":
             from gaphor.SysML2 import kerml, kerml_slice, sysml2
 
             return (
