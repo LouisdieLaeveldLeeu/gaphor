@@ -81,6 +81,15 @@ Tests (`test_m1b_kernel.py`, `test_kernel_adapter.py`): the five required behavi
 
 Scope honesty: this is `Create-API`+`Persist` plus the five behaviours. There is no grammar/parse, text import, scoped validation, export, or round-trip yet; those are M2. The support matrix marks the kernel classes `internal-only`, never `supported`.
 
+### Deferred: versioned spec-ingestion pipeline (post-M2)
+
+The adapter already produces a normalized in-memory IR (`Kernel`: classes, properties, target kind, derived/stored, composite, enum literals) and applies a reviewed mapping policy (`COMPOSITE_REFS`; derived-refs-computed-in-behaviour-layer; fail-fast on unknown non-derived targets). A natural extension is a full versioned spec-ingestion pipeline for future OMG XMI releases:
+
+- emit a machine-readable metamodel index (e.g. `docs/sysml-v2/generated/KerML_INDEX.json`): class/property name, target kind, derived/stored, composite, enum literals, multiplicity, source XMI id;
+- on a new artifact: re-verify provenance/hash, parse to IR, diff against the previous IR, regenerate, and produce a review report; fail the build on an unknown mapping change (e.g. a new non-derived class reference with no ownership policy).
+
+Decision (2026-06-16): defer this to a named post-M2 phase rather than build it now. The corrective part it was meant to enforce (derived/composite/fail-fast) already shipped in M1b. M2's validation/resolution is deliberately scoped to concrete same-namespace + simple qualified-name resolution and four named structural rules — it does not consume a metamodel index — so the index is not load-bearing for M2 and building the diff/fetch/upgrade machinery now would be speculative ahead of an actual spec release. Boundary to preserve when built: automatic = structural extraction, generated classes, index, deterministic diffs; human-reviewed = semantic behaviour, ownership policy, compatibility/migration, support-matrix claims.
+
 ## Grammar Tool
 
 Decision: use Lark for the first SysML v2 textual grammar.
