@@ -58,11 +58,11 @@ def test_every_kernel_class_persists_and_reloads(cls, element_factory, saver, lo
 
 
 def test_kernel_has_expected_class_count():
-    # Following only STORED (non-derived) references, the minimal kernel closure
-    # is 12 classes: the kickoff seed plus AnnotatingElement/Comment reached via
-    # Documentation. Classes formerly pulled in only through derived references
-    # (FeatureMembership, FeatureTyping, Conjugation, ...) are correctly absent.
-    assert len(_all_kernel_classes()) == 12
+    # Following only STORED (non-derived) references, the kernel closure is 16
+    # classes: the original 12-class minimal kernel, plus Classifier/Class/
+    # Structure (supermodel roots the M2 SysML layer generalizes) and
+    # FeatureTyping (the stored type/feature relation the tracer types with).
+    assert len(_all_kernel_classes()) == 16
 
 
 # --- required behaviour 1: namespace + membership round-trip -----------------

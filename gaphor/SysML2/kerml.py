@@ -47,15 +47,6 @@ class AnnotatingElement(Element):
     pass
 
 
-class Comment(AnnotatingElement):
-    body: _attribute[str] = _attribute("body", str)
-    locale: _attribute[str] = _attribute("locale", str)
-
-
-class Documentation(Comment):
-    pass
-
-
 class Namespace(Element):
     pass
 
@@ -63,6 +54,23 @@ class Namespace(Element):
 class Type(Namespace):
     isAbstract: _attribute[bool] = _attribute("isAbstract", bool)
     isSufficient: _attribute[bool] = _attribute("isSufficient", bool)
+
+
+class Classifier(Type):
+    pass
+
+
+class Class(Classifier):
+    pass
+
+
+class Comment(AnnotatingElement):
+    body: _attribute[str] = _attribute("body", str)
+    locale: _attribute[str] = _attribute("locale", str)
+
+
+class Documentation(Comment):
+    pass
 
 
 class Feature(Type):
@@ -85,6 +93,16 @@ class Relationship(Element):
     target: relation_many[Element]
 
 
+class Specialization(Relationship):
+    general: relation_many[Type]
+    specific: relation_many[Type]
+
+
+class FeatureTyping(Specialization):
+    type: relation_many[Type]
+    typedFeature: relation_many[Feature]
+
+
 class Import(Relationship):
     isImportAll: _attribute[bool] = _attribute("isImportAll", bool)
     isRecursive: _attribute[bool] = _attribute("isRecursive", bool)
@@ -102,9 +120,8 @@ class OwningMembership(Membership):
     pass
 
 
-class Specialization(Relationship):
-    general: relation_many[Type]
-    specific: relation_many[Type]
+class Structure(Class):
+    pass
 
 
 
@@ -114,6 +131,8 @@ Relationship.target = association("target", Element)
 Relationship.source = association("source", Element)
 Relationship.owningRelatedElement = association("owningRelatedElement", Element)
 Relationship.ownedRelatedElement = association("ownedRelatedElement", Element, composite=True)
-Membership.memberElement = association("memberElement", Element)
 Specialization.general = association("general", Type)
 Specialization.specific = association("specific", Type)
+FeatureTyping.typedFeature = association("typedFeature", Feature)
+FeatureTyping.type = association("type", Type)
+Membership.memberElement = association("memberElement", Element)

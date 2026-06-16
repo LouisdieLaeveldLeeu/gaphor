@@ -423,6 +423,15 @@ KERNEL_SEED = (
     "Specialization",
     "Import",
     "Documentation",
+    # Classifier roots the SysML layer generalizes (PartDefinition -> ... ->
+    # Classifier/Class/Structure). Added so the KerML kernel can serve as the
+    # supermodel for the generated SysML classes, the way Core serves KerML.
+    "Classifier",
+    "Class",
+    "Structure",
+    # FeatureTyping carries the stored type/feature relation (typedFeature, type)
+    # the M2 tracer needs to type a PartUsage by a PartDefinition.
+    "FeatureTyping",
 )
 
 
@@ -456,6 +465,16 @@ class Kernel:
     enums: list[EnumType] = field(default_factory=list)
 
 
+def _href_class_name(href: str) -> str:
+    """Resolve a cross-file generalization href to a KerML class name.
+
+    SysML classes generalize KerML classes via an external href, e.g.
+    `...KerML.xmi#Core-Features-Feature`. The fragment's final hyphen-segment is
+    the class name (`Feature`).
+    """
+    return href.rsplit("#", 1)[-1].rsplit("-", 1)[-1]
+
+
 def _generalizations(class_elem: ET.Element, index: dict[str, tuple]) -> list[str]:
     names: list[str] = []
     for child in class_elem:
@@ -463,9 +482,13 @@ def _generalizations(class_elem: ET.Element, index: dict[str, tuple]) -> list[st
             continue
         general = child.find("general")
         gid = child.get("general")
+        href = None
         if general is not None:
             gid = general.get(XMI_NS + "idref") or general.get("idref")
-        if gid:
+            href = general.get("href")
+        if href:
+            names.append(_href_class_name(href))
+        elif gid:
             tinfo = index.get(gid)
             if tinfo and tinfo[1]:
                 names.append(tinfo[1])
@@ -594,7 +617,9 @@ def extract_kernel(xmi_path: Path, seed: tuple[str, ...] = KERNEL_SEED) -> Kerne
     for name in present:
         elem = by_name[name]
         r = raw(elem, enum_targets)
-        supers = [s for s in _generalizations(elem, index) if s in closure]
+        # Keep all super names (in-closure or external/supermodel); the emitter
+        # resolves each to a full class, a supermodel import stub, or Base.
+        supers = _generalizations(elem, index)
         kept_refs = [ref for ref in r.refs if ref.target in closure]
         classes.append(
             KernelClass(
@@ -616,19 +641,34 @@ def extract_kernel(xmi_path: Path, seed: tuple[str, ...] = KERNEL_SEED) -> Kerne
     return Kernel(classes=classes, enums=enums)
 
 
-def emit_gaphor_kernel_model(kernel: Kernel, package_name: str) -> str:
+def emit_gaphor_kernel_model(
+    kernel: Kernel,
+    package_name: str,
+    supermodel_supers: frozenset[str] = frozenset(),
+    supermodel_package: str | None = None,
+) -> str:
     """Render a multi-class kernel as a coder-ready `.gaphor` model.
 
-    Root classes (no in-closure super) generalize Gaphor `Base` via the Core
-    supermodel; non-root classes generalize their in-closure super(s). Each
-    class-typed reference is emitted as a one-directional association end.
-    Enumeration-typed properties are emitted as enum-typed `UML:Property`
-    pointing at emitted `UML:Enumeration` value-domain types.
+    Generalization resolution per super name:
+    - a super that is a generated class in this model -> a full class reference;
+    - a super in `supermodel_supers` -> an imported stub in `supermodel_package`
+      (resolved by the coder via that supermodel, e.g. SysML2 classes -> KerML);
+    - otherwise, a root class -> Gaphor `Base` via the Core supermodel.
+
+    Each class-typed reference is a one-directional association end; enumeration
+    properties point at emitted `UML:Enumeration` value-domain types.
     """
     classes = kernel.classes
+    class_names = {c.name for c in classes}
     pkg_id = _id(package_name)
     core_pkg_id = _id("Core")
     base_id = _id("Core", "Base")
+    # Supermodel stubs (e.g. KerML classes the SysML layer generalizes).
+    supermodel_pkg_id = _id(supermodel_package) if supermodel_package else None
+    supermodel_ids = {
+        name: _id(supermodel_package or "", "super", name)
+        for name in supermodel_supers
+    }
     class_ids = {c.name: _id(package_name, c.name) for c in classes}
     enum_ids = {e.name: _id(package_name, "enum", e.name) for e in kernel.enums}
 
@@ -724,12 +764,22 @@ def emit_gaphor_kernel_model(kernel: Kernel, package_name: str) -> str:
                 f"</UML:Association>"
             )
 
-        # Generalizations: in-closure supers, or Base for root classes.
-        supers = c.supers or ["Base"]
-        for super_name in supers:
+        # Generalizations: resolve each super to a full class (in this model), a
+        # supermodel stub, or Base for true roots.
+        resolved_supers = [
+            s for s in c.supers if s in class_names or s in supermodel_supers
+        ]
+        if not resolved_supers:
+            resolved_supers = ["Base"]
+        for super_name in resolved_supers:
             gid = _id(package_name, c.name, "generalization", super_name)
             gen_ids.append(gid)
-            general_ref = base_id if super_name == "Base" else class_ids[super_name]
+            if super_name == "Base":
+                general_ref = base_id
+            elif super_name in class_names:
+                general_ref = class_ids[super_name]
+            else:  # supermodel stub
+                general_ref = supermodel_ids[super_name]
             generalization_blocks.append(
                 f'<UML:Generalization id="{gid}">\n'
                 f'<general><ref refid="{general_ref}"/></general>\n'
@@ -767,11 +817,33 @@ def emit_gaphor_kernel_model(kernel: Kernel, package_name: str) -> str:
         f"</UML:Class>"
     )
 
+    # Supermodel package + imported stubs (e.g. the KerML classes the SysML
+    # layer generalizes). Only emitted for supers actually used by this model.
+    supermodel_blocks: list[str] = []
+    used_supermodel_supers = sorted(
+        s for c in classes for s in c.supers if s in supermodel_supers
+    )
+    if supermodel_package and used_supermodel_supers:
+        supermodel_blocks.append(
+            f'<UML:Package id="{supermodel_pkg_id}">\n'
+            f"<name><val>{escape(supermodel_package)}</val></name>\n"
+            f"</UML:Package>"
+        )
+        for super_name in dict.fromkeys(used_supermodel_supers):
+            supermodel_blocks.append(
+                f'<UML:Class id="{supermodel_ids[super_name]}">\n'
+                f"<name><val>{escape(super_name)}</val></name>\n"
+                f'<owningPackage><ref refid="{supermodel_pkg_id}"/></owningPackage>\n'
+                f'<package><ref refid="{supermodel_pkg_id}"/></package>\n'
+                f"</UML:Class>"
+            )
+
     body = "\n".join(
         [
             package_block,
             core_package_block,
             base_class_block,
+            *supermodel_blocks,
             *enum_blocks,
             *blocks,
             *generalization_blocks,
@@ -793,7 +865,59 @@ def build_kerml_kernel(xmi_path: Path) -> str:
     rendered as a coder-ready multi-class `.gaphor` model.
     """
     classes = extract_kernel(xmi_path)
-    return emit_gaphor_kernel_model(classes, package_name="KerML")
+    # The class package must NOT be named with the supermodel key ("KerML"):
+    # the coder's in_super_model resolves a supermodel super only when it is
+    # found in a package that is itself NOT a supermodel key. The KerML
+    # modeling language still resolves these classes under the "KerML" namespace.
+    return emit_gaphor_kernel_model(classes, package_name="KerMLKernel")
+
+
+# --- M2: SysML user-concept layer on the KerML kernel ------------------------
+
+# Seed of the SysML vertical-tracer slice (PartDefinition/PartUsage and their
+# stored-reference closure within SysML.xmi). Their generalizations to KerML
+# classes are resolved against the KerML kernel supermodel, not regenerated.
+SYSML_SEED = ("PartDefinition", "PartUsage")
+
+# KerML classes that the generated SysML kernel must already provide as a
+# supermodel (the SysML closure generalizes these). Kept here so the generator
+# can verify the supermodel actually supplies them.
+SYSML_KERML_SUPERS = (
+    "Definition",  # SysML-internal, but its supers are KerML
+    "Usage",
+)
+
+
+def extract_sysml(xmi_path: Path, seed: tuple[str, ...] = SYSML_SEED) -> Kernel:
+    """Extract the SysML closure over STORED refs within SysML.xmi.
+
+    Generalizations to KerML classes (external hrefs) are recorded as super
+    names; the closure does not try to pull KerML classes out of SysML.xmi
+    (they live in the KerML supermodel). Same three-way property classification
+    and fail-fast rules as `extract_kernel`.
+    """
+    return extract_kernel(xmi_path, seed=seed)
+
+
+def build_sysml_model(xmi_path: Path, kerml_class_names: frozenset[str]) -> str:
+    """Render the SysML closure, generalizing KerML supers as supermodel imports.
+
+    `kerml_class_names` is the set of class names the KerML supermodel provides;
+    any SysML super in that set is emitted as an imported stub in a `KerML`
+    package (resolved by the coder via the supermodel), not as a full class.
+    """
+    kernel = extract_sysml(xmi_path)
+    return emit_gaphor_kernel_model(
+        kernel,
+        package_name="SysML2",
+        supermodel_supers=kerml_class_names,
+        supermodel_package="KerML",
+    )
+
+
+def kerml_class_names(xmi_path: Path) -> frozenset[str]:
+    """The class names the generated KerML kernel provides (for supermodel use)."""
+    return frozenset(c.name for c in extract_kernel(xmi_path).classes)
 
 
 def main(xmi_path: str, out_path: str) -> None:
@@ -804,6 +928,13 @@ def main(xmi_path: str, out_path: str) -> None:
 
 def main_kernel(xmi_path: str, out_path: str) -> None:
     model_xml = build_kerml_kernel(Path(xmi_path))
+    Path(out_path).write_text(model_xml, encoding="utf-8")
+    print(f"wrote {out_path}")
+
+
+def main_sysml(sysml_xmi_path: str, kerml_xmi_path: str, out_path: str) -> None:
+    supers = kerml_class_names(Path(kerml_xmi_path))
+    model_xml = build_sysml_model(Path(sysml_xmi_path), supers)
     Path(out_path).write_text(model_xml, encoding="utf-8")
     print(f"wrote {out_path}")
 

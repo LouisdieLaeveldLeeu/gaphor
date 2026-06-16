@@ -107,6 +107,8 @@ documentation = "https://docs.gaphor.org/"
 "C4Model" = "gaphor.C4Model.modelinglanguage:C4ModelLanguage"
 "RAAML" = "gaphor.RAAML.modelinglanguage:RAAMLModelingLanguage"
 "general" = "gaphor.diagram.general.modelinglanguage:GeneralModelingLanguage"
+"KerML" = "gaphor.SysML2.modelinglanguage:KerMLModelingLanguage"
+"SysML2" = "gaphor.SysML2.modelinglanguage:SysML2ModelingLanguage"
 
 [project.entry-points."gaphor.argparsers"]
 gui = "gaphor.main:gui_parser"
@@ -231,6 +233,22 @@ sysml2-kernel.script = """gaphor.codegen.coder:main(
     modelfile='models/KerML.gaphor',
     outfile='gaphor/SysML2/kerml.py',
     supermodelfiles=[('Core', 'models/Core.gaphor')]
+    )"""
+# SysML v2 user-concept layer (M2): PartDefinition/PartUsage on the KerML kernel.
+# The SysML2 model generalizes KerML classes, resolved via the KerML supermodel
+# (two-level chain SysML2 -> KerML -> Core, the same pattern Gaphor's own SysML
+# uses with UML+Core). Run `poe sysml2-model` then `poe sysml2-classes`.
+sysml2-model.script = """gaphor.SysML2.codegen.xmi_adapter:main_sysml(
+    sysml_xmi_path='docs/sysml-v2/omg/20250201/SysML.xmi',
+    kerml_xmi_path='docs/sysml-v2/omg/20250201/KerML.xmi',
+    out_path='models/SysML2.gaphor'
+    )"""
+sysml2-classes.script = """gaphor.codegen.coder:main(
+    modelfile='models/SysML2.gaphor',
+    outfile='gaphor/SysML2/sysml2.py',
+    supermodelfiles=[
+        ('KerML', 'models/KerML.gaphor'),
+        ('Core', 'models/Core.gaphor')]
     )"""
 lint = "pre-commit run --all-files"
 docs = { "cwd" = "docs", "shell" = "sphinx-build -W -b html . _build/html" }

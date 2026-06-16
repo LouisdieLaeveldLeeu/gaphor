@@ -12,7 +12,10 @@ from gaphor.core.modeling.modelinglanguage import (
     MockModelingLanguage,
 )
 import gaphor.storage as storage
-from gaphor.SysML2.modelinglanguage import SysML2ModelingLanguage
+from gaphor.SysML2.modelinglanguage import (
+    KerMLModelingLanguage,
+    SysML2ModelingLanguage,
+)
 
 
 @pytest.fixture
@@ -22,7 +25,11 @@ def element_factory():
 
 @pytest.fixture
 def modeling_language():
-    return MockModelingLanguage(CoreModelingLanguage(), SysML2ModelingLanguage())
+    return MockModelingLanguage(
+        CoreModelingLanguage(),
+        KerMLModelingLanguage(),
+        SysML2ModelingLanguage(),
+    )
 
 
 @pytest.fixture
