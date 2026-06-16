@@ -18,6 +18,17 @@ def test_cli_stub_parsers_are_registered_by_name():
     )
 
 
+def test_every_cli_command_has_a_packaged_entry_point():
+    # Guard against drift: every command in parser_names() must be wired as a
+    # gaphor.argparsers console entry point, or it is unreachable when packaged
+    # (which is exactly how sysml2-round-trip was initially missed).
+    from gaphor.entrypoint import load_entry_points
+
+    registered = set(load_entry_points("gaphor.argparsers"))
+    for name in cli.parser_names():
+        assert name in registered, f"{name} is not a registered gaphor.argparsers entry point"
+
+
 def test_validate_accepts_valid_text(tmp_path, capsys):
     src = tmp_path / "model.sysml"
     src.write_text(TRACER, encoding="utf-8")
