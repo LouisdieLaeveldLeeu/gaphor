@@ -16,7 +16,7 @@ unresolved on the usage so validation can report it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from gaphor.core.modeling import ElementFactory
 from gaphor.SysML2 import kerml, sysml2
@@ -28,12 +28,16 @@ from gaphor.SysML2.grammar import ast
 class MappingResult:
     root: kerml.Namespace
     elements_by_name: dict[str, kerml.Element]
+    # usage element id -> declared type name that did not resolve (for the
+    # usage-without-valid-type validation rule).
+    unresolved_types: dict[str, str] = field(default_factory=dict)
 
 
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     """Build semantic elements for a parsed package into `factory`."""
     root = factory.create(kerml.Namespace)
     by_name: dict[str, kerml.Element] = {}
+    unresolved_types: dict[str, str] = {}
 
     # First pass: create definitions and usages as owned members of the root.
     for member in pkg.members:
@@ -47,15 +51,22 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
         kk.add_owned_member(root, element, factory.create(kerml.OwningMembership))
         by_name[member.name] = element
 
-    # Second pass: resolve usage typing now that all names exist.
+    # Second pass: resolve usage typing now that all names exist. An unresolved
+    # type name is recorded (not silently dropped) for validation to report.
     for member in pkg.members:
         if isinstance(member, ast.PartUsage) and member.type_name is not None:
             usage = by_name[member.name]
             target = _resolve_type(root, member.type_name)
             if target is not None:
                 _set_type(factory, usage, target)
+            else:
+                unresolved_types[usage.id] = "::".join(member.type_name)
 
-    return MappingResult(root=root, elements_by_name=by_name)
+    return MappingResult(
+        root=root,
+        elements_by_name=by_name,
+        unresolved_types=unresolved_types,
+    )
 
 
 def _resolve_type(
