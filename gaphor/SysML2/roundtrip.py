@@ -100,7 +100,11 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
     result = map_package(parse(text), factory)
     result.root.declaredName = root_name
     source_form = canonical_form(result.root)
+    # Full diagnostics use mapping context (e.g. an unresolvable declared type
+    # name, which is only known at mapping time). The model-derived subset is
+    # what can be recomputed from a persisted model with no mapping context.
     source_diagnostics = validate(factory, result.unresolved_types)
+    source_model_diagnostics = validate(factory)
     root_id = result.root.id
 
     # save -> reload through .gaphor
@@ -114,11 +118,13 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
     reloaded_root = factory.lookup(root_id)
     assert isinstance(reloaded_root, kerml.Namespace)
     reloaded_form = canonical_form(reloaded_root)
-    # Validate the reloaded (no mapping context) model: the model-derived rules
-    # must reach the same verdict as the source, proving validation is not
-    # dependent on transient mapping state.
+    # The MODEL-DERIVED verdict must survive persistence (validation is not
+    # dependent on transient mapping state). Mapping-context-only diagnostics
+    # (an unresolvable type name) legitimately do not persist -- after reload an
+    # untyped usage is indistinguishable from one that never declared a type --
+    # so they are intentionally excluded from this invariant.
     reloaded_diagnostics = validate(factory)
-    assert has_errors(reloaded_diagnostics) == has_errors(source_diagnostics)
+    assert has_errors(reloaded_diagnostics) == has_errors(source_model_diagnostics)
 
     # export -> re-parse -> re-map -> canonical form
     exported_text = export_namespace(reloaded_root)

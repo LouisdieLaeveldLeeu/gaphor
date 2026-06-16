@@ -62,6 +62,7 @@ def _run_import(args: argparse.Namespace) -> int:
     from gaphor.core.modeling import ElementFactory
     from gaphor.SysML2.grammar.parser import parse
     from gaphor.SysML2.mapping import map_package
+    from gaphor.SysML2.validation import has_errors, validate
 
     text = Path(args.source).read_text(encoding="utf-8")
     try:
@@ -71,7 +72,20 @@ def _run_import(args: argparse.Namespace) -> int:
         return ERROR_EXIT_CODE
 
     factory = ElementFactory()
-    map_package(pkg, factory)
+    result = map_package(pkg, factory)
+
+    # Validate before persisting: invalid input is never silently imported.
+    diagnostics = validate(factory, result.unresolved_types)
+    for d in diagnostics:
+        print(f"{d.severity}: {d.rule}: {d.message}", file=sys.stderr)
+    if has_errors(diagnostics) and not args.allow_invalid:
+        print(
+            "import refused: model has validation errors "
+            "(use --allow-invalid to import anyway)",
+            file=sys.stderr,
+        )
+        return ERROR_EXIT_CODE
+
     with open(args.model, "w", encoding="utf-8") as f:
         storage.save(f, factory)
     return 0
@@ -144,6 +158,11 @@ def import_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("source", help="SysML v2 source file")
     parser.add_argument("model", help="target .gaphor model")
+    parser.add_argument(
+        "--allow-invalid",
+        action="store_true",
+        help="import even if validation reports errors",
+    )
     parser.set_defaults(command=_run_import)
     return parser
 
