@@ -127,6 +127,9 @@ def extract_slice(
     result = SliceClass(name=class_name)
     wanted_attrs = set(attributes)
     wanted_refs = set(references)
+    found_attrs: set[str] = set()
+    found_refs: set[str] = set()
+    misclassified: list[str] = []
 
     for owned in target_class:
         if not owned.tag.endswith("ownedAttribute"):
@@ -136,15 +139,43 @@ def extract_slice(
             continue
         kind = _classify_attribute(owned)
         if kind is None:
+            # A requested name that exists but is neither a usable primitive
+            # attribute nor a resolvable class reference is a spec-shape
+            # mismatch, not something to skip silently.
+            if pname in wanted_attrs or pname in wanted_refs:
+                misclassified.append(pname)
             continue
-        if kind[0] == "attr" and pname in wanted_attrs:
+        if pname in wanted_attrs:
+            if kind[0] != "attr":
+                misclassified.append(pname)
+                continue
             result.attributes.append(Attribute(pname, kind[1]))
-        elif kind[0] == "ref" and pname in wanted_refs:
+            found_attrs.add(pname)
+        elif pname in wanted_refs:
+            if kind[0] != "ref":
+                misclassified.append(pname)
+                continue
             tinfo = index.get(kind[1])
             target_name = tinfo[1] if tinfo else None
             # Keep self-references only (single-class slice, no dangling target).
             if target_name == class_name or kind[1] == class_id:
                 result.references.append(Reference(pname, class_name))
+                found_refs.add(pname)
+            else:
+                # Requested as a reference but targets another class: outside
+                # the single-class slice contract.
+                misclassified.append(pname)
+
+    # Fail fast: a typo or spec-shape mismatch must surface as a clear adapter
+    # error, never as a silently incomplete kernel.
+    missing_attrs = sorted(wanted_attrs - found_attrs)
+    missing_refs = sorted(wanted_refs - found_refs)
+    if missing_attrs or missing_refs or misclassified:
+        raise ValueError(
+            f"slice extraction for class {class_name!r} incomplete: "
+            f"missing attributes={missing_attrs}, missing references={missing_refs}, "
+            f"unusable/misclassified={sorted(set(misclassified))}"
+        )
 
     return result
 
@@ -155,8 +186,14 @@ _MODEL_NS = "https://gaphor.org/model"
 _UML_NS = "https://gaphor.org/modelinglanguage/UML"
 
 
-def _id() -> str:
-    return str(uuid.uuid4())
+# Fixed namespace UUID for deterministic, name-derived element ids. Stable ids
+# keep the emitted `.gaphor` model byte-identical across runs, so regeneration
+# (`poe sysml2-slice-model`) never dirties the worktree.
+_ID_NAMESPACE = uuid.UUID("6f9b4d2e-3c1a-5e7f-8a0b-2d4c6e8f1a3b")
+
+
+def _id(*parts: str) -> str:
+    return str(uuid.uuid5(_ID_NAMESPACE, "/".join(parts)))
 
 
 def emit_gaphor_model(slice_: SliceClass, package_name: str) -> str:
@@ -168,11 +205,12 @@ def emit_gaphor_model(slice_: SliceClass, package_name: str) -> str:
     supermodel resolves it to `gaphor.core.modeling.base.Base` rather than
     regenerating it.
     """
-    pkg_id = _id()
-    class_id = _id()
-    core_pkg_id = _id()
-    base_id = _id()
-    generalization_id = _id()
+    cls = slice_.name
+    pkg_id = _id(package_name)
+    class_id = _id(package_name, cls)
+    core_pkg_id = _id("Core")
+    base_id = _id("Core", "Base")
+    generalization_id = _id(package_name, cls, "generalization", "Base")
 
     owned_attr_ids: list[str] = []
     property_blocks: list[str] = []
@@ -180,7 +218,7 @@ def emit_gaphor_model(slice_: SliceClass, package_name: str) -> str:
 
     # Primitive attributes: UML:Property with typeValue.
     for attr in slice_.attributes:
-        pid = _id()
+        pid = _id(package_name, cls, "attr", attr.name)
         owned_attr_ids.append(pid)
         property_blocks.append(
             f'<UML:Property id="{pid}">\n'
@@ -192,9 +230,9 @@ def emit_gaphor_model(slice_: SliceClass, package_name: str) -> str:
 
     # References: each is a self-association end (Property with type + association).
     for ref in slice_.references:
-        end_id = _id()
-        opposite_id = _id()
-        assoc_id = _id()
+        end_id = _id(package_name, cls, "ref", ref.name)
+        opposite_id = _id(package_name, cls, "ref", ref.name, "opposite")
+        assoc_id = _id(package_name, cls, "assoc", ref.name)
         owned_attr_ids.append(end_id)
         property_blocks.append(
             f'<UML:Property id="{end_id}">\n'
