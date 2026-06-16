@@ -76,6 +76,38 @@ def test_round_trip_surfaces_validation_errors():
     assert not result.valid
 
 
+def test_cross_package_qualified_typing_round_trips():
+    # Regression: export must emit a re-resolvable type name. A usage typed by a
+    # definition in ANOTHER package must export the qualified name (A::Engine),
+    # not the bare effective name, or re-import loses the typing.
+    src = "package A { part def Engine; } package B { part e : A::Engine; }"
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert (
+        "PartUsage",
+        "Root::B::e",
+        "Root::A::Engine",
+    ) in result.source_form
+
+
+def test_nested_cross_package_qualified_typing_round_trips():
+    src = (
+        "package Outer { package Inner { part def Engine; } } "
+        "package Uses { part e : Outer::Inner::Engine; }"
+    )
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+
+
+def test_empty_semicolon_package_round_trips():
+    result = round_trip("package P;")
+    assert result.preserved
+    assert result.valid
+    assert ("Package", "Root::P") in result.source_form
+
+
 def test_nested_package_round_trips():
     src = "package Outer { package Inner { part def Engine; part e : Engine; } }"
     result = round_trip(src)

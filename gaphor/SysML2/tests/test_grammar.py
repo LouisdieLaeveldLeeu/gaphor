@@ -67,6 +67,13 @@ def test_parses_package_with_members():
     )
 
 
+def test_parses_empty_package_semicolon_form():
+    pkg = parse("package P;")
+    assert pkg == ast.Package(
+        members=(ast.PackageDefinition(name="P", members=()),)
+    )
+
+
 def test_parses_nested_packages():
     pkg = parse("package Outer { package Inner { part def Engine; } }")
     (outer,) = pkg.members

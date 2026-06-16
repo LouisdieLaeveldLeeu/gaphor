@@ -42,6 +42,10 @@ class _ASTBuilder(Transformer):
         members = items[1]  # package_body -> tuple
         return ast.PackageDefinition(name=name, members=members)
 
+    def empty_package_definition(self, items):
+        (name,) = items
+        return ast.PackageDefinition(name=name, members=())
+
     def member(self, items):
         return items[0]
 

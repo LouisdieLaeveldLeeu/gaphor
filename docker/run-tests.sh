@@ -36,9 +36,18 @@ echo "Running pytest headless (xvfb): ${PYTEST_ARGS[*]}"
 # pytest args are passed as positional parameters ("$@") into the inner shell,
 # not interpolated into the command string, so quoted args (e.g. -k "a or b")
 # survive intact.
+# Compile the shipped GSettings schema into a dir on GSETTINGS_SCHEMA_DIR before
+# running, so tests that touch Gaphor settings find org.gaphor.Gaphor (the schema
+# source is in the bind-mounted repo, not baked into the image).
 docker run --rm --init \
     --volume "$REPO_ROOT:/workspace:Z" \
     --workdir /workspace \
+    --env GSETTINGS_SCHEMA_DIR=/tmp/glib-schemas \
     "$IMAGE" \
-    bash -lc 'poetry install --with dev >/dev/null && xvfb-run -a poetry run pytest "$@"' \
-    _ "${PYTEST_ARGS[@]}"
+    bash -lc '
+        poetry install --with dev >/dev/null
+        mkdir -p /tmp/glib-schemas
+        cp gaphor/ui/installschemas/org.gaphor.Gaphor.gschema.xml /tmp/glib-schemas/
+        glib-compile-schemas /tmp/glib-schemas
+        xvfb-run -a poetry run pytest "$@"
+    ' _ "${PYTEST_ARGS[@]}"

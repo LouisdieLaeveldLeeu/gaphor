@@ -33,9 +33,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libgirepository-2.0-dev gobject-introspection \
         libcairo2-dev pkg-config \
         graphviz \
+        librsvg2-common \
+        libglib2.0-bin \
         xvfb \
         git curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+# librsvg2-common provides the GDK-Pixbuf SVG loader (icons are .svg, so without
+# it gdk-pixbuf cannot load them -- e.g. test_diagrampage.test_placement_cursor).
+# libglib2.0-bin provides glib-compile-schemas for the GSettings schema below.
 
 # Pin Poetry via pipx (decoupled from the project venv). virtualenvs.in-project
 # keeps the resolved environment next to the checkout for transparency.

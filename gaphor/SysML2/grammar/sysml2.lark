@@ -24,8 +24,9 @@ part_definition: "part" "def" NAME ";"
 // `part <name> [ ":" <type> ] ;`
 part_usage: "part" NAME (":" type_ref)? ";"
 
-// `package <name> { <members> }` -- packages nest (a member may be a package).
-package_definition: "package" NAME "{" package_body "}"
+// `package <name> { <members> }` (nestable) or `package <name> ;` (empty).
+package_definition: "package" NAME "{" package_body "}"  -> package_definition
+                  | "package" NAME ";"                    -> empty_package_definition
 
 type_ref: qualified_name
 
