@@ -1,0 +1,15 @@
+# Keep the Docker build context small and stable. The Dockerfile only needs
+# pyproject.toml + poetry.lock at build time; full source is bind-mounted at run
+# time (docker/run-tests.sh, docker/run-gui.sh).
+.git
+.venv
+**/__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+htmlcov
+*.flatpak
+build
+dist
+docs/_build

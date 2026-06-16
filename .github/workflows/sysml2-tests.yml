@@ -1,0 +1,62 @@
+# SysML v2 test workflow.
+#
+# Runs pytest inside the SAME Docker image developers use locally
+# (docker/Dockerfile, Ubuntu 25.10 with libadwaita >= 1.8), so "verified" means
+# the same thing in CI and on a workstation. The development host is Ubuntu
+# 24.04 (libadwaita 1.5) and cannot run these tests directly; the image is the
+# reproducible environment of record. See docs/sysml-v2/MAPPING_DECISIONS.md
+# ("Test Environment").
+name: SysML v2 Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+      - agent/sysml-v2
+    paths-ignore:
+      - '*.md'
+  pull_request:
+    paths-ignore:
+      - '*.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sysml2-tests:
+    name: 🧩 SysML v2 (Docker, libadwaita >= 1.8)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Build the SysML v2 test image
+        run: docker build -t gaphor-sysml2-test -f docker/Dockerfile .
+
+      - name: Run SysML v2 tests (headless)
+        run: |
+          docker run --rm \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace \
+            gaphor-sysml2-test \
+            bash -lc "poetry install --with dev && xvfb-run -a poetry run pytest gaphor/SysML2 -q"
+
+      - name: Smoke-check the broader suite collects
+        run: |
+          docker run --rm \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace \
+            gaphor-sysml2-test \
+            bash -lc "poetry install --with dev && xvfb-run -a poetry run pytest --collect-only -q >/dev/null"
