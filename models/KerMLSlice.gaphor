@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gaphor xmlns="https://gaphor.org/model" xmlns:UML="https://gaphor.org/modelinglanguage/UML" version="4" gaphor-version="3.1.0">
+<model>
+<UML:Package id="6ef27490-edf3-43b6-836c-efebf0a6f27a">
+<name><val>KerMLSlice</val></name>
+</UML:Package>
+<UML:Class id="f32e55e0-0400-476f-b164-16706b4868ec">
+<name><val>Element</val></name>
+<ownedAttribute><reflist>
+<ref refid="6c6f346a-137e-4678-9479-70e217cc50f0"/>
+<ref refid="eb5ec036-cb65-4a82-a223-51bb856768b7"/>
+<ref refid="a3926eba-1ece-4a54-967d-5c2d8c255c2a"/>
+</reflist></ownedAttribute>
+<generalization><reflist><ref refid="660c2df1-de1f-4338-acf2-acdeda8eedda"/></reflist></generalization>
+<owningPackage><ref refid="6ef27490-edf3-43b6-836c-efebf0a6f27a"/></owningPackage>
+<package><ref refid="6ef27490-edf3-43b6-836c-efebf0a6f27a"/></package>
+</UML:Class>
+<UML:Package id="1fc1efdf-61a7-4b3c-b123-d5e370fe1579">
+<name><val>Core</val></name>
+</UML:Package>
+<UML:Class id="9e7cc611-b958-4a25-a632-361054e1f3c0">
+<name><val>Base</val></name>
+<owningPackage><ref refid="1fc1efdf-61a7-4b3c-b123-d5e370fe1579"/></owningPackage>
+<package><ref refid="1fc1efdf-61a7-4b3c-b123-d5e370fe1579"/></package>
+</UML:Class>
+<UML:Generalization id="660c2df1-de1f-4338-acf2-acdeda8eedda">
+<general><ref refid="9e7cc611-b958-4a25-a632-361054e1f3c0"/></general>
+<specific><ref refid="f32e55e0-0400-476f-b164-16706b4868ec"/></specific>
+</UML:Generalization>
+<UML:Property id="6c6f346a-137e-4678-9479-70e217cc50f0">
+<name><val>declaredName</val></name>
+<structuredClassifier><ref refid="f32e55e0-0400-476f-b164-16706b4868ec"/></structuredClassifier>
+<typeValue><val>str</val></typeValue>
+</UML:Property>
+<UML:Property id="eb5ec036-cb65-4a82-a223-51bb856768b7">
+<name><val>isLibraryElement</val></name>
+<structuredClassifier><ref refid="f32e55e0-0400-476f-b164-16706b4868ec"/></structuredClassifier>
+<typeValue><val>bool</val></typeValue>
+</UML:Property>
+<UML:Property id="a3926eba-1ece-4a54-967d-5c2d8c255c2a">
+<aggregation><val>composite</val></aggregation>
+<association><ref refid="3cf1cb0c-c2e1-4d6a-b080-86f395d74fb1"/></association>
+<name><val>ownedElement</val></name>
+<structuredClassifier><ref refid="f32e55e0-0400-476f-b164-16706b4868ec"/></structuredClassifier>
+<type><ref refid="f32e55e0-0400-476f-b164-16706b4868ec"/></type>
+</UML:Property>
+<UML:Property id="96622410-0727-4450-b96d-18e9000ac8d3">
+<name><val>ownedElement_of</val></name>
+<type><ref refid="f32e55e0-0400-476f-b164-16706b4868ec"/></type>
+<owningAssociation><ref refid="3cf1cb0c-c2e1-4d6a-b080-86f395d74fb1"/></owningAssociation>
+</UML:Property>
+<UML:Association id="3cf1cb0c-c2e1-4d6a-b080-86f395d74fb1">
+<memberEnd><reflist><ref refid="a3926eba-1ece-4a54-967d-5c2d8c255c2a"/><ref refid="96622410-0727-4450-b96d-18e9000ac8d3"/></reflist></memberEnd>
+<owningPackage><ref refid="6ef27490-edf3-43b6-836c-efebf0a6f27a"/></owningPackage>
+<package><ref refid="6ef27490-edf3-43b6-836c-efebf0a6f27a"/></package>
+</UML:Association>
+</model>
+</gaphor>

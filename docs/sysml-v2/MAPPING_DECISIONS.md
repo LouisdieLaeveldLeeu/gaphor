@@ -57,6 +57,16 @@ Use a two-step generator strategy:
 
 Do not hand-author the KerML or SysML metamodel as production code unless M1a proves the generation path unviable and a new human-approved plan replaces this decision.
 
+### M1a Outcome (verified 2026-06-16): generator path is viable
+
+The two-step path was proven end to end on one semantics-free class:
+
+- `gaphor/SysML2/codegen/xmi_adapter.py` parses the normative `KerML.xmi` and emits a coder-ready `.gaphor` slice (`models/KerMLSlice.gaphor`) for KerML `Element` with two primitive attributes (`declaredName`, `isLibraryElement`) and one self-reference (`ownedElement`), generalized to Gaphor `Base` via the Core supermodel.
+- Gaphor's own `gaphor.codegen.coder` generated `gaphor/SysML2/kerml_slice.py`: `class Element(_Base)` with `_attribute` properties and an `association`. No class body was hand-authored. Regenerable via `poe sysml2-slice-model` then `poe sysml2-slice`.
+- `gaphor/SysML2/tests/test_m1a_generated_persist.py` confirms real persistence (not just import): the generated class is a `Base` subclass; the generated string attribute, bool attribute, and reference each persist and reload through `.gaphor` via `ElementFactory` + `storage`.
+
+Note recorded for M1b: Gaphor's `attribute.load()` does not coerce a persisted value back to the declared Python type, so a generated `bool` reloads as the string `"True"`. This is shared framework behaviour (UML/SysML attributes behave the same), not a generator defect. M1b should decide whether KerML boolean attributes need typed accessors or validation-time coercion.
+
 ## Grammar Tool
 
 Decision: use Lark for the first SysML v2 textual grammar.

@@ -11,8 +11,11 @@ Status vocabulary:
 
 Do not advance any cell from `no` without a passing focused test. Do not use `supported` until the construct is complete end to end for the claimed surface.
 
+The `_GeneratorSpike Element` row below is **not** a SysML2/KerML semantic construct. It is the M1a feasibility-spike artifact: a semantics-free class generated from the normative MOF XMI through Gaphor's coder, used only to prove the generator + persistence path. It carries no KerML semantics and must not be read as KerML `Element` support.
+
 | Construct | Parse | Import | Create-API | Persist | Validate | Export | Round-trip | Diagram | UI-edit | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| _GeneratorSpike Element (M1a) | no | no | yes | yes | no | no | no | no | no | internal-only |
 | KerML Element | no | no | no | no | no | no | no | no | no | not-started |
 | KerML Namespace | no | no | no | no | no | no | no | no | no | not-started |
 | KerML Membership | no | no | no | no | no | no | no | no | no | not-started |
