@@ -37,6 +37,11 @@ class _ASTBuilder(Transformer):
         type_name = items[1] if len(items) > 1 else None
         return ast.PartUsage(name=name, type_name=type_name)
 
+    def package_definition(self, items):
+        name = items[0]
+        members = items[1]  # package_body -> tuple
+        return ast.PackageDefinition(name=name, members=members)
+
     def member(self, items):
         return items[0]
 

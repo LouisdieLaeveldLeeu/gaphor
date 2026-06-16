@@ -96,6 +96,10 @@ Scope honesty: this is `Create-API`+`Persist` plus the five behaviours. There is
 
 Support matrix: PartDefinition and PartUsage advance to `alpha` with Parse/Import/Create-API/Persist/Validate/Export/Round-trip all `yes`; Diagram and UI-edit stay `no`. They are `alpha`, not `supported`, because resolution is minimal and the diagram/UI surface is unimplemented. The required deliverable is the CLI/Python round-trip (both work); diagram projection was deferred (optional stretch) and not built.
 
+### Post-M2 Construct: Package / nested namespace (verified 2026-06-16)
+
+The second vertical-tracer construct, chosen to strengthen scoping, qualified names, and round-trip without adding UI surface. `Package` is a KerML class (a `Namespace` subclass), added to the kernel seed (kernel now 17 classes); `package X { ... }` maps onto it and nests members and sub-packages through the existing `OwningMembership` containment spine -- no new ownership machinery. The grammar gained a recursive `package_definition`; the mapper builds the ownership tree in a first phase (so all names exist) then resolves typing in a second; export recurses with indentation; the canonical form recurses through packages, with each entry's qualified name (e.g. `Root::Outer::Inner::Engine`) encoding the full nesting path. Resolution gained a member-relative `resolve_in_namespace` for qualified names from the implicit root, distinct from the root-rooted `resolve_qualified_name`. Package advances to `alpha` (Parse..Round-trip yes; Diagram/UI no) and is the third coverage-metric row. Verified: nested packages persist/reload, qualified names span nesting through `.gaphor`, and the nested model round-trips canonically.
+
 ### Deferred: versioned spec-ingestion pipeline (post-M2)
 
 The adapter already produces a normalized in-memory IR (`Kernel`: classes, properties, target kind, derived/stored, composite, enum literals) and applies a reviewed mapping policy (`COMPOSITE_REFS`; derived-refs-computed-in-behaviour-layer; fail-fast on unknown non-derived targets). A natural extension is a full versioned spec-ingestion pipeline for future OMG XMI releases:

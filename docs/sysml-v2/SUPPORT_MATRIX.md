@@ -27,6 +27,7 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | KerML Specialization | no | no | yes | yes | no | no | no | no | no | internal-only |
 | KerML Import | no | no | yes | yes | no | no | no | no | no | internal-only |
 | KerML Documentation | no | no | yes | yes | no | no | no | no | no | internal-only |
+| KerML Package | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML ActionUsage | no | no | no | no | no | no | no | no | no | not-started |
@@ -47,7 +48,9 @@ references, never ids or raw text). M2 establishes the harness
 | --- | --- | --- |
 | SysML PartDefinition | yes | `test_roundtrip.py::test_tracer_round_trip_preserves_canonical_form` |
 | SysML PartUsage (typed + untyped) | yes | `test_roundtrip.py` |
+| KerML Package (nested) | yes | `test_roundtrip.py::test_nested_package_round_trips` |
 
-Coverage: 2 constructs round-trip-covered. `alpha`, not `supported`: resolution
-is same-namespace + simple qualified-name only, and Diagram/UI-edit are not yet
+Coverage: 3 constructs round-trip-covered. `alpha`, not `supported`: resolution
+is same-namespace + simple qualified-name only (Package adds nested-namespace
+scoping and qualified names that span nesting), and Diagram/UI-edit are not yet
 implemented (diagram projection is the optional deferred stretch).

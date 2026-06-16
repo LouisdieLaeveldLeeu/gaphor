@@ -120,6 +120,10 @@ class OwningMembership(Membership):
     pass
 
 
+class Package(Namespace):
+    pass
+
+
 class Structure(Class):
     pass
 

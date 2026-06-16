@@ -1,10 +1,10 @@
-"""Export semantic elements back to SysML v2 text (M2 sub-step 5).
+"""Export semantic elements back to SysML v2 text.
 
-Walks a root namespace's members and re-emits valid SysML text for the tracer
-slice: a PartDefinition stays a definition, a PartUsage stays a usage, and a
-usage's typing (read back from its FeatureTyping) is preserved. The output is
-re-parseable by `grammar.parser`, which the round-trip harness (sub-step 6)
-relies on.
+Walks a namespace's members and re-emits valid SysML text: a PartDefinition
+stays a definition, a PartUsage stays a usage (with its typing read back from
+its FeatureTyping), and a Package re-emits as `package Name { ... }` with its
+members exported recursively and indented. The output is re-parseable by
+`grammar.parser`, which the round-trip harness relies on.
 """
 
 from __future__ import annotations
@@ -12,22 +12,33 @@ from __future__ import annotations
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 
+_INDENT = "    "
+
 
 def export_namespace(root: kerml.Namespace) -> str:
-    """Render the members of `root` as SysML v2 text, one statement per line."""
-    lines = [_export_member(member) for member in kk.members(root)]
-    return "".join(f"{line}\n" for line in lines if line is not None)
+    """Render the members of `root` as SysML v2 text."""
+    return "".join(_export_member(member, 0) for member in kk.members(root))
 
 
-def _export_member(element: kerml.Element) -> str | None:
+def _export_member(element: kerml.Element, depth: int) -> str:
+    pad = _INDENT * depth
+    # Package check first: PartDefinition/PartUsage are also Namespaces, but a
+    # Package is the only member rendered as a nesting container.
+    if isinstance(element, kerml.Package):
+        inner = "".join(
+            _export_member(m, depth + 1) for m in kk.members(element)
+        )
+        if inner:
+            return f"{pad}package {element.declaredName} {{\n{inner}{pad}}}\n"
+        return f"{pad}package {element.declaredName} {{ }}\n"
     if isinstance(element, sysml2.PartDefinition):
-        return f"part def {element.declaredName};"
+        return f"{pad}part def {element.declaredName};\n"
     if isinstance(element, sysml2.PartUsage):
         type_name = _usage_type_name(element)
         if type_name is not None:
-            return f"part {element.declaredName} : {type_name};"
-        return f"part {element.declaredName};"
-    return None
+            return f"{pad}part {element.declaredName} : {type_name};\n"
+        return f"{pad}part {element.declaredName};\n"
+    return ""
 
 
 def _usage_type_name(usage: sysml2.PartUsage) -> str | None:

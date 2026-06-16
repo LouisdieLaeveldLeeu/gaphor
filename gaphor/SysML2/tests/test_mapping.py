@@ -49,6 +49,44 @@ def test_qualified_names_reflect_ownership(element_factory):
     assert kk.qualified_name(engine) == "Vehicles::Engine"
 
 
+def test_package_becomes_a_namespace_owning_its_members(element_factory):
+    result = map_package(
+        parse("package Vehicles { part def Engine; }"), element_factory
+    )
+    vehicles = result.elements_by_name["Vehicles"]
+    assert isinstance(vehicles, kerml.Package)
+    assert isinstance(vehicles, kerml.Namespace)
+    engine = kk.owned_member_named(vehicles, "Engine")
+    assert engine is not None and isinstance(engine, sysml2.PartDefinition)
+
+
+def test_nested_package_ownership_and_qualified_names(element_factory):
+    result = map_package(
+        parse("package Outer { package Inner { part def Engine; } }"),
+        element_factory,
+    )
+    result.root.declaredName = "Root"
+    outer = result.elements_by_name["Outer"]
+    inner = kk.owned_member_named(outer, "Inner")
+    engine = kk.owned_member_named(inner, "Engine")
+    assert engine is not None
+    # Qualified name spans the full nesting chain.
+    assert kk.qualified_name(engine) == "Root::Outer::Inner::Engine"
+
+
+def test_usage_typed_within_its_package(element_factory):
+    result = map_package(
+        parse("package P { part def Engine; part e : Engine; }"), element_factory
+    )
+    p = result.elements_by_name["P"]
+    engine = kk.owned_member_named(p, "Engine")
+    usage = kk.owned_member_named(p, "e")
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 1
+    assert usage in list(typings[0].typedFeature)
+    assert engine in list(typings[0].type)
+
+
 def test_unresolved_type_leaves_usage_untyped(element_factory):
     # Forward/undefined reference: no FeatureTyping is created; validation (a
     # later sub-step) is responsible for reporting it.

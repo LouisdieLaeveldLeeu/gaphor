@@ -92,6 +92,25 @@ def test_deleting_definition_does_not_delete_usage_or_typing(element_factory):
     assert element_factory.lookup(typing_id) is not None
 
 
+def test_nested_package_persists_and_reloads(element_factory, saver, loader):
+    src = "package Outer { package Inner { part def Engine; } }"
+    result = map_package(parse(src), element_factory)
+    result.root.declaredName = "Root"
+    outer_id = result.elements_by_name["Outer"].id
+    engine_id = kk.owned_member_named(
+        kk.owned_member_named(result.elements_by_name["Outer"], "Inner"), "Engine"
+    ).id
+
+    loader(saver())
+
+    outer = element_factory.lookup(outer_id)
+    engine = element_factory.lookup(engine_id)
+    assert isinstance(outer, kerml.Package)
+    assert engine is not None
+    # Nesting + qualified name survive the round-trip through .gaphor.
+    assert kk.qualified_name(engine) == "Root::Outer::Inner::Engine"
+
+
 def test_qualified_names_survive_reload(element_factory, saver, loader):
     result = map_package(parse(TRACER), element_factory)
     result.root.declaredName = "Vehicles"

@@ -1,10 +1,10 @@
-// SysML v2 textual grammar -- M2 vertical-tracer slice.
+// SysML v2 textual grammar -- vertical-tracer slice.
 //
-// Covers exactly the two tracer constructs, ported from the SysML v2 / KerML
-// textual concrete syntax:
+// Covers, ported from the SysML v2 / KerML textual concrete syntax:
 //
 //   part def Engine;
 //   part vehicleEngine : Engine;
+//   package Vehicles { part def Engine; part e : Engine; package Inner { ... } }
 //
 // This is intentionally minimal. The grammar grows one construct at a time as
 // the support matrix advances; it is layered (SysML extends KerML notation) and
@@ -16,12 +16,16 @@ package_body: member*
 
 member: part_definition
       | part_usage
+      | package_definition
 
 // `part def <name> ;`
 part_definition: "part" "def" NAME ";"
 
 // `part <name> [ ":" <type> ] ;`
 part_usage: "part" NAME (":" type_ref)? ";"
+
+// `package <name> { <members> }` -- packages nest (a member may be a package).
+package_definition: "package" NAME "{" package_body "}"
 
 type_ref: qualified_name
 

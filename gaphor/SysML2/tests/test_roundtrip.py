@@ -74,3 +74,19 @@ def test_round_trip_surfaces_validation_errors():
     # reports it as invalid -- preservation and validity are distinct.
     result = round_trip("part def Engine;\npart def Engine;")
     assert not result.valid
+
+
+def test_nested_package_round_trips():
+    src = "package Outer { package Inner { part def Engine; part e : Engine; } }"
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    # Canonical form captures the nesting via qualified names.
+    assert ("Package", "Root::Outer") in result.source_form
+    assert ("Package", "Root::Outer::Inner") in result.source_form
+    assert ("PartDefinition", "Root::Outer::Inner::Engine") in result.source_form
+    assert (
+        "PartUsage",
+        "Root::Outer::Inner::e",
+        "Root::Outer::Inner::Engine",
+    ) in result.source_form

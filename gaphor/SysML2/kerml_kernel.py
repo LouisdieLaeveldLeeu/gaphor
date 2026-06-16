@@ -139,8 +139,26 @@ def qualified_name(element: Element) -> str:
     return QUALIFIED_NAME_SEPARATOR.join(reversed(parts))
 
 
+def resolve_in_namespace(namespace: Namespace, qualified: str) -> Element | None:
+    """Resolve a `A::B::C` qualified name relative to a containing namespace.
+
+    The first segment is a *member* of `namespace` (not its own name); each
+    further segment is a member of the previously resolved namespace. Used for
+    resolution from an implicit/unnamed root that owns the top-level members.
+    """
+    current: Element | None = namespace
+    for segment in qualified.split(QUALIFIED_NAME_SEPARATOR):
+        if not isinstance(current, Namespace):
+            return None
+        current = owned_member_named(current, segment)
+        if current is None:
+            return None
+    return current
+
+
 def resolve_qualified_name(root: Namespace, qualified: str) -> Element | None:
-    """Resolve a `A::B::C` qualified name starting from `root`."""
+    """Resolve a `A::B::C` qualified name where the FIRST segment is `root`'s own
+    name (root-rooted), then each further segment is a member."""
     segments = qualified.split(QUALIFIED_NAME_SEPARATOR)
     if not segments or effective_name(root) != segments[0]:
         return None

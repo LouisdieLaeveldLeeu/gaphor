@@ -35,19 +35,31 @@ from gaphor.SysML2.validation import Diagnostic, has_errors, validate
 
 
 def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
-    """A structural fingerprint of `root`, independent of ids/order/formatting."""
+    """A structural fingerprint of `root`, independent of ids/order/formatting.
+
+    Recurses through packages; each entry's qualified name encodes the full
+    nesting path, so nesting is captured without storing tree shape separately.
+    """
     entries: set[tuple[str, ...]] = set()
-    for member in kk.members(root):
-        if isinstance(member, sysml2.PartDefinition):
-            entries.add(("PartDefinition", kk.qualified_name(member)))
-        elif isinstance(member, sysml2.PartUsage):
-            entries.add(
-                (
-                    "PartUsage",
-                    kk.qualified_name(member),
-                    _usage_type_qualified_name(member) or "",
+
+    def visit(namespace: kerml.Namespace) -> None:
+        for member in kk.members(namespace):
+            # Package check first (Part* are also Namespaces).
+            if isinstance(member, kerml.Package):
+                entries.add(("Package", kk.qualified_name(member)))
+                visit(member)
+            elif isinstance(member, sysml2.PartDefinition):
+                entries.add(("PartDefinition", kk.qualified_name(member)))
+            elif isinstance(member, sysml2.PartUsage):
+                entries.add(
+                    (
+                        "PartUsage",
+                        kk.qualified_name(member),
+                        _usage_type_qualified_name(member) or "",
+                    )
                 )
-            )
+
+    visit(root)
     return frozenset(entries)
 
 

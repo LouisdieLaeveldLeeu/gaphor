@@ -432,6 +432,9 @@ KERNEL_SEED = (
     # FeatureTyping carries the stored type/feature relation (typedFeature, type)
     # the M2 tracer needs to type a PartUsage by a PartDefinition.
     "FeatureTyping",
+    # Package is a Namespace; the `package X { ... }` construct maps onto it and
+    # nests members/sub-packages through the existing OwningMembership spine.
+    "Package",
 )
 
 

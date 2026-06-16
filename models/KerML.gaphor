@@ -209,6 +209,17 @@
 <owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
 <package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
 </UML:Class>
+<UML:Class id="b99e5efd-b9d6-5102-9d84-0dc93791b148">
+<name><val>Package</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="808a58a9-f4f9-52b6-b51a-d8dfaa0f9c46"/>
+</reflist></generalization>
+<owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
+<package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
+</UML:Class>
 <UML:Class id="5c95ffa6-87d9-50b9-a00c-ad8747e39649">
 <name><val>Relationship</val></name>
 <ownedAttribute><reflist>
@@ -306,6 +317,10 @@
 <UML:Generalization id="721bb355-e5d0-5130-b6bf-bc7cdd489d20">
 <general><ref refid="16e2ce97-9c8f-53f4-83f9-0247d060a031"/></general>
 <specific><ref refid="b872179f-a3d0-527d-b1f1-5b33c13a5a88"/></specific>
+</UML:Generalization>
+<UML:Generalization id="808a58a9-f4f9-52b6-b51a-d8dfaa0f9c46">
+<general><ref refid="b7e4ddbd-8de5-56ee-92cb-933a9c2749a2"/></general>
+<specific><ref refid="b99e5efd-b9d6-5102-9d84-0dc93791b148"/></specific>
 </UML:Generalization>
 <UML:Generalization id="b84a2dba-5115-52f4-9a8e-680fd321bf96">
 <general><ref refid="af9795d4-f050-5540-8e93-92482b3aa04b"/></general>

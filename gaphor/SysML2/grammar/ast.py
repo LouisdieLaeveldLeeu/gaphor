@@ -26,7 +26,21 @@ class PartUsage:
 
 
 @dataclass(frozen=True)
-class Package:
-    """The top-level container of parsed members."""
+class PackageDefinition:
+    """`package <name> { <members> }` -- a named, nestable container."""
 
-    members: tuple[PartDefinition | PartUsage, ...] = field(default_factory=tuple)
+    name: str
+    members: tuple["Member", ...] = field(default_factory=tuple)
+
+
+# A member is any construct that can appear in a (package) body.
+Member = "PartDefinition | PartUsage | PackageDefinition"
+
+
+@dataclass(frozen=True)
+class Package:
+    """The top-level container of parsed members (the implicit root namespace)."""
+
+    members: tuple["PartDefinition | PartUsage | PackageDefinition", ...] = field(
+        default_factory=tuple
+    )

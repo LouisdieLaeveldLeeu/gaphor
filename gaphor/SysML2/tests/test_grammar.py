@@ -49,6 +49,33 @@ def test_ignores_comments_and_whitespace():
     assert pkg.members == (ast.PartDefinition(name="Engine"),)
 
 
+def test_parses_empty_package():
+    pkg = parse("package Vehicles { }")
+    assert pkg == ast.Package(
+        members=(ast.PackageDefinition(name="Vehicles", members=()),)
+    )
+
+
+def test_parses_package_with_members():
+    pkg = parse("package Vehicles { part def Engine; part e : Engine; }")
+    (vehicles,) = pkg.members
+    assert isinstance(vehicles, ast.PackageDefinition)
+    assert vehicles.name == "Vehicles"
+    assert vehicles.members == (
+        ast.PartDefinition(name="Engine"),
+        ast.PartUsage(name="e", type_name=("Engine",)),
+    )
+
+
+def test_parses_nested_packages():
+    pkg = parse("package Outer { package Inner { part def Engine; } }")
+    (outer,) = pkg.members
+    (inner,) = outer.members
+    assert isinstance(inner, ast.PackageDefinition)
+    assert inner.name == "Inner"
+    assert inner.members == (ast.PartDefinition(name="Engine"),)
+
+
 @pytest.mark.parametrize(
     "bad",
     [
@@ -56,6 +83,8 @@ def test_ignores_comments_and_whitespace():
         "part def ;",  # missing name
         "definition Engine;",  # unknown keyword
         "part def 1Engine;",  # invalid identifier
+        "package Vehicles {",  # unclosed package
+        "package { }",  # missing package name
     ],
 )
 def test_invalid_text_raises_syntax_error(bad):
