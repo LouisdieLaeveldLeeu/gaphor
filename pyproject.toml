@@ -46,6 +46,7 @@ dependencies = [
     "defusedxml>=0.7.1",
     "pyobjc-framework-cocoa (>=9.0.1) ; sys_platform == 'darwin'",
     "dulwich>=1.2.6",
+    "lark>=1.1,<2",
 ]
 
 [project.scripts]

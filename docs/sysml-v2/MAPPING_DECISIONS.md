@@ -68,6 +68,8 @@ Tradeoff:
 
 The grammar is one layered grammar: SysML textual notation extends KerML textual notation. Port from the BNF, not from intuition. Pilot/Xtext behavior may be used to understand ambiguities, not as the source of truth.
 
+Lark is declared as a core dependency in `pyproject.toml` (`lark>=1.1,<2`, locked to 1.3.1 on 2026-06-16). It is a core dependency rather than an optional extra because SysML2 is registered as a first-class modeling language and is auto-loaded like UML/SysML/C4Model; a base install without it would fail once the parser layer imports `lark`. Being pure Python, Lark is ABI-safe across the host (3.12) and Flatpak (3.13) test environments. No code imports it yet — it is staged ahead of the M2 grammar layer.
+
 ## Spec Version Pin
 
 Pin to:
