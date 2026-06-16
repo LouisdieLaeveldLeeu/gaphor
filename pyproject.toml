@@ -221,6 +221,17 @@ sysml2-slice.script = """gaphor.codegen.coder:main(
     outfile='gaphor/SysML2/kerml_slice.py',
     supermodelfiles=[('Core', 'models/Core.gaphor')]
     )"""
+# SysML v2 M1b minimal KerML kernel. Adapt the kernel closure from the XMI,
+# then run Gaphor's coder. Run `poe sysml2-kernel-model` then `poe sysml2-kernel`.
+sysml2-kernel-model.script = """gaphor.SysML2.codegen.xmi_adapter:main_kernel(
+    xmi_path='docs/sysml-v2/omg/20250201/KerML.xmi',
+    out_path='models/KerML.gaphor'
+    )"""
+sysml2-kernel.script = """gaphor.codegen.coder:main(
+    modelfile='models/KerML.gaphor',
+    outfile='gaphor/SysML2/kerml.py',
+    supermodelfiles=[('Core', 'models/Core.gaphor')]
+    )"""
 lint = "pre-commit run --all-files"
 docs = { "cwd" = "docs", "shell" = "sphinx-build -W -b html . _build/html" }
 docs-gettext-pot = { "cwd" = "docs", "shell" = "sphinx-build -b gettext . locale" }

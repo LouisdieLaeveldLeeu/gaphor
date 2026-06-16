@@ -67,6 +67,17 @@ The two-step path was proven end to end on one semantics-free class:
 
 Note recorded for M1b: Gaphor's `attribute.load()` does not coerce a persisted value back to the declared Python type, so a generated `bool` reloads as the string `"True"`. This is shared framework behaviour (UML/SysML attributes behave the same), not a generator defect. M1b should decide whether KerML boolean attributes need typed accessors or validation-time coercion.
 
+### M1b Outcome (verified 2026-06-16): minimal KerML kernel via the proven path
+
+The kernel was built through the M1a generator path, scaled to a connected multi-class closure:
+
+- `extract_kernel()` computes the transitive closure of the kickoff's seed classes (Element, Relationship, Namespace, Membership, OwningMembership, Type, Feature, Specialization, Import, Documentation) over generalizations and class-typed references: 29 classes. `emit_gaphor_kernel_model()` renders them as one connected `.gaphor` model (`models/KerML.gaphor`) with generalization chains (root classes generalize Gaphor `Base` via the Core supermodel). The coder generated `gaphor/SysML2/kerml.py`. Regenerable via `poe sysml2-kernel-model` then `poe sysml2-kernel`.
+- Three-way property classification: primitive href -> `typeValue` attribute; `uml:Class` -> reference (extends the closure); `uml:Enumeration` -> a value-domain enumeration (collected, emitted as `UML:Enumeration` + enum-typed property, NOT added to the class closure). So `Feature.direction` (FeatureDirectionKind) and `Membership`/`Import.visibility` (VisibilityKind) generate as `enum.StrEnum` + `_enumeration(...)` rather than being silently dropped. A property whose type is none of the three categories raises (fail-fast), never a silent drop (invariant 8).
+- Behaviour layer `gaphor/SysML2/kerml_kernel.py` adds KerML's *derived* features over the generated structural classes, ported from the normative XMI (not intuition): `owner` = `owningRelationship.owningRelatedElement`; effective `name` = `declaredName`; `qualified_name` walks the owning-namespace chain joined by `::`. The normative XMI does not declare association opposite-end pairings, so owner/member navigation is established bidirectionally in this layer (`add_owned_member`) rather than inferred — the structural model stays faithful to the XMI.
+- Tests (`test_m1b_kernel.py`, `test_kernel_adapter.py`): the five required behaviours (membership, type/feature relation, import resolution, delete-owner cascade via Gaphor composite associations, rename-updates-qualifiedName) each through `.gaphor` save/reload; a parametrized create->save->reload over all 29 classes; enum-specific tests; determinism and freshness of `models/KerML.gaphor` and `gaphor/SysML2/kerml.py`.
+
+Scope honesty: this is `Create-API`+`Persist` plus the five behaviours. There is no grammar/parse, text import, scoped validation, export, or round-trip yet; those are M2. The support matrix marks the kernel classes `internal-only`, never `supported`.
+
 ## Grammar Tool
 
 Decision: use Lark for the first SysML v2 textual grammar.

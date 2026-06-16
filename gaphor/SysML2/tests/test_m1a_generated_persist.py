@@ -13,55 +13,53 @@ If these fail, the generator path is unviable and M1b must not be built on it.
 
 from __future__ import annotations
 
-from io import StringIO
-
 import pytest
 
-from gaphor.core.modeling import ElementFactory
+from gaphor.abc import ModelingLanguage
 from gaphor.core.modeling.base import Base
 from gaphor.core.modeling.modelinglanguage import (
     CoreModelingLanguage,
     MockModelingLanguage,
 )
-import gaphor.storage as storage
 from gaphor.SysML2 import kerml_slice
-from gaphor.SysML2.modelinglanguage import SysML2ModelingLanguage
+
+# element_factory / saver / loader come from gaphor/SysML2/tests/conftest.py.
+# The M1a slice and the M1b kernel both define an `Element`; this module pins
+# resolution to the slice so the feasibility artifact is tested unambiguously.
 
 
-@pytest.fixture
-def element_factory():
-    return ElementFactory()
+class SysML2SliceModelingLanguage(ModelingLanguage):
+    @property
+    def name(self):
+        return "SysML2"
+
+    @property
+    def toolbox_definition(self):
+        raise ValueError("none")
+
+    @property
+    def diagram_types(self):
+        return ()
+
+    @property
+    def element_types(self):
+        return ()
+
+    @property
+    def model_browser_model(self):
+        raise ValueError("none")
+
+    def lookup_element(self, name, ns=None):
+        if ns in (None, "SysML2"):
+            return getattr(kerml_slice, name, None)
+        return None
 
 
 @pytest.fixture
 def modeling_language():
-    return MockModelingLanguage(CoreModelingLanguage(), SysML2ModelingLanguage())
-
-
-@pytest.fixture
-def saver(element_factory):
-    def save():
-        f = StringIO()
-        storage.save(f, element_factory)
-        data = f.getvalue()
-        f.close()
-        return data
-
-    return save
-
-
-@pytest.fixture
-def loader(element_factory, modeling_language):
-    def load(data):
-        element_factory.flush()
-        assert not list(element_factory.select())
-        f = StringIO(data)
-        storage.load(
-            f, element_factory=element_factory, modeling_language=modeling_language
-        )
-        f.close()
-
-    return load
+    return MockModelingLanguage(
+        CoreModelingLanguage(), SysML2SliceModelingLanguage()
+    )
 
 
 def test_generated_class_is_a_base_subclass():
