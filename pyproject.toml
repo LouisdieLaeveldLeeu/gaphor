@@ -114,6 +114,9 @@ exec = "gaphor.main:exec_parser"
 export = "gaphor.plugins.diagramexport.exportcli:export_parser"
 html-report = "gaphor.plugins.htmlreport.reportcli:html_report_parser"
 install-schemas = "gaphor.ui.installschemas:install_schemas_parser"
+sysml2-validate = "gaphor.SysML2.cli:validate_parser"
+sysml2-import = "gaphor.SysML2.cli:import_parser"
+sysml2-export = "gaphor.SysML2.cli:export_parser"
 
 [project.entry-points."babel.extractors"]
 "gaphor" = "gaphor.babel:extract_gaphor"
