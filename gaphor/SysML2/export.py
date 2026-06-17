@@ -45,10 +45,12 @@ def _usage_type_name(usage: sysml2.PartUsage, root: kerml.Namespace) -> str | No
     """The type reference to emit for a usage, via its owned FeatureTyping.
 
     The emitted name must re-resolve under the import rules (simple name in the
-    usage's own namespace, else a root-relative qualified name): a bare name when
-    the type is a member of the usage's OWN namespace, otherwise the type's
-    qualified name with the implicit root prefix dropped (e.g. `A::Engine`), so a
-    cross-package reference survives export -> re-import.
+    usage's own namespace, else a name qualified from the export root): a bare
+    name when the type is a member of the usage's OWN namespace, otherwise the
+    path from the export root down to the type. The path is computed relative to
+    `root` by walking the ownership chain -- so it is correct whether or not the
+    root is named (a named root must NOT prefix its own name; an unnamed root
+    must NOT emit a leading `::`).
     """
     for relationship in usage.ownedRelationship:
         if isinstance(relationship, kerml.FeatureTyping):
@@ -59,17 +61,24 @@ def _usage_type_name(usage: sysml2.PartUsage, root: kerml.Namespace) -> str | No
             # Same-namespace: a bare name is sufficient and resolves locally.
             if owning is not None and definition in set(kk.members(owning)):
                 return kk.effective_name(definition)
-            # Otherwise emit the root-relative qualified name: the type's
-            # qualified name with the implicit root segment dropped, since import
-            # resolves a qualified name from the root's members.
-            segments = kk.qualified_name(definition).split(
-                kk.QUALIFIED_NAME_SEPARATOR
-            )
-            if (
-                segments
-                and kk.effective_name(root) is not None
-                and segments[0] == kk.effective_name(root)
-            ):
-                segments = segments[1:]
-            return kk.QUALIFIED_NAME_SEPARATOR.join(segments)
+            return _path_from_root(definition, root)
     return None
+
+
+def _path_from_root(element: kerml.Element, root: kerml.Namespace) -> str:
+    """The `A::B::C` path from `root` (exclusive) down to `element`.
+
+    Walks the owning-namespace chain from `element` up, stopping at `root`, so
+    the result is independent of whether `root` is named.
+    """
+    segments: list[str] = []
+    current: kerml.Element | None = element
+    seen: set[str] = set()
+    while current is not None and current.id != root.id:
+        if current.id in seen:  # defensive against cycles
+            break
+        seen.add(current.id)
+        name = kk.effective_name(current)
+        segments.append(name if name is not None else "")
+        current = kk.owning_namespace(current)
+    return kk.QUALIFIED_NAME_SEPARATOR.join(reversed(segments))

@@ -6,12 +6,16 @@
 # against the live source tree (bind-mounted), headless via xvfb. This is the
 # authoritative local equivalent of CI: same image, same deps from poetry.lock.
 #
-# Usage:
-#   docker/run-tests.sh                         # whole SysML2 test tree
-#   docker/run-tests.sh gaphor/SysML2/tests -q  # pass args through to pytest
+# Target contract (full suite is always intentional, never accidental):
+#   docker/run-tests.sh                    # SysML2 subset (fast default)
+#   docker/run-tests.sh -q                 # SysML2 subset with pytest flags
+#   docker/run-tests.sh gaphor/SysML2 -q   # explicit subset/path with flags
+#   docker/run-tests.sh --full             # whole Gaphor suite
+#   docker/run-tests.sh --full -q          # whole suite with pytest flags
 #
-# Anything passed on the command line is forwarded to pytest; with no args it
-# runs the SysML2 tests.
+# `--full` is a wrapper-only flag (consumed here, not forwarded). When it is
+# absent and no explicit path is given, the SysML2 subset is used -- so a
+# flag-only invocation like `-q` runs the subset, NOT an accidental full suite.
 
 set -euo pipefail
 
@@ -21,9 +25,29 @@ IMAGE="gaphor-sysml2-test"
 echo "Building $IMAGE (Ubuntu 25.10, libadwaita >= 1.8)..."
 docker build -t "$IMAGE" -f "$REPO_ROOT/docker/Dockerfile" "$REPO_ROOT"
 
-PYTEST_ARGS=("$@")
-if [[ ${#PYTEST_ARGS[@]} -eq 0 ]]; then
-    PYTEST_ARGS=(gaphor/SysML2/tests)
+# Parse the wrapper-only --full flag; forward the rest to pytest.
+FULL=0
+FORWARDED=()
+has_path=0
+for arg in "$@"; do
+    if [[ "$arg" == "--full" ]]; then
+        FULL=1
+    else
+        FORWARDED+=("$arg")
+        # A path/node-id is any forwarded arg not starting with '-'.
+        [[ "$arg" != -* ]] && has_path=1
+    fi
+done
+
+# Decide the pytest target: --full -> whole suite; else an explicit path is
+# honoured; else the SysML2 subset (so a flag-only run like `-q` is the subset,
+# never an accidental full suite).
+PYTEST_ARGS=()
+[[ ${#FORWARDED[@]} -gt 0 ]] && PYTEST_ARGS=("${FORWARDED[@]}")
+if [[ "$FULL" -eq 1 ]]; then
+    PYTEST_ARGS+=("gaphor")
+elif [[ "$has_path" -eq 0 ]]; then
+    PYTEST_ARGS+=("gaphor/SysML2/tests")
 fi
 
 echo "Running pytest headless (xvfb): ${PYTEST_ARGS[*]}"

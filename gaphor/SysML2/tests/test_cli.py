@@ -104,6 +104,37 @@ def test_import_then_export_round_trips(tmp_path):
     assert "part vehicleEngine : Engine;" in exported
 
 
+def test_import_then_export_cross_package_round_trips(tmp_path):
+    # Regression: the CLI saves the mapped root UNNAMED, so export must compute
+    # the qualified type path relative to the (unnamed) export root -- emitting
+    # `A::Engine`, not `::A::Engine` (which the grammar rejects). The
+    # same-namespace tracer test above did not exercise this.
+    src = tmp_path / "model.sysml"
+    src.write_text(
+        "package A { part def Engine; } package B { part e : A::Engine; }",
+        encoding="utf-8",
+    )
+    model = tmp_path / "model.gaphor"
+    out = tmp_path / "out.sysml"
+
+    imp = cli.import_parser()
+    imp_args = imp.parse_args([str(src), str(model)])
+    assert imp_args.command(imp_args) == 0
+
+    exp = cli.export_parser()
+    exp_args = exp.parse_args([str(model), "-o", str(out)])
+    assert exp_args.command(exp_args) == 0
+
+    exported = out.read_text(encoding="utf-8")
+    assert "part e : A::Engine;" in exported
+    assert "::A::Engine" not in exported  # no stray leading separator
+
+    # The exported text must re-import cleanly (validates, no parse error).
+    reout = tmp_path / "re.gaphor"
+    re_args = imp.parse_args([str(out), str(reout)])
+    assert re_args.command(re_args) == 0
+
+
 def test_import_refuses_invalid_model(tmp_path, capsys):
     src = tmp_path / "model.sysml"
     src.write_text("part p : Missing;", encoding="utf-8")
