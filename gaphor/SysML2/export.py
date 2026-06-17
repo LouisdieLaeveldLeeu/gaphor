@@ -33,15 +33,24 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         return f"{pad}package {element.declaredName} {{ }}\n"
     if isinstance(element, sysml2.PartDefinition):
         return f"{pad}part def {element.declaredName};\n"
+    if isinstance(element, sysml2.AttributeDefinition):
+        return f"{pad}attribute def {element.declaredName};\n"
     if isinstance(element, sysml2.PartUsage):
-        type_name = _usage_type_name(element, root)
-        if type_name is not None:
-            return f"{pad}part {element.declaredName} : {type_name};\n"
-        return f"{pad}part {element.declaredName};\n"
+        return f"{pad}part {_usage_decl(element, root)};\n"
+    if isinstance(element, sysml2.AttributeUsage):
+        return f"{pad}attribute {_usage_decl(element, root)};\n"
     return ""
 
 
-def _usage_type_name(usage: sysml2.PartUsage, root: kerml.Namespace) -> str | None:
+def _usage_decl(usage: kerml.Feature, root: kerml.Namespace) -> str:
+    """`<name>` or `<name> : <type>` for a usage (Part or Attribute)."""
+    type_name = _usage_type_name(usage, root)
+    if type_name is not None:
+        return f"{usage.declaredName} : {type_name}"
+    return f"{usage.declaredName}"
+
+
+def _usage_type_name(usage: kerml.Feature, root: kerml.Namespace) -> str | None:
     """The type reference to emit for a usage, via its owned FeatureTyping.
 
     The emitted name must re-resolve under the import rules (simple name in the

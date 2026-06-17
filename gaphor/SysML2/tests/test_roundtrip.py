@@ -101,6 +101,34 @@ def test_nested_cross_package_qualified_typing_round_trips():
     assert result.valid
 
 
+def test_attribute_definition_and_usage_round_trip():
+    src = "attribute def Mass;\nattribute m : Mass;"
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert ("AttributeDefinition", "Root::Mass") in result.source_form
+    assert (
+        "AttributeUsage",
+        "Root::m",
+        "Root::Mass",
+    ) in result.source_form
+
+
+def test_attribute_in_package_cross_references_round_trip():
+    src = (
+        "package Units { attribute def Mass; } "
+        "package M { attribute m : Units::Mass; }"
+    )
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert (
+        "AttributeUsage",
+        "Root::M::m",
+        "Root::Units::Mass",
+    ) in result.source_form
+
+
 def test_empty_semicolon_package_round_trips():
     result = round_trip("package P;")
     assert result.preserved

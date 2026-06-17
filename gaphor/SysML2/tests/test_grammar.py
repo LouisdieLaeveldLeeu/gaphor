@@ -67,6 +67,27 @@ def test_parses_package_with_members():
     )
 
 
+def test_parses_attribute_definition():
+    pkg = parse("attribute def Mass;")
+    assert pkg == ast.Package(members=(ast.AttributeDefinition(name="Mass"),))
+
+
+def test_parses_typed_attribute_usage():
+    pkg = parse("attribute m : Mass;")
+    assert pkg == ast.Package(
+        members=(ast.AttributeUsage(name="m", type_name=("Mass",)),)
+    )
+
+
+def test_parses_attribute_and_part_together():
+    pkg = parse("attribute def Mass;\npart def Engine;\nattribute m : Mass;")
+    assert pkg.members == (
+        ast.AttributeDefinition(name="Mass"),
+        ast.PartDefinition(name="Engine"),
+        ast.AttributeUsage(name="m", type_name=("Mass",)),
+    )
+
+
 def test_parses_empty_package_semicolon_form():
     pkg = parse("package P;")
     assert pkg == ast.Package(

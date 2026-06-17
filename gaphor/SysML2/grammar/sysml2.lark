@@ -16,6 +16,8 @@ package_body: member*
 
 member: part_definition
       | part_usage
+      | attribute_definition
+      | attribute_usage
       | package_definition
 
 // `part def <name> ;`
@@ -23,6 +25,12 @@ part_definition: "part" "def" NAME ";"
 
 // `part <name> [ ":" <type> ] ;`
 part_usage: "part" NAME (":" type_ref)? ";"
+
+// `attribute def <name> ;`
+attribute_definition: "attribute" "def" NAME ";"
+
+// `attribute <name> [ ":" <type> ] ;`
+attribute_usage: "attribute" NAME (":" type_ref)? ";"
 
 // `package <name> { <members> }` (nestable) or `package <name> ;` (empty).
 package_definition: "package" NAME "{" package_body "}"  -> package_definition

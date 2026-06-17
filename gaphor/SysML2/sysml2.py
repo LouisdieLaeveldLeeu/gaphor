@@ -21,6 +21,7 @@ from gaphor.core.modeling.properties import (
 from gaphor.core.modeling.base import Base as _Base
 from gaphor.SysML2.kerml import Class as _Class
 from gaphor.SysML2.kerml import Classifier as _Classifier
+from gaphor.SysML2.kerml import DataType as _DataType
 from gaphor.SysML2.kerml import Feature as _Feature
 from gaphor.SysML2.kerml import Structure as _Structure
 
@@ -34,16 +35,24 @@ class Definition(_Classifier):
     isVariation: _attribute[bool] = _attribute("isVariation", bool)
 
 
+class AttributeDefinition(Definition, _DataType):
+    pass
+
+
+class Usage(_Feature):
+    isVariation: _attribute[bool] = _attribute("isVariation", bool)
+
+
+class AttributeUsage(Usage):
+    pass
+
+
 class OccurrenceDefinition(Definition, _Class):
     isIndividual: _attribute[bool] = _attribute("isIndividual", bool)
 
 
 class ItemDefinition(OccurrenceDefinition, _Structure):
     pass
-
-
-class Usage(_Feature):
-    isVariation: _attribute[bool] = _attribute("isVariation", bool)
 
 
 class OccurrenceUsage(Usage):

@@ -75,8 +75,14 @@ def _build_members(
     for member in members:
         if isinstance(member, ast.PartDefinition):
             element: kerml.Element = factory.create(sysml2.PartDefinition)
+        elif isinstance(member, ast.AttributeDefinition):
+            element = factory.create(sysml2.AttributeDefinition)
         elif isinstance(member, ast.PartUsage):
             element = factory.create(sysml2.PartUsage)
+            if member.type_name is not None:
+                typed_usages.append((element, namespace, member.type_name))
+        elif isinstance(member, ast.AttributeUsage):
+            element = factory.create(sysml2.AttributeUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name))
         elif isinstance(member, ast.PackageDefinition):

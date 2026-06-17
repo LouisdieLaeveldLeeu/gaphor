@@ -435,6 +435,9 @@ KERNEL_SEED = (
     # Package is a Namespace; the `package X { ... }` construct maps onto it and
     # nests members/sub-packages through the existing OwningMembership spine.
     "Package",
+    # DataType is the KerML Classifier that AttributeDefinition generalizes;
+    # needed as a supermodel root for the SysML attribute layer.
+    "DataType",
 )
 
 
@@ -880,7 +883,12 @@ def build_kerml_kernel(xmi_path: Path) -> str:
 # Seed of the SysML vertical-tracer slice (PartDefinition/PartUsage and their
 # stored-reference closure within SysML.xmi). Their generalizations to KerML
 # classes are resolved against the KerML kernel supermodel, not regenerated.
-SYSML_SEED = ("PartDefinition", "PartUsage")
+SYSML_SEED = (
+    "PartDefinition",
+    "PartUsage",
+    "AttributeDefinition",
+    "AttributeUsage",
+)
 
 # KerML classes that the generated SysML kernel must already provide as a
 # supermodel (the SysML closure generalizes these). Kept here so the generator

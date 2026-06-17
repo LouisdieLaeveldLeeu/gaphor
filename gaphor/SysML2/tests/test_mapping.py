@@ -87,6 +87,20 @@ def test_usage_typed_within_its_package(element_factory):
     assert engine in list(typings[0].type)
 
 
+def test_attribute_usage_typed_by_attribute_definition(element_factory):
+    result = map_package(
+        parse("attribute def Mass;\nattribute m : Mass;"), element_factory
+    )
+    mass = result.elements_by_name["Mass"]
+    m = result.elements_by_name["m"]
+    assert isinstance(mass, sysml2.AttributeDefinition)
+    assert isinstance(m, sysml2.AttributeUsage)
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 1
+    assert m in list(typings[0].typedFeature)
+    assert mass in list(typings[0].type)
+
+
 def test_unresolved_type_leaves_usage_untyped(element_factory):
     # Forward/undefined reference: no FeatureTyping is created; validation (a
     # later sub-step) is responsible for reporting it.

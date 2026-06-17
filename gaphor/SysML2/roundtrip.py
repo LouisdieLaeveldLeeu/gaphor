@@ -50,10 +50,20 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                 visit(member)
             elif isinstance(member, sysml2.PartDefinition):
                 entries.add(("PartDefinition", kk.qualified_name(member)))
+            elif isinstance(member, sysml2.AttributeDefinition):
+                entries.add(("AttributeDefinition", kk.qualified_name(member)))
             elif isinstance(member, sysml2.PartUsage):
                 entries.add(
                     (
                         "PartUsage",
+                        kk.qualified_name(member),
+                        _usage_type_qualified_name(member) or "",
+                    )
+                )
+            elif isinstance(member, sysml2.AttributeUsage):
+                entries.add(
+                    (
+                        "AttributeUsage",
                         kk.qualified_name(member),
                         _usage_type_qualified_name(member) or "",
                     )

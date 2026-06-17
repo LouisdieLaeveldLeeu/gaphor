@@ -30,9 +30,10 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | KerML Package | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
+| SysML AttributeDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
+| SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML ActionUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML RequirementUsage | no | no | no | no | no | no | no | no | no | not-started |
-| SysML AttributeUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML PortUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML ConnectionUsage | no | no | no | no | no | no | no | no | no | not-started |
 
@@ -49,8 +50,13 @@ references, never ids or raw text). M2 establishes the harness
 | SysML PartDefinition | yes | `test_roundtrip.py::test_tracer_round_trip_preserves_canonical_form` |
 | SysML PartUsage (typed + untyped) | yes | `test_roundtrip.py` |
 | KerML Package (nested) | yes | `test_roundtrip.py::test_nested_package_round_trips` |
+| SysML AttributeDefinition | yes | `test_roundtrip.py::test_attribute_definition_and_usage_round_trip` |
+| SysML AttributeUsage (typed) | yes | `test_roundtrip.py` |
 
-Coverage: 3 constructs round-trip-covered. `alpha`, not `supported`: resolution
-is same-namespace + simple qualified-name only (Package adds nested-namespace
-scoping and qualified names that span nesting), and Diagram/UI-edit are not yet
-implemented (diagram projection is the optional deferred stretch).
+Coverage: 5 constructs round-trip-covered. `alpha`, not `supported`: resolution
+is same-namespace + simple/qualified name (incl. nested + cross-package), and
+Diagram/UI-edit are not yet implemented (diagram projection is the optional
+deferred stretch). Note: AttributeUsage typing is by an AttributeDefinition; the
+distinct primitive/value-type axis (e.g. `attribute x : Real`) is later work --
+this construct establishes the attribute definition/usage pattern on a DataType
+base, not full value-type semantics.

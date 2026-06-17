@@ -26,6 +26,21 @@ class PartUsage:
 
 
 @dataclass(frozen=True)
+class AttributeDefinition:
+    """`attribute def <name> ;`"""
+
+    name: str
+
+
+@dataclass(frozen=True)
+class AttributeUsage:
+    """`attribute <name> [ : <type> ] ;`"""
+
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
 class PackageDefinition:
     """`package <name> { <members> }` -- a named, nestable container."""
 
@@ -34,13 +49,18 @@ class PackageDefinition:
 
 
 # A member is any construct that can appear in a (package) body.
-Member = "PartDefinition | PartUsage | PackageDefinition"
+Member = (
+    "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage "
+    "| PackageDefinition"
+)
 
 
 @dataclass(frozen=True)
 class Package:
     """The top-level container of parsed members (the implicit root namespace)."""
 
-    members: tuple["PartDefinition | PartUsage | PackageDefinition", ...] = field(
-        default_factory=tuple
-    )
+    members: tuple[
+        "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage"
+        " | PackageDefinition",
+        ...,
+    ] = field(default_factory=tuple)

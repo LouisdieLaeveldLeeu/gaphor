@@ -69,6 +69,10 @@ class Comment(AnnotatingElement):
     locale: _attribute[str] = _attribute("locale", str)
 
 
+class DataType(Classifier):
+    pass
+
+
 class Documentation(Comment):
     pass
 
