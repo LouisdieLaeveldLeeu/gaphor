@@ -1,9 +1,12 @@
 # SysML v2 Support-Matrix Completion Roadmap
 
-Goal: drive every row in `SUPPORT_MATRIX.md` to `supported` -- all nine cells
-(Parse, Import, Create-API, Persist, Validate, Export, Round-trip, Diagram,
-UI-edit) `yes`, each backed by conformance tests. This is the plan from the
-current state to a fully filled matrix.
+Goal: complete `SUPPORT_MATRIX.md` honestly: every row reaches its maximum
+defensible status (`supported`, `alpha` with a named dependency, or
+`internal-only` with a documented rationale), and every `yes` cell is backed by
+conformance tests. For user-facing constructs, `supported` still means all nine
+cells (Parse, Import, Create-API, Persist, Validate, Export, Round-trip,
+Diagram, UI-edit) are `yes`; structural kernel rows are not forced into
+impossible Parse/UI-edit claims.
 
 This is a planning artifact. Per the project's phase-stop discipline, each phase
 below STOPS for human review before implementation; nothing here is built until
@@ -12,7 +15,8 @@ honestly claimed (claim discipline: a cell advances only with a passing test).
 
 ## Current state (baseline)
 
-- KerML kernel (18 generated classes): `internal-only` -- Create-API + Persist.
+- KerML kernel (18 generated non-enum classes): `internal-only` -- Create-API +
+  Persist.
 - KerML Package: `alpha` (Parse..Round-trip).
 - SysML PartDefinition, PartUsage: `alpha` + Diagram (projection core).
 - SysML AttributeDefinition, AttributeUsage: `alpha`.
@@ -32,23 +36,25 @@ honestly claimed (claim discipline: a cell advances only with a passing test).
 3. Conformance tests covering every claimed cell, and removal of any `alpha`
    caveats that no longer hold.
 
-## Flagged dependency / risk (NOT yet scheduled as phases)
+## Dependency gates and risks
 
 Some constructs cannot honestly reach `supported` without deeper semantics the
-kickoff names as later milestones. These are risks the roadmap acknowledges but
-does not yet sequence; a construct that needs them stops at `alpha` until they
-land, and the affected phase will name the dependency explicitly:
+kickoff names as later milestones. These are gates, not background concerns: a
+construct phase that needs one stops at `alpha`, names the dependency
+explicitly, and schedules the dependency phase before claiming `supported`.
 
 - Deeper name resolution: inheritance, visibility, aliases, feature chains.
-- The real read-only standard-library loader (e.g. typing by library value
-  types such as `Real`/`String`; usages whose definitions live in the stdlib).
+- The real read-only standard-library loader (e.g. typing by library value types
+  such as `Real`/`String`; usages whose definitions live in the stdlib). This is
+  a required decision gate before primitive/value-typed AttributeUsage can be
+  marked `supported`.
 - Out of scope for this whole effort (excluded, not deferred): behavior /
   actions / states, analysis & verification cases, calculations & parametrics,
   KPAR & the SysML v2 API client, collaboration.
 
 ConnectionUsage in particular depends on connector/end semantics, and several
-usages depend on stdlib value types; these will likely cap at `alpha` until the
-dependency phases are scheduled.
+usages depend on stdlib value types; these cap at `alpha` until the dependency
+phases land.
 
 ## Phases
 
@@ -61,8 +67,9 @@ needs: `toolbox_definition`, `element_types`, `diagram_types`,
 `model_browser_model` for the SysML2 (and KerML where relevant) languages,
 replacing the current `raise` stubs. Add a SysML2 diagram type. No per-construct
 toolbox entries yet -- just the framework so later phases can register them.
-Exit: the language no longer raises on these; a smoke test creates an element
-via the toolbox/element-create path and projects it; gates + CI green.
+Exit: the language no longer raises on these; smoke tests can enumerate SysML2
+element/diagram metadata and instantiate the SysML2 diagram type; gates + CI
+green.
 
 ### Phase B -- Promote PartDefinition / PartUsage to `supported`
 On the Phase A foundation: toolbox entries that create-and-project Part def/
@@ -70,39 +77,53 @@ usage, property pages (rename, set type), and conformance tests for all nine
 cells. Diagram already done. Resolves the `alpha` caveat for these two.
 Exit: PartDefinition + PartUsage rows = `supported`, every cell tested.
 
-### Phase C -- Promote Package + Attribute Def/Usage to `supported`
-Diagram projection for Package (a frame/box) and Attribute def/usage (boxes);
-toolbox + property pages; conformance tests. Note: AttributeUsage typed by a
-primitive/value type (`attribute x : Real`) needs the stdlib-loader dependency
--- if unscheduled, this row caps at `alpha` with the dependency noted, and only
-AttributeDefinition + AttributeUsage-typed-by-AttributeDefinition reach
-`supported`.
-Exit: Package + AttributeDefinition `supported`; AttributeUsage `supported` or
-`alpha`-with-dependency, explicitly.
+### Phase C1 -- Promote Package to `supported`
+Add Package diagram projection (frame/box), toolbox entry, property page, and
+conformance tests for all nine cells. Keep this separate from Attribute work
+because package projection and namespace editing have a different risk profile.
+Exit: KerML Package row = `supported`, every cell tested.
 
-### Phase D -- ActionUsage: full chain + diagram + UI
-First not-started construct through the entire matrix: grammar (`action`...),
-mapping onto the kernel, persist/validate/export/round-trip, diagram item,
-toolbox, property page, conformance tests. Establishes the template for the
-remaining usages.
-Exit: ActionUsage row = `supported` (or `alpha` if it hits a flagged dependency,
-named).
+### Phase C2 -- Promote Attribute Definition/Usage
+Add diagram projection for AttributeDefinition and AttributeUsage (boxes),
+toolbox entries, property pages, and conformance tests. Before claiming
+AttributeUsage `supported`, explicitly decide the stdlib-loader gate:
+`attribute x : Real` and similar primitive/value-typed usages require the
+read-only standard-library loader. If Z2 is not scheduled yet, AttributeUsage
+stays `alpha` with that dependency named; AttributeDefinition and
+AttributeUsage-typed-by-AttributeDefinition may still reach `supported`.
+Exit: AttributeDefinition = `supported`; AttributeUsage = `supported` only if
+the stdlib/value-type gate is cleared, otherwise `alpha` with named dependency.
 
-### Phase E -- RequirementUsage: full chain + diagram + UI
-As Phase D for RequirementUsage. May surface constraint/relationship semantics;
-if those touch a flagged dependency, cap at `alpha` with the dependency named.
-Exit: RequirementUsage row = `supported` or `alpha`-with-dependency.
+### Phase D -- ActionUsage, split into three review gates
+First not-started construct through the smaller vertical-tracer template:
 
-### Phase F -- PortUsage: full chain + diagram + UI
-As above for PortUsage. Ports introduce interface/conjugation semantics; expect
-a flagged dependency to surface -- name it and cap honestly if so.
-Exit: PortUsage row = `supported` or `alpha`-with-dependency.
+1. D1 semantic chain: grammar (`action`...), mapping onto the kernel,
+   Create-API, Persist, Validate, Export, and canonical Round-trip. STOP.
+2. D2 diagram projection: project an existing ActionUsage as a diagram view,
+   persist/reload the view, and cascade-delete it. STOP.
+3. D3 UI-edit: toolbox create-and-project flow, property page, and conformance
+   tests for all nine cells. STOP.
 
-### Phase G -- ConnectionUsage: full chain + diagram + UI
-As above for ConnectionUsage; this is a relationship-style usage, so it reuses
-and extends the view-only connector work. Most likely to need connector/end
-semantics from a flagged dependency.
-Exit: ConnectionUsage row = `supported` or `alpha`-with-dependency.
+Exit: ActionUsage row = `supported`, or `alpha` with a named dependency if D1-D3
+surface one.
+
+### Phase E -- RequirementUsage, split into three review gates
+Repeat the D1/D2/D3 pattern for RequirementUsage. Constraint or relationship
+semantics discovered here become explicit dependency gates rather than hidden
+scope creep.
+Exit: RequirementUsage row = `supported` or `alpha` with named dependency.
+
+### Phase F -- PortUsage, split into three review gates
+Repeat the D1/D2/D3 pattern for PortUsage. Ports introduce interface,
+conjugation, and feature-chain semantics; expect dependency gates to surface and
+cap honestly if they do.
+Exit: PortUsage row = `supported` or `alpha` with named dependency.
+
+### Phase G -- ConnectionUsage, split into three review gates
+Repeat the D1/D2/D3 pattern for ConnectionUsage. This is a relationship-style
+usage, so the diagram phase reuses and extends the view-only connector work.
+Connector/end semantics are likely a dependency gate.
+Exit: ConnectionUsage row = `supported` or `alpha` with named dependency.
 
 ### Phase H -- KerML kernel rows: resolve `internal-only`
 Decide and execute the honest end-state for the kernel rows (Element, Namespace,
@@ -113,10 +134,10 @@ narrower `supported` surface for what they genuinely offer, or keep them
 row's status is the honest maximum, not when every cell is forced to `yes`).
 Exit: every kernel row has a final, justified status.
 
-### Phase Z -- Dependency phases (scheduled only if needed to clear caps)
-If Phases C-G leave rows capped at `alpha` on a flagged dependency, schedule the
-needed dependency as its own phase here, each a substantial milestone with its
-own review:
+### Phase Z -- Dependency phases (scheduled to clear named caps)
+If Phases C2 through G leave rows capped at `alpha` on a dependency gate,
+schedule the needed dependency as its own phase here, each a substantial
+milestone with its own review:
 - Z1: deeper name resolution (inheritance / visibility / aliases / feature chains).
 - Z2: read-only standard-library loader.
 Then revisit the capped rows to promote them to `supported`.
