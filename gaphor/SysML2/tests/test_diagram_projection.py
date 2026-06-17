@@ -6,7 +6,9 @@ symbol-only (invariant 4).
 from __future__ import annotations
 
 from gaphor.core.modeling import Diagram
+from gaphor.diagram.connectors import Connector
 from gaphor.diagram.drop import drop
+from gaphor.diagram.presentation import connect
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2.diagramitems import (
     FeatureTypingItem,
@@ -16,8 +18,16 @@ from gaphor.SysML2.diagramitems import (
 from gaphor.SysML2.grammar.parser import parse
 from gaphor.SysML2.mapping import map_package
 
-# Importing gaphor.SysML2.drop registers the projection handlers.
+# Importing gaphor.SysML2.drop registers the projection handlers + connector.
 import gaphor.SysML2.drop  # noqa: F401, E402
+
+
+def _allows(line, handle, target_item) -> bool:
+    """Whether the FeatureTyping connector permits connecting `handle` to
+    `target_item` (mirrors how the diagram gates a connection)."""
+    connector = Connector(target_item, line)
+    port = target_item.ports()[0]
+    return bool(connector.allow(handle, port))
 
 
 def test_item_registered_for_part_definition():
@@ -168,3 +178,83 @@ def test_deleting_typing_removes_its_line(element_factory):
     typing.unlink()
 
     assert element_factory.lookup(line_id) is None
+
+
+# --- reconnect semantics of a projected typing line (a VIEW, not an editor) ---
+
+
+def _project_with_other_usage(element_factory):
+    """Project Engine + vehicleEngine + a second usage `other`, plus the typing
+    line for vehicleEngine:Engine. Returns (diagram, line, usage_item,
+    other_item, typing)."""
+    result = map_package(
+        parse(
+            "part def Engine;\npart vehicleEngine : Engine;\npart other : Engine;"
+        ),
+        element_factory,
+    )
+    engine = result.elements_by_name["Engine"]
+    usage = result.elements_by_name["vehicleEngine"]
+    other = result.elements_by_name["other"]
+    typing = next(
+        t for t in element_factory.lselect(kerml.FeatureTyping) if usage in list(t.typedFeature)
+    )
+    diagram = element_factory.create(Diagram)
+    engine_item = drop(engine, diagram, 0, 0)
+    usage_item = drop(usage, diagram, 100, 0)
+    other_item = drop(other, diagram, 200, 0)
+    line = drop(typing, diagram, 50, 0)
+    return diagram, line, usage_item, other_item, engine_item, typing
+
+
+def test_reconnect_head_to_original_feature_keeps_one_typing(element_factory):
+    diagram, line, usage_item, other_item, engine_item, typing = (
+        _project_with_other_usage(element_factory)
+    )
+    before = len(element_factory.lselect(kerml.FeatureTyping))
+
+    connect(line, line.head, usage_item)  # the typing's actual typed feature
+
+    assert _allows(line, line.head, usage_item)
+    assert line.subject is typing
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == before
+
+
+def test_reconnect_head_to_other_usage_is_refused_no_duplicate(element_factory):
+    diagram, line, usage_item, other_item, engine_item, typing = (
+        _project_with_other_usage(element_factory)
+    )
+    before = len(element_factory.lselect(kerml.FeatureTyping))
+
+    # `other` is not the typing's typed feature -> the connector must refuse.
+    assert not _allows(line, line.head, other_item)
+    # Even if a connect is attempted, no duplicate typing is created and the
+    # subject is unchanged.
+    connect(line, line.head, other_item)
+    assert line.subject is typing
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == before
+
+
+def test_reconnect_tail_to_non_type_is_refused(element_factory):
+    diagram, line, usage_item, other_item, engine_item, typing = (
+        _project_with_other_usage(element_factory)
+    )
+    # The tail must be the typing's type (Engine); a usage item is not it.
+    assert not _allows(line, line.tail, usage_item)
+
+
+def test_temporary_disconnect_preserves_the_view_subject(element_factory):
+    diagram, line, usage_item, other_item, engine_item, typing = (
+        _project_with_other_usage(element_factory)
+    )
+    from gaphor.diagram.connectors import Connector
+
+    before = len(element_factory.lselect(kerml.FeatureTyping))
+
+    # Disconnect the head handle; the line must still view the same typing, and
+    # the disconnect must not add/remove any typing.
+    connector = Connector(usage_item, line)
+    connector.disconnect(line.head)
+
+    assert line.subject is typing
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == before
