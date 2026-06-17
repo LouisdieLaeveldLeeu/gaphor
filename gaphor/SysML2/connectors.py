@@ -25,6 +25,9 @@ silent model rewrite. Real relationship editing is left to a later UI-edit phase
 
 from __future__ import annotations
 
+from gaphas.connector import ConnectionSink
+from gaphas.connector import Connector as ConnectorAspect
+
 from gaphor.diagram.connectors import Connector, MetadataRelationConnect
 from gaphor.diagram.presentation import ElementPresentation
 from gaphor.SysML2 import kerml
@@ -36,21 +39,56 @@ class FeatureTypingConnect(MetadataRelationConnect):
     """Anchor a FeatureTyping line to its endpoint items as a view onto the
     existing typing -- reuse the subject, reject mismatched ends, never create."""
 
-    def allow(self, handle, port):
-        if not super().allow(handle, port):
-            return False
+    def _actual_end_subjects(self, handle):
         subject = self.line.subject
         if not isinstance(subject, kerml.FeatureTyping):
-            # No existing typing to validate against -> defer to generic rules.
-            return True
+            return None
+        if handle is self.line.head:
+            return list(subject.typedFeature)
+        return list(subject.type)
+
+    def _is_actual_endpoint(self, handle):
         target = self.element.subject
         if target is None:
             return True
+        expected = self._actual_end_subjects(handle)
+        return expected is None or target in expected
+
+    def _actual_endpoint_item(self, handle):
+        expected = self._actual_end_subjects(handle)
+        if not expected:
+            return None
+        for subject in expected:
+            for item in subject.presentation:
+                if item.diagram is self.diagram:
+                    return item
+        return None
+
+    def _restore_actual_endpoint(self, handle):
+        item = self._actual_endpoint_item(handle)
+        if item is None:
+            return
+
+        connector = ConnectorAspect(self.line, handle, self.diagram.connections)
+        sink = ConnectionSink(item, distance=float("inf"))
+        if self.diagram.connections.get_connection(handle):
+            connector.disconnect_handle()
+        connector.glue(sink)
+        if sink.port:
+            connector.connect_handle(sink)
+
+    def allow(self, handle, port):
+        if not super().allow(handle, port):
+            return False
         # The head must connect to the typing's typed feature; the tail to its
         # type. Anything else would make the view misrepresent the model.
-        if handle is self.line.head:
-            return target in list(subject.typedFeature)
-        return target in list(subject.type)
+        return self._is_actual_endpoint(handle)
+
+    def connect(self, handle, port):
+        if not self._is_actual_endpoint(handle):
+            self._restore_actual_endpoint(handle)
+            return False
+        return super().connect(handle, port)
 
     def connect_subject(self, handle):
         # A projected line already views an existing FeatureTyping. Keep it; do

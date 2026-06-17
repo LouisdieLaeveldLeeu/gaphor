@@ -213,7 +213,7 @@ def test_reconnect_head_to_original_feature_keeps_one_typing(element_factory):
     )
     before = len(element_factory.lselect(kerml.FeatureTyping))
 
-    connect(line, line.head, usage_item)  # the typing's actual typed feature
+    connect(line, line.head, usage_item)
 
     assert _allows(line, line.head, usage_item)
     assert line.subject is typing
@@ -225,12 +225,18 @@ def test_reconnect_head_to_other_usage_is_refused_no_duplicate(element_factory):
         _project_with_other_usage(element_factory)
     )
     before = len(element_factory.lselect(kerml.FeatureTyping))
+    original_connection = diagram.connections.get_connection(line.head)
+    assert original_connection
+    assert original_connection.connected is usage_item
 
     # `other` is not the typing's typed feature -> the connector must refuse.
     assert not _allows(line, line.head, other_item)
-    # Even if a connect is attempted, no duplicate typing is created and the
-    # subject is unchanged.
+    # Even if a connect is attempted, the visual endpoint, subject, and relation
+    # count remain unchanged.
     connect(line, line.head, other_item)
+    refused_connection = diagram.connections.get_connection(line.head)
+    assert refused_connection
+    assert refused_connection.connected is usage_item
     assert line.subject is typing
     assert len(element_factory.lselect(kerml.FeatureTyping)) == before
 
@@ -239,8 +245,19 @@ def test_reconnect_tail_to_non_type_is_refused(element_factory):
     diagram, line, usage_item, other_item, engine_item, typing = (
         _project_with_other_usage(element_factory)
     )
+    before = len(element_factory.lselect(kerml.FeatureTyping))
+    original_connection = diagram.connections.get_connection(line.tail)
+    assert original_connection
+    assert original_connection.connected is engine_item
+
     # The tail must be the typing's type (Engine); a usage item is not it.
     assert not _allows(line, line.tail, usage_item)
+    connect(line, line.tail, usage_item)
+    refused_connection = diagram.connections.get_connection(line.tail)
+    assert refused_connection
+    assert refused_connection.connected is engine_item
+    assert line.subject is typing
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == before
 
 
 def test_temporary_disconnect_preserves_the_view_subject(element_factory):
