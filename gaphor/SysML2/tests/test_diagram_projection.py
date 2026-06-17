@@ -112,6 +112,25 @@ def test_feature_typing_projects_as_a_view_on_the_existing_typing(element_factor
     assert len(element_factory.lselect(kerml.FeatureTyping)) == typings_before
 
 
+def test_feature_typing_line_is_anchored_to_its_endpoints(element_factory):
+    diagram, usage, engine, typing = _project_tracer(element_factory)
+
+    line = drop(typing, diagram, 50, 0)
+
+    # Both handles are connected to the endpoint items (usage and definition),
+    # and the connection did NOT create a duplicate typing (the connector reuses
+    # the existing subject).
+    connected_subjects = {
+        diagram.connections.get_connection(h).connected.subject
+        for h in line.handles()
+        if diagram.connections.get_connection(h)
+    }
+    assert usage in connected_subjects
+    assert engine in connected_subjects
+    assert line.subject is typing
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+
 def test_typing_line_not_projected_when_an_endpoint_is_absent(element_factory):
     # Only the definition is projected (not the usage), so the typing line has
     # nothing to connect to and is not created -- never a dangling/symbol-only line.

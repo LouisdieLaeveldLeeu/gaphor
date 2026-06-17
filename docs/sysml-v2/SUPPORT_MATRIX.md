@@ -67,11 +67,13 @@ view->element link persists and reloads through `.gaphor`, and deleting the
 element removes its projection. It does NOT yet mean toolbox creation or
 in-diagram editing -- `UI-edit` stays `no` (no toolbox/property pages).
 
-The FeatureTyping relation can also be projected as a line (`FeatureTypingItem`)
-whose `subject` is the EXISTING typing -- it appears only when both ends are
-already projected, binds the existing element (no duplicate), persists/reloads,
-and cascade-deletes. Its handles are NOT yet auto-anchored to the endpoint box
-items: a custom connector that reuses the existing subject (rather than the
-default connector, which would create a new typing on connect) is a follow-up.
-So the typing line is a correct semantic VIEW but not yet visually wired to its
-endpoints; this is why no separate `FeatureTyping` matrix row claims Diagram.
+The FeatureTyping relation projects as a line (`FeatureTypingItem`) whose
+`subject` is the EXISTING typing -- it appears only when both ends are already
+projected, binds the existing element (no duplicate), persists/reloads, and
+cascade-deletes. The line's handles ARE anchored to the endpoint box items via a
+custom connector (`FeatureTypingConnect`) that reuses the existing subject
+instead of the default find-or-create connector (which would duplicate the
+typing on connect). So the typing line is now a fully visually-wired view of an
+existing relation. (No separate `FeatureTyping` matrix row: it is a relationship
+view that accompanies the PartUsage/PartDefinition rows, not a standalone
+construct claim.)
