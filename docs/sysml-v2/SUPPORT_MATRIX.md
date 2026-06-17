@@ -29,7 +29,7 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | KerML Documentation | no | no | yes | yes | no | no | no | no | no | internal-only |
 | KerML Package | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
-| SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
+| SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
 | SysML AttributeDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML ActionUsage | no | no | no | no | no | no | no | no | no | not-started |
@@ -61,9 +61,17 @@ the attribute definition/usage pattern on a DataType base, not full value-type
 semantics.
 
 Diagram cell scope. `Diagram=yes` for PartDefinition means the projection core:
-a `PartDefinitionItem` (an `ElementPresentation`) projects an EXISTING
-PartDefinition via Gaphor's `subject` mechanism (never symbol-only), the
+a box item (an `ElementPresentation`) projects an EXISTING PartDefinition or
+PartUsage via Gaphor's `subject` mechanism (never symbol-only), the
 view->element link persists and reloads through `.gaphor`, and deleting the
 element removes its projection. It does NOT yet mean toolbox creation or
-in-diagram editing -- `UI-edit` stays `no` (no toolbox/property pages). Only
-PartDefinition has a projection so far; the other constructs keep `Diagram=no`.
+in-diagram editing -- `UI-edit` stays `no` (no toolbox/property pages).
+
+The FeatureTyping relation can also be projected as a line (`FeatureTypingItem`)
+whose `subject` is the EXISTING typing -- it appears only when both ends are
+already projected, binds the existing element (no duplicate), persists/reloads,
+and cascade-deletes. Its handles are NOT yet auto-anchored to the endpoint box
+items: a custom connector that reuses the existing subject (rather than the
+default connector, which would create a new typing on connect) is a follow-up.
+So the typing line is a correct semantic VIEW but not yet visually wired to its
+endpoints; this is why no separate `FeatureTyping` matrix row claims Diagram.
