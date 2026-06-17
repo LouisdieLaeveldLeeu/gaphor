@@ -1,0 +1,57 @@
+# Full repository test suite (the whole Gaphor suite, including top-level
+# tests/), run in the same Docker image as docker/run-tests.sh --full.
+#
+# This is intentionally NOT a per-push gate yet: it is a separate, deliberate
+# job (manual workflow_dispatch + a nightly schedule) so the full-suite runtime
+# can be observed before promoting it to a required check. See VERIFY.md
+# ("run-tests.sh target contract") and MAPPING_DECISIONS.md ("Test Environment").
+name: Full Suite Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Nightly at 03:17 UTC (off the hour to avoid scheduler congestion).
+    - cron: '17 3 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-suite:
+    name: 🧪 Full Gaphor suite (Docker, headless)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Build the test image
+        run: docker build -t gaphor-sysml2-test -f docker/Dockerfile .
+
+      # Whole repository suite ("."), headless via xvfb. The GSettings schema is
+      # compiled into GSETTINGS_SCHEMA_DIR (as docker/run-tests.sh does) so
+      # settings-dependent tests resolve org.gaphor.Gaphor. --init gives correct
+      # PID 1 signal handling for xvfb-run.
+      - name: Run the full suite (headless)
+        run: |
+          docker run --rm --init \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace \
+            --env GSETTINGS_SCHEMA_DIR=/tmp/glib-schemas \
+            gaphor-sysml2-test \
+            bash -lc '
+              poetry install --with dev
+              mkdir -p /tmp/glib-schemas
+              cp gaphor/ui/installschemas/org.gaphor.Gaphor.gschema.xml /tmp/glib-schemas/
+              glib-compile-schemas /tmp/glib-schemas
+              xvfb-run -a poetry run pytest . -q
+            '
