@@ -9,9 +9,10 @@
 # Target contract (full suite is always intentional, never accidental):
 #   docker/run-tests.sh                    # SysML2 subset (fast default)
 #   docker/run-tests.sh -q                 # SysML2 subset with pytest flags
+#   docker/run-tests.sh -q -k parser       # SysML2 subset with option values
 #   docker/run-tests.sh gaphor/SysML2 -q   # explicit subset/path with flags
-#   docker/run-tests.sh --full             # whole Gaphor suite
-#   docker/run-tests.sh --full -q          # whole suite with pytest flags
+#   docker/run-tests.sh --full             # whole repository suite
+#   docker/run-tests.sh --full -q          # whole repository suite with flags
 #
 # `--full` is a wrapper-only flag (consumed here, not forwarded). When it is
 # absent and no explicit path is given, the SysML2 subset is used -- so a
@@ -25,29 +26,57 @@ IMAGE="gaphor-sysml2-test"
 echo "Building $IMAGE (Ubuntu 25.10, libadwaita >= 1.8)..."
 docker build -t "$IMAGE" -f "$REPO_ROOT/docker/Dockerfile" "$REPO_ROOT"
 
+pytest_option_takes_value() {
+    case "$1" in
+        -k|-m|-o|-p|-W|--basetemp|--capture|--color|--confcutdir|--cov|--cov-config|--cov-context|--cov-fail-under|--cov-report|--deselect|--doctest-glob|--ignore|--ignore-glob|--import-mode|--junit-prefix|--junit-xml|--junitxml|--log-auto-indent|--log-cli-date-format|--log-cli-format|--log-cli-level|--log-date-format|--log-file|--log-file-date-format|--log-file-format|--log-file-level|--log-format|--log-level|--maxfail|--override-ini|--pythonwarnings|--rootdir|--tb|--verbosity)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+is_pytest_target() {
+    local arg="$1"
+    local path="${arg%%::*}"
+
+    [[ "$arg" == "-"* ]] && return 1
+    [[ -e "$REPO_ROOT/$path" ]]
+}
+
 # Parse the wrapper-only --full flag; forward the rest to pytest.
 FULL=0
 FORWARDED=()
 has_path=0
+skip_option_value=0
 for arg in "$@"; do
     if [[ "$arg" == "--full" ]]; then
         FULL=1
     else
         FORWARDED+=("$arg")
-        # A path/node-id is any forwarded arg not starting with '-'.
-        [[ "$arg" != -* ]] && has_path=1
+        if [[ "$skip_option_value" -eq 1 ]]; then
+            skip_option_value=0
+        else
+            is_pytest_target "$arg" && has_path=1
+        fi
+        if pytest_option_takes_value "$arg"; then
+            skip_option_value=1
+        else
+            skip_option_value=0
+        fi
     fi
 done
 
 # Decide the pytest target: --full -> whole suite; else an explicit path is
 # honoured; else the SysML2 subset (so a flag-only run like `-q` is the subset,
 # never an accidental full suite).
-PYTEST_ARGS=()
-[[ ${#FORWARDED[@]} -gt 0 ]] && PYTEST_ARGS=("${FORWARDED[@]}")
 if [[ "$FULL" -eq 1 ]]; then
-    PYTEST_ARGS+=("gaphor")
+    PYTEST_ARGS=("." "${FORWARDED[@]}")
 elif [[ "$has_path" -eq 0 ]]; then
-    PYTEST_ARGS+=("gaphor/SysML2/tests")
+    PYTEST_ARGS=("gaphor/SysML2/tests" "${FORWARDED[@]}")
+else
+    PYTEST_ARGS=("${FORWARDED[@]}")
 fi
 
 echo "Running pytest headless (xvfb): ${PYTEST_ARGS[*]}"
