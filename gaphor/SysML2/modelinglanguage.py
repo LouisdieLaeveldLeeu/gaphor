@@ -81,13 +81,15 @@ class SysML2ModelingLanguage(ModelingLanguage):
     def lookup_element(self, name, ns=None):
         # Everything under gaphor.SysML2 persists in the single "SysML2" runtime
         # namespace, so this resolver spans the SysML user concepts, the KerML
-        # kernel, and the M1a slice -- but only under an explicit ns.
+        # kernel, the M1a slice, and the diagram items (projections) -- but only
+        # under an explicit ns.
         if ns == "SysML2":
-            from gaphor.SysML2 import kerml, kerml_slice, sysml2
+            from gaphor.SysML2 import diagramitems, kerml, kerml_slice, sysml2
 
             return (
                 getattr(sysml2, name, None)
                 or getattr(kerml, name, None)
                 or getattr(kerml_slice, name, None)
+                or getattr(diagramitems, name, None)
             )
         return None

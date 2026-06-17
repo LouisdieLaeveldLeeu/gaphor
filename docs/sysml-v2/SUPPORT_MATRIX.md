@@ -28,7 +28,7 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | KerML Import | no | no | yes | yes | no | no | no | no | no | internal-only |
 | KerML Documentation | no | no | yes | yes | no | no | no | no | no | internal-only |
 | KerML Package | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
-| SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
+| SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
 | SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML AttributeDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
@@ -54,9 +54,16 @@ references, never ids or raw text). M2 establishes the harness
 | SysML AttributeUsage (typed) | yes | `test_roundtrip.py` |
 
 Coverage: 5 constructs round-trip-covered. `alpha`, not `supported`: resolution
-is same-namespace + simple/qualified name (incl. nested + cross-package), and
-Diagram/UI-edit are not yet implemented (diagram projection is the optional
-deferred stretch). Note: AttributeUsage typing is by an AttributeDefinition; the
-distinct primitive/value-type axis (e.g. `attribute x : Real`) is later work --
-this construct establishes the attribute definition/usage pattern on a DataType
-base, not full value-type semantics.
+is same-namespace + simple/qualified name (incl. nested + cross-package). Note:
+AttributeUsage typing is by an AttributeDefinition; the distinct primitive/value-
+type axis (e.g. `attribute x : Real`) is later work -- this construct establishes
+the attribute definition/usage pattern on a DataType base, not full value-type
+semantics.
+
+Diagram cell scope. `Diagram=yes` for PartDefinition means the projection core:
+a `PartDefinitionItem` (an `ElementPresentation`) projects an EXISTING
+PartDefinition via Gaphor's `subject` mechanism (never symbol-only), the
+view->element link persists and reloads through `.gaphor`, and deleting the
+element removes its projection. It does NOT yet mean toolbox creation or
+in-diagram editing -- `UI-edit` stays `no` (no toolbox/property pages). Only
+PartDefinition has a projection so far; the other constructs keep `Diagram=no`.

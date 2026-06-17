@@ -72,6 +72,7 @@ documentation = "https://docs.gaphor.org/"
 "uml_ui_components" = "gaphor.UML.uicomponents"
 "sysml_property_pages" = "gaphor.SysML.uicomponents"
 "c4model_property_pages" = "gaphor.C4Model.propertypages"
+"sysml2_ui_components" = "gaphor.SysML2.uicomponents"
 
 [project.entry-points."gaphor.services"]
 "component_registry" = "gaphor.services.componentregistry:ComponentRegistry"
