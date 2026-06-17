@@ -21,7 +21,7 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 from gaphor.core.modeling import ElementFactory
-from gaphor.SysML2 import kerml, sysml2
+from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
 
 
@@ -145,19 +145,21 @@ def _check_broken_typing(factory: ElementFactory) -> Iterator[Diagnostic]:
 def _check_usage_without_valid_type(
     factory: ElementFactory, unresolved_types: dict[str, str]
 ) -> Iterator[Diagnostic]:
-    """A PartUsage that declared a type whose name did not resolve is an error.
+    """Any usage that declared a type which did not resolve to a Type is an error.
 
-    The mapper records (usage id -> declared type name) for type names it could
-    not resolve; this rule reports them. A usage with no declared type is fine
-    (an untyped usage is legal).
+    The mapper records (usage id -> declared type name) for every usage -- Part,
+    Attribute, or any future usage kind -- whose declared type name either did
+    not resolve or resolved to a non-Type (e.g. a Package). Iterating the
+    recorded ids (not a specific usage class) keeps this correct as constructs
+    grow. A usage with no declared type is fine (an untyped usage is legal).
     """
-    for usage in factory.select(sysml2.PartUsage):
-        declared_type = unresolved_types.get(usage.id)
-        if declared_type is not None:
-            yield Diagnostic(
-                Severity.ERROR,
-                "usage-without-valid-type",
-                f"usage {usage.declaredName!r} declares type {declared_type!r} "
-                f"which does not resolve",
-                usage.id,
-            )
+    for usage_id, declared_type in unresolved_types.items():
+        element = factory.lookup(usage_id)
+        name = element.declaredName if element is not None else None
+        yield Diagnostic(
+            Severity.ERROR,
+            "usage-without-valid-type",
+            f"usage {name!r} declares type {declared_type!r} which does not "
+            f"resolve to a type",
+            usage_id,
+        )

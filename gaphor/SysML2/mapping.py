@@ -48,10 +48,13 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     top_level = _build_members(pkg.members, root, factory, typed_usages)
 
     # Phase 2: resolve usage typing. Resolution is scoped: a simple name resolves
-    # in the usage's own namespace; a qualified name resolves from the root.
+    # in the usage's own namespace; a qualified name resolves from the root. A
+    # name that does not resolve, OR resolves to something that is not a Type
+    # (e.g. a Package), is recorded as unresolved for validation -- never crashed
+    # into FeatureTyping (which requires a Type) and never silently dropped.
     for usage, namespace, type_name in typed_usages:
         target = _resolve_type(root, namespace, type_name)
-        if target is not None:
+        if isinstance(target, kerml.Type):
             _set_type(factory, usage, target)
         else:
             unresolved_types[usage.id] = "::".join(type_name)

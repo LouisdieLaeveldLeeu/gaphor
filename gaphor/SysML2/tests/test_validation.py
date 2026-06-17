@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from gaphor.core.modeling import ElementFactory
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2.grammar.parser import parse
@@ -72,6 +73,25 @@ def test_missing_owner_is_reported(element_factory):
     diagnostics = validate(element_factory)
     assert "missing-owner" in _rules(diagnostics)
     assert has_errors(diagnostics)
+
+
+def test_attribute_usage_unresolved_type_is_reported(element_factory):
+    # Regression: the rule must cover AttributeUsage, not only PartUsage.
+    result = map_package(parse("attribute m : Missing;"), element_factory)
+    diagnostics = validate(element_factory, result.unresolved_types)
+    assert "usage-without-valid-type" in _rules(diagnostics)
+    assert has_errors(diagnostics)
+
+
+def test_typing_by_non_type_is_reported_not_crashed():
+    # Regression: a name that resolves to a non-Type (a Package) must be a
+    # diagnostic, not a TypeError crash in the mapper.
+    for src in ("package P; attribute m : P;", "package P; part p : P;"):
+        f = ElementFactory()
+        result = map_package(parse(src), f)  # must not raise
+        diagnostics = validate(f, result.unresolved_types)
+        assert "usage-without-valid-type" in _rules(diagnostics), src
+        assert has_errors(diagnostics), src
 
 
 def test_broken_typing_in_persisted_model_is_reported(element_factory):
