@@ -78,6 +78,28 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                         _usage_type_qualified_name(member) or "",
                     )
                 )
+            # RequirementDefinition is a ConstraintDefinition (and the usage
+            # likewise), so the more specific class is matched first.
+            elif isinstance(member, sysml2.RequirementDefinition):
+                entries.add(("RequirementDefinition", kk.qualified_name(member)))
+            elif isinstance(member, sysml2.ConstraintDefinition):
+                entries.add(("ConstraintDefinition", kk.qualified_name(member)))
+            elif isinstance(member, sysml2.RequirementUsage):
+                entries.add(
+                    (
+                        "RequirementUsage",
+                        kk.qualified_name(member),
+                        _usage_type_qualified_name(member) or "",
+                    )
+                )
+            elif isinstance(member, sysml2.ConstraintUsage):
+                entries.add(
+                    (
+                        "ConstraintUsage",
+                        kk.qualified_name(member),
+                        _usage_type_qualified_name(member) or "",
+                    )
+                )
 
     visit(root)
     return frozenset(entries)

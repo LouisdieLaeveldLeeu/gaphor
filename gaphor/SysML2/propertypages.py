@@ -5,6 +5,7 @@ from __future__ import annotations
 from gi.repository import Gio
 
 from gaphor.core import Transaction
+from gaphor.i18n import gettext
 from gaphor.diagram.propertypages import (
     LabelValue,
     PropertyPageBase,
@@ -25,6 +26,10 @@ new_builder = new_resource_builder("gaphor.SysML2")
 @PropertyPages.register(sysml2.AttributeUsage)
 @PropertyPages.register(sysml2.ActionDefinition)
 @PropertyPages.register(sysml2.ActionUsage)
+@PropertyPages.register(sysml2.ConstraintDefinition)
+@PropertyPages.register(sysml2.ConstraintUsage)
+@PropertyPages.register(sysml2.RequirementDefinition)
+@PropertyPages.register(sysml2.RequirementUsage)
 @PropertyPages.register(sysml2.PartDefinition)
 @PropertyPages.register(sysml2.PartUsage)
 class DeclaredNamePropertyPage(PropertyPageBase):
@@ -40,6 +45,10 @@ class DeclaredNamePropertyPage(PropertyPageBase):
             | sysml2.AttributeUsage
             | sysml2.ActionDefinition
             | sysml2.ActionUsage
+            | sysml2.ConstraintDefinition
+            | sysml2.ConstraintUsage
+            | sysml2.RequirementDefinition
+            | sysml2.RequirementUsage
             | sysml2.PartDefinition
             | sysml2.PartUsage
         ),
@@ -200,10 +209,76 @@ class ActionUsageTypePropertyPage(PropertyPageBase):
                 kk.set_feature_type(self.subject, None)
 
 
+@PropertyPages.register(sysml2.ConstraintUsage)
+class ConstraintRequirementTypePropertyPage(PropertyPageBase):
+    """Set the definition type for a Constraint or Requirement usage.
+
+    RequirementUsage is a ConstraintUsage subclass, so a single page (registered
+    on ConstraintUsage, matched for both by isinstance) handles both -- it would
+    be wrong to register two pages and show a RequirementUsage two dropdowns. The
+    definition kind is chosen from the subject's own type: a RequirementUsage is
+    typed by a RequirementDefinition, any other ConstraintUsage by a
+    ConstraintDefinition.
+    """
+
+    order = 20
+
+    def __init__(self, subject: sysml2.ConstraintUsage, event_manager):
+        super().__init__()
+        self.subject = subject
+        self.event_manager = event_manager
+        self._definition_type: type[
+            sysml2.ConstraintDefinition | sysml2.RequirementDefinition
+        ] = (
+            sysml2.RequirementDefinition
+            if isinstance(subject, sysml2.RequirementUsage)
+            else sysml2.ConstraintDefinition
+        )
+
+    def construct(self):
+        builder = new_builder("constraint-usage-type-editor")
+
+        dropdown = builder.get_object("constraint-usage-type")
+        label = builder.get_object("constraint-usage-type-label")
+        label.set_text(
+            gettext("Requirement Definition Type")
+            if self._definition_type is sysml2.RequirementDefinition
+            else gettext("Constraint Definition Type")
+        )
+        model = list_of_definitions(self.subject.model, self._definition_type)
+        dropdown.set_model(model)
+
+        if isinstance(type_ := kk.feature_type(self.subject), self._definition_type):
+            selected = next(
+                (n for n, lv in enumerate(model) if lv.value == type_.id),
+                None,
+            )
+            if selected is not None:
+                dropdown.set_selected(selected)
+
+        dropdown.connect("notify::selected", self._on_type_changed)
+
+        return builder.get_object("constraint-usage-type-editor")
+
+    def _on_type_changed(self, dropdown, _pspec):
+        selected = dropdown.get_selected_item()
+        with Transaction(self.event_manager, context="editing"):
+            if selected and selected.value:
+                type_ = self.subject.model.lookup(selected.value)
+                assert isinstance(type_, self._definition_type)
+                kk.set_feature_type(self.subject, type_)
+            else:
+                kk.set_feature_type(self.subject, None)
+
+
 def list_of_definitions(
     element_factory,
     definition_type: type[
-        sysml2.PartDefinition | sysml2.AttributeDefinition | sysml2.ActionDefinition
+        sysml2.PartDefinition
+        | sysml2.AttributeDefinition
+        | sysml2.ActionDefinition
+        | sysml2.ConstraintDefinition
+        | sysml2.RequirementDefinition
     ],
 ) -> Gio.ListStore:
     model = Gio.ListStore.new(LabelValue)
@@ -220,7 +295,9 @@ def list_of_definitions(
 def _definition_label(
     definition: sysml2.PartDefinition
     | sysml2.AttributeDefinition
-    | sysml2.ActionDefinition,
+    | sysml2.ActionDefinition
+    | sysml2.ConstraintDefinition
+    | sysml2.RequirementDefinition,
 ) -> str:
     qualified_name = kk.qualified_name(definition).lstrip(kk.QUALIFIED_NAME_SEPARATOR)
     return qualified_name or definition.declaredName or type(definition).__name__

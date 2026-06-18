@@ -93,4 +93,28 @@
     </style>
   </object>
 
+  <object class="GtkBox" id="constraint-usage-type-editor">
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkLabel" id="constraint-usage-type-label">
+        <property name="label" translatable="yes">Constraint Definition Type</property>
+        <property name="xalign">0</property>
+        <style>
+          <class name="title"/>
+        </style>
+      </object>
+    </child>
+    <child>
+      <object class="GtkDropDown" id="constraint-usage-type">
+        <property name="enable-search">1</property>
+        <property name="expression">
+          <lookup type="LabelValue" name="label"/>
+        </property>
+      </object>
+    </child>
+    <style>
+      <class name="propertypage"/>
+    </style>
+  </object>
+
 </interface>

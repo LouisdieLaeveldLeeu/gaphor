@@ -20,6 +20,10 @@ member: part_definition
       | attribute_usage
       | action_definition
       | action_usage
+      | constraint_definition
+      | constraint_usage
+      | requirement_definition
+      | requirement_usage
       | package_definition
 
 // `part def <name> ;`
@@ -39,6 +43,18 @@ action_definition: "action" "def" NAME ";"
 
 // `action <name> [ ":" <type> ] ;`
 action_usage: "action" NAME (":" type_ref)? ";"
+
+// `constraint def <name> ;`
+constraint_definition: "constraint" "def" NAME ";"
+
+// `constraint <name> [ ":" <type> ] ;`
+constraint_usage: "constraint" NAME (":" type_ref)? ";"
+
+// `requirement def <name> ;`
+requirement_definition: "requirement" "def" NAME ";"
+
+// `requirement <name> [ ":" <type> ] ;`
+requirement_usage: "requirement" NAME (":" type_ref)? ";"
 
 // `package <name> { <members> }` (nestable) or `package <name> ;` (empty).
 package_definition: "package" NAME "{" package_body "}"  -> package_definition

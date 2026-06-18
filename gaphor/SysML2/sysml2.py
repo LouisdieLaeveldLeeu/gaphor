@@ -20,10 +20,12 @@ from gaphor.core.modeling.properties import (
 
 from gaphor.core.modeling.base import Base as _Base
 from gaphor.SysML2.kerml import Behavior as _Behavior
+from gaphor.SysML2.kerml import BooleanExpression as _BooleanExpression
 from gaphor.SysML2.kerml import Class as _Class
 from gaphor.SysML2.kerml import Classifier as _Classifier
 from gaphor.SysML2.kerml import DataType as _DataType
 from gaphor.SysML2.kerml import Feature as _Feature
+from gaphor.SysML2.kerml import Predicate as _Predicate
 from gaphor.SysML2.kerml import Step as _Step
 from gaphor.SysML2.kerml import Structure as _Structure
 
@@ -66,6 +68,14 @@ class AttributeUsage(Usage):
     pass
 
 
+class ConstraintDefinition(OccurrenceDefinition, _Predicate):
+    pass
+
+
+class ConstraintUsage(OccurrenceUsage, _BooleanExpression):
+    pass
+
+
 class ItemDefinition(OccurrenceDefinition, _Structure):
     pass
 
@@ -80,6 +90,14 @@ class PartDefinition(ItemDefinition):
 
 class PartUsage(ItemUsage):
     pass
+
+
+class RequirementDefinition(ConstraintDefinition):
+    reqId: _attribute[str] = _attribute("reqId", str)
+
+
+class RequirementUsage(ConstraintUsage):
+    reqId: _attribute[str] = _attribute("reqId", str)
 
 
 

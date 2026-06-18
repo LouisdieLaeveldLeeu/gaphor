@@ -911,6 +911,14 @@ SYSML_SEED = (
     "AttributeUsage",
     "ActionDefinition",
     "ActionUsage",
+    # RequirementDefinition/Usage generalize ConstraintDefinition/Usage, which in
+    # turn generalize the KerML expression roots Predicate/BooleanExpression (now
+    # in the kernel supermodel). Constraint is seeded explicitly because it is the
+    # requirement's direct super and a construct in its own right.
+    "ConstraintDefinition",
+    "ConstraintUsage",
+    "RequirementDefinition",
+    "RequirementUsage",
 )
 
 # KerML classes that the generated SysML kernel must already provide as a

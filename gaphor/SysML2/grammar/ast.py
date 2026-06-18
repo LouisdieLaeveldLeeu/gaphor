@@ -56,6 +56,36 @@ class ActionUsage:
 
 
 @dataclass(frozen=True)
+class ConstraintDefinition:
+    """`constraint def <name> ;`"""
+
+    name: str
+
+
+@dataclass(frozen=True)
+class ConstraintUsage:
+    """`constraint <name> [ : <type> ] ;`"""
+
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
+class RequirementDefinition:
+    """`requirement def <name> ;`"""
+
+    name: str
+
+
+@dataclass(frozen=True)
+class RequirementUsage:
+    """`requirement <name> [ : <type> ] ;`"""
+
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
 class PackageDefinition:
     """`package <name> { <members> }` -- a named, nestable container."""
 
@@ -66,7 +96,8 @@ class PackageDefinition:
 # A member is any construct that can appear in a (package) body.
 Member = (
     "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage "
-    "| ActionDefinition | ActionUsage | PackageDefinition"
+    "| ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage "
+    "| RequirementDefinition | RequirementUsage | PackageDefinition"
 )
 
 
@@ -76,6 +107,7 @@ class Package:
 
     members: tuple[
         "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage"
-        " | ActionDefinition | ActionUsage | PackageDefinition",
+        " | ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage"
+        " | RequirementDefinition | RequirementUsage | PackageDefinition",
         ...,
     ] = field(default_factory=tuple)

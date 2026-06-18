@@ -55,6 +55,24 @@ class _ASTBuilder(Transformer):
         type_name = items[1] if len(items) > 1 else None
         return ast.ActionUsage(name=name, type_name=type_name)
 
+    def constraint_definition(self, items):
+        (name,) = items
+        return ast.ConstraintDefinition(name=name)
+
+    def constraint_usage(self, items):
+        name = items[0]
+        type_name = items[1] if len(items) > 1 else None
+        return ast.ConstraintUsage(name=name, type_name=type_name)
+
+    def requirement_definition(self, items):
+        (name,) = items
+        return ast.RequirementDefinition(name=name)
+
+    def requirement_usage(self, items):
+        name = items[0]
+        type_name = items[1] if len(items) > 1 else None
+        return ast.RequirementUsage(name=name, type_name=type_name)
+
     def package_definition(self, items):
         name = items[0]
         members = items[1]  # package_body -> tuple

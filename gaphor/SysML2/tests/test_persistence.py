@@ -129,6 +129,33 @@ def test_action_tracer_persists_with_typing(element_factory, saver, loader):
     assert brake in list(typings[0].type)
 
 
+def test_requirement_tracer_persists_with_typing(element_factory, saver, loader):
+    result = map_package(
+        parse(
+            "constraint def Limit;\nconstraint c : Limit;\n"
+            "requirement def MassReq;\nrequirement r : MassReq;"
+        ),
+        element_factory,
+    )
+    ids = _ids(result)
+
+    loader(saver())
+
+    limit = element_factory.lookup(ids["Limit"])
+    c = element_factory.lookup(ids["c"])
+    req_def = element_factory.lookup(ids["MassReq"])
+    r = element_factory.lookup(ids["r"])
+    assert isinstance(limit, sysml2.ConstraintDefinition)
+    assert isinstance(c, sysml2.ConstraintUsage)
+    assert isinstance(req_def, sysml2.RequirementDefinition)
+    assert isinstance(r, sysml2.RequirementUsage)
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 2
+    typed = {kk._single(t.typedFeature): kk._single(t.type) for t in typings}
+    assert typed[c] is limit
+    assert typed[r] is req_def
+
+
 def test_qualified_names_survive_reload(element_factory, saver, loader):
     result = map_package(parse(TRACER), element_factory)
     result.root.declaredName = "Vehicles"

@@ -34,20 +34,30 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         return f"{pad}package {element.declaredName} {{ }}\n"
     # Definitions before usages, and the most-derived class before its bases:
     # PartDefinition is an ItemDefinition/OccurrenceDefinition but must render as
-    # `part def`, and ActionDefinition is an OccurrenceDefinition that must render
-    # as `action def`, so the specific classes are checked first.
+    # `part def`, ActionDefinition is an OccurrenceDefinition rendering as
+    # `action def`, and RequirementDefinition is a ConstraintDefinition that must
+    # render as `requirement def` -- so the more specific classes are checked
+    # first (RequirementDefinition before ConstraintDefinition, likewise usages).
     if isinstance(element, sysml2.PartDefinition):
         return f"{pad}part def {element.declaredName};\n"
     if isinstance(element, sysml2.AttributeDefinition):
         return f"{pad}attribute def {element.declaredName};\n"
     if isinstance(element, sysml2.ActionDefinition):
         return f"{pad}action def {element.declaredName};\n"
+    if isinstance(element, sysml2.RequirementDefinition):
+        return f"{pad}requirement def {element.declaredName};\n"
+    if isinstance(element, sysml2.ConstraintDefinition):
+        return f"{pad}constraint def {element.declaredName};\n"
     if isinstance(element, sysml2.PartUsage):
         return f"{pad}part {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.AttributeUsage):
         return f"{pad}attribute {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.ActionUsage):
         return f"{pad}action {_usage_decl(element, root)};\n"
+    if isinstance(element, sysml2.RequirementUsage):
+        return f"{pad}requirement {_usage_decl(element, root)};\n"
+    if isinstance(element, sysml2.ConstraintUsage):
+        return f"{pad}constraint {_usage_decl(element, root)};\n"
     return ""
 
 

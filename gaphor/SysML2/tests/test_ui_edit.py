@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from gaphor.diagram.diagramtoolbox import get_tool_def
 from gaphor.diagram.propertypages import PropertyPages
 from gaphor.diagram.tests.fixtures import find
@@ -11,15 +13,20 @@ from gaphor.SysML2.diagramitems import (
     ActionUsageItem,
     AttributeDefinitionItem,
     AttributeUsageItem,
+    ConstraintDefinitionItem,
+    ConstraintUsageItem,
     PackageItem,
     PartDefinitionItem,
     PartUsageItem,
+    RequirementDefinitionItem,
+    RequirementUsageItem,
 )
 from gaphor.SysML2.diagramtype import SysML2Diagram
 from gaphor.SysML2.modelinglanguage import SysML2ModelingLanguage
 from gaphor.SysML2.propertypages import (
     ActionUsageTypePropertyPage,
     AttributeUsageTypePropertyPage,
+    ConstraintRequirementTypePropertyPage,
     DeclaredNamePropertyPage,
     PartUsageTypePropertyPage,
 )
@@ -132,12 +139,59 @@ def test_action_usage_toolbox_entry_creates_semantic_element_and_projection(
     assert item in item.subject.presentation
 
 
+@pytest.mark.parametrize(
+    ("tool_id", "item_cls", "element_cls", "default_name"),
+    [
+        (
+            "toolbox-constraint-definition",
+            ConstraintDefinitionItem,
+            sysml2.ConstraintDefinition,
+            "ConstraintDefinition",
+        ),
+        (
+            "toolbox-constraint-usage",
+            ConstraintUsageItem,
+            sysml2.ConstraintUsage,
+            "constraintUsage",
+        ),
+        (
+            "toolbox-requirement-definition",
+            RequirementDefinitionItem,
+            sysml2.RequirementDefinition,
+            "RequirementDefinition",
+        ),
+        (
+            "toolbox-requirement-usage",
+            RequirementUsageItem,
+            sysml2.RequirementUsage,
+            "requirementUsage",
+        ),
+    ],
+)
+def test_requirement_constraint_toolbox_entries_create_element_and_projection(
+    element_factory, tool_id, item_cls, element_cls, default_name
+):
+    diagram = element_factory.create(SysML2Diagram)
+
+    item = _toolbox_item(tool_id, diagram)
+
+    assert isinstance(item, item_cls)
+    assert isinstance(item.subject, element_cls)
+    assert item.subject.declaredName == default_name
+    assert item in diagram.ownedPresentation
+    assert item in item.subject.presentation
+
+
 def test_property_pages_are_registered_for_part_constructs(element_factory):
     package = element_factory.create(kerml.Package)
     attribute_definition = element_factory.create(sysml2.AttributeDefinition)
     attribute_usage = element_factory.create(sysml2.AttributeUsage)
     action_definition = element_factory.create(sysml2.ActionDefinition)
     action_usage = element_factory.create(sysml2.ActionUsage)
+    constraint_definition = element_factory.create(sysml2.ConstraintDefinition)
+    constraint_usage = element_factory.create(sysml2.ConstraintUsage)
+    requirement_definition = element_factory.create(sysml2.RequirementDefinition)
+    requirement_usage = element_factory.create(sysml2.RequirementUsage)
     part_definition = element_factory.create(sysml2.PartDefinition)
     part_usage = element_factory.create(sysml2.PartUsage)
 
@@ -146,6 +200,10 @@ def test_property_pages_are_registered_for_part_constructs(element_factory):
     attribute_usage_pages = set(PropertyPages.find(attribute_usage))
     action_definition_pages = set(PropertyPages.find(action_definition))
     action_usage_pages = set(PropertyPages.find(action_usage))
+    constraint_definition_pages = set(PropertyPages.find(constraint_definition))
+    constraint_usage_pages = set(PropertyPages.find(constraint_usage))
+    requirement_definition_pages = set(PropertyPages.find(requirement_definition))
+    requirement_usage_pages = set(PropertyPages.find(requirement_usage))
     definition_pages = set(PropertyPages.find(part_definition))
     usage_pages = set(PropertyPages.find(part_usage))
 
@@ -154,6 +212,10 @@ def test_property_pages_are_registered_for_part_constructs(element_factory):
     assert DeclaredNamePropertyPage in attribute_usage_pages
     assert DeclaredNamePropertyPage in action_definition_pages
     assert DeclaredNamePropertyPage in action_usage_pages
+    assert DeclaredNamePropertyPage in constraint_definition_pages
+    assert DeclaredNamePropertyPage in constraint_usage_pages
+    assert DeclaredNamePropertyPage in requirement_definition_pages
+    assert DeclaredNamePropertyPage in requirement_usage_pages
     assert DeclaredNamePropertyPage in definition_pages
     assert DeclaredNamePropertyPage in usage_pages
     assert AttributeUsageTypePropertyPage in attribute_usage_pages
@@ -163,10 +225,24 @@ def test_property_pages_are_registered_for_part_constructs(element_factory):
     assert ActionUsageTypePropertyPage not in action_definition_pages
     assert ActionUsageTypePropertyPage not in usage_pages
     assert ActionUsageTypePropertyPage not in attribute_usage_pages
+    # One type page covers both constraint and requirement usages (the latter is
+    # a ConstraintUsage subclass): a RequirementUsage must NOT get two dropdowns.
+    assert ConstraintRequirementTypePropertyPage in constraint_usage_pages
+    assert ConstraintRequirementTypePropertyPage in requirement_usage_pages
+    assert ConstraintRequirementTypePropertyPage not in constraint_definition_pages
+    assert ConstraintRequirementTypePropertyPage not in requirement_definition_pages
+    assert ConstraintRequirementTypePropertyPage not in usage_pages
+    type_pages_for_requirement = [
+        p
+        for p in PropertyPages.find(requirement_usage)
+        if p is ConstraintRequirementTypePropertyPage
+    ]
+    assert len(type_pages_for_requirement) == 1
     assert PartUsageTypePropertyPage in usage_pages
     assert PartUsageTypePropertyPage not in definition_pages
     assert PartUsageTypePropertyPage not in attribute_usage_pages
     assert PartUsageTypePropertyPage not in action_usage_pages
+    assert PartUsageTypePropertyPage not in requirement_usage_pages
 
 
 def test_declared_name_property_page_renames_part_definition(
@@ -251,6 +327,28 @@ def test_declared_name_property_page_renames_action_usage(
     entry.set_text("emergencyBrake")
 
     assert action_usage.declaredName == "emergencyBrake"
+
+
+@pytest.mark.parametrize(
+    ("element_cls", "new_name"),
+    [
+        (sysml2.ConstraintDefinition, "Limit"),
+        (sysml2.ConstraintUsage, "c"),
+        (sysml2.RequirementDefinition, "MassReq"),
+        (sysml2.RequirementUsage, "r"),
+    ],
+)
+def test_declared_name_property_page_renames_requirement_constraint(
+    element_factory, event_manager, element_cls, new_name
+):
+    element = element_factory.create(element_cls)
+    property_page = DeclaredNamePropertyPage(element, event_manager)
+
+    widget = property_page.construct()
+    entry = find(widget, "declared-name")
+    entry.set_text(new_name)
+
+    assert element.declaredName == new_name
 
 
 def test_part_usage_type_property_page_sets_and_replaces_type(
@@ -408,6 +506,84 @@ def test_action_usage_type_property_page_can_clear_type(
 
     widget = property_page.construct()
     dropdown = find(widget, "action-usage-type")
+    dropdown.set_selected(0)
+
+    assert kk.feature_type(usage) is None
+    assert element_factory.lselect(kerml.FeatureTyping) == []
+
+
+def test_constraint_usage_type_property_page_sets_and_replaces_type(
+    element_factory,
+    event_manager,
+):
+    limit = element_factory.create(sysml2.ConstraintDefinition)
+    limit.declaredName = "Limit"
+    other = element_factory.create(sysml2.ConstraintDefinition)
+    other.declaredName = "Other"
+    usage = element_factory.create(sysml2.ConstraintUsage)
+    usage.declaredName = "c"
+    property_page = ConstraintRequirementTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "constraint-usage-type")
+    values = {lv.value for lv in dropdown.get_model()}
+    assert limit.id in values
+    assert other.id in values
+
+    limit_index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == limit.id
+    )
+    dropdown.set_selected(limit_index)
+    assert kk.feature_type(usage) is limit
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+    other_index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == other.id
+    )
+    dropdown.set_selected(other_index)
+    assert kk.feature_type(usage) is other
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+
+def test_requirement_usage_type_property_page_lists_requirement_definitions(
+    element_factory,
+    event_manager,
+):
+    mass_req = element_factory.create(sysml2.RequirementDefinition)
+    mass_req.declaredName = "MassReq"
+    plain_constraint = element_factory.create(sysml2.ConstraintDefinition)
+    plain_constraint.declaredName = "PlainConstraint"
+    usage = element_factory.create(sysml2.RequirementUsage)
+    usage.declaredName = "r"
+    property_page = ConstraintRequirementTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "constraint-usage-type")
+    values = {lv.value for lv in dropdown.get_model()}
+    # A RequirementUsage is typed by a RequirementDefinition; a plain
+    # ConstraintDefinition (not a requirement) must not appear.
+    assert mass_req.id in values
+    assert plain_constraint.id not in values
+
+    index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == mass_req.id
+    )
+    dropdown.set_selected(index)
+    assert kk.feature_type(usage) is mass_req
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+
+def test_constraint_usage_type_property_page_can_clear_type(
+    element_factory,
+    event_manager,
+):
+    limit = element_factory.create(sysml2.ConstraintDefinition)
+    usage = element_factory.create(sysml2.ConstraintUsage)
+    kk.set_feature_type(usage, limit)
+    property_page = ConstraintRequirementTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "constraint-usage-type")
     dropdown.set_selected(0)
 
     assert kk.feature_type(usage) is None

@@ -34,7 +34,10 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML ActionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML ActionUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML RequirementUsage | no | no | no | no | no | no | no | no | no | not-started |
+| SysML ConstraintDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML ConstraintUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML RequirementDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML RequirementUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML PortUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML ConnectionUsage | no | no | no | no | no | no | no | no | no | not-started |
 
@@ -76,6 +79,25 @@ declaration-and-typing surface is proven; promotion to `supported` waits until
 that behavioral surface is scheduled and built. This is the Phase-D behavioral
 gate decision, taken explicitly per the roadmap.
 
+ConstraintDefinition/Usage and RequirementDefinition/Usage (Phase E) have all
+nine cells implemented and focused-tested for the declaration-and-typing surface
+(`constraint def Limit; constraint c : Limit; requirement def MassReq;
+requirement r : MassReq;`). RequirementDefinition/Usage generalize
+ConstraintDefinition/Usage, which generalize the KerML expression roots
+Predicate/BooleanExpression (added to the kernel as the Phase E prerequisite, so
+the chain is faithful, not lossy). The diagram cell projects each as a
+subject-bound box and projects the FeatureTyping line; the UI-edit cell adds
+toolbox create-and-project tools, declared-name editing, and a single type page
+that types a ConstraintUsage by a ConstraintDefinition and a RequirementUsage by
+a RequirementDefinition (one page, never two dropdowns on the requirement). Like
+actions, all four rows are deliberately held at `alpha`, NOT `supported`, on a
+named dependency: a constraint's actual content -- its boolean expression body
+(the predicate `{ ... }`) -- and a requirement's `subject`/`assume`/`require`
+parameter parts are not modeled. Only the declaration-and-typing surface is
+proven; promotion waits until the constraint-expression surface is scheduled and
+built. This is the Phase-E constraint-expression gate decision, taken explicitly
+per the roadmap.
+
 AttributeUsage stays `alpha` on a named dependency. Every one of its cells is
 implemented and focused-tested -- including the Diagram and UI-edit cells added
 in Phase C2 -- for untyped usages and usages typed by an AttributeDefinition
@@ -87,21 +109,24 @@ lands and `attribute x : Real` round-trips. This is the C2 standard-library gate
 decision, taken explicitly per the roadmap.
 
 Diagram cell scope. `Diagram=yes` for Package, PartDefinition, PartUsage,
-AttributeDefinition, AttributeUsage, ActionDefinition, and ActionUsage means a
-diagram item (an `ElementPresentation`) projects an EXISTING semantic element via
-Gaphor's `subject` mechanism (never symbol-only), the view->element link persists
-and reloads through `.gaphor`, and deleting the element removes its projection.
-Package projection is a package frame/box view of the namespace; semantic
-namespace ownership remains in the KerML ownership spine.
+AttributeDefinition, AttributeUsage, ActionDefinition, ActionUsage,
+ConstraintDefinition, ConstraintUsage, RequirementDefinition, and
+RequirementUsage means a diagram item (an `ElementPresentation`) projects an
+EXISTING semantic element via Gaphor's `subject` mechanism (never symbol-only),
+the view->element link persists and reloads through `.gaphor`, and deleting the
+element removes its projection. Package projection is a package frame/box view of
+the namespace; semantic namespace ownership remains in the KerML ownership spine.
 
 UI-edit scope for Package, PartDefinition, PartUsage, AttributeDefinition,
-AttributeUsage, ActionDefinition, and ActionUsage. `UI-edit=yes` means the SysML2
-toolbox has Package, Part Definition, Part Usage, Attribute Definition, Attribute
-Usage, Action Definition, and Action Usage tools that create the semantic element
-and its projection together (never symbol-only), and property pages can rename
-all seven constructs. PartUsage can set/clear/replace a PartDefinition type;
-AttributeUsage can set/clear/replace an AttributeDefinition type; ActionUsage can
-set/clear/replace an ActionDefinition type. Re-typing replaces the stored
+AttributeUsage, ActionDefinition, ActionUsage, ConstraintDefinition,
+ConstraintUsage, RequirementDefinition, and RequirementUsage. `UI-edit=yes` means
+the SysML2 toolbox has a create-and-project tool for each (never symbol-only),
+and property pages can rename every one of them. PartUsage can set/clear/replace
+a PartDefinition type; AttributeUsage an AttributeDefinition; ActionUsage an
+ActionDefinition; ConstraintUsage a ConstraintDefinition; and RequirementUsage a
+RequirementDefinition (a single type page serves both constraint and requirement
+usages, choosing the definition kind from the subject's own type, so a
+RequirementUsage never gets two dropdowns). Re-typing replaces the stored
 FeatureTyping instead of accumulating duplicates.
 
 The FeatureTyping relation projects as a line (`FeatureTypingItem`) whose

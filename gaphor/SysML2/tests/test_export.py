@@ -61,3 +61,32 @@ def test_action_export_is_reparseable(element_factory):
     result = map_package(parse(src), element_factory)
     exported = export_namespace(result.root)
     assert parse(exported) == parse(src)
+
+
+def test_exports_constraint_and_requirement_definitions_and_usages(element_factory):
+    result = map_package(
+        parse(
+            "constraint def Limit;\nconstraint c : Limit;\n"
+            "requirement def MassReq;\nrequirement r : MassReq;"
+        ),
+        element_factory,
+    )
+    text = export_namespace(result.root)
+    assert "constraint def Limit;" in text
+    assert "constraint c : Limit;" in text
+    assert "requirement def MassReq;" in text
+    assert "requirement r : MassReq;" in text
+    # A RequirementDefinition is a ConstraintDefinition subclass but must NOT be
+    # emitted as `constraint def` (most-derived keyword wins).
+    assert "constraint def MassReq" not in text
+    assert "constraint r :" not in text
+
+
+def test_requirement_and_constraint_export_is_reparseable(element_factory):
+    src = (
+        "constraint def Limit;\nconstraint c : Limit;\n"
+        "requirement def MassReq;\nrequirement r : MassReq;"
+    )
+    result = map_package(parse(src), element_factory)
+    exported = export_namespace(result.root)
+    assert parse(exported) == parse(src)

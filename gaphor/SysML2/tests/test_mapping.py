@@ -117,6 +117,40 @@ def test_action_usage_typed_by_action_definition(element_factory):
     assert brake in list(typings[0].type)
 
 
+def test_constraint_usage_typed_by_constraint_definition(element_factory):
+    result = map_package(
+        parse("constraint def Limit;\nconstraint c : Limit;"), element_factory
+    )
+    limit = result.elements_by_name["Limit"]
+    c = result.elements_by_name["c"]
+    assert isinstance(limit, sysml2.ConstraintDefinition)
+    assert isinstance(c, sysml2.ConstraintUsage)
+    # Constraint usage reaches the KerML expression + feature spine.
+    assert isinstance(c, kerml.BooleanExpression)
+    assert isinstance(c, kerml.Feature)
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 1
+    assert c in list(typings[0].typedFeature)
+    assert limit in list(typings[0].type)
+
+
+def test_requirement_usage_typed_by_requirement_definition(element_factory):
+    result = map_package(
+        parse("requirement def MassReq;\nrequirement r : MassReq;"), element_factory
+    )
+    req_def = result.elements_by_name["MassReq"]
+    r = result.elements_by_name["r"]
+    assert isinstance(req_def, sysml2.RequirementDefinition)
+    assert isinstance(r, sysml2.RequirementUsage)
+    # RequirementUsage is a ConstraintUsage on the KerML feature chain.
+    assert isinstance(r, sysml2.ConstraintUsage)
+    assert isinstance(r, kerml.Feature)
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 1
+    assert r in list(typings[0].typedFeature)
+    assert req_def in list(typings[0].type)
+
+
 def test_unresolved_type_leaves_usage_untyped(element_factory):
     # Forward/undefined reference: no FeatureTyping is created; validation (a
     # later sub-step) is responsible for reporting it.

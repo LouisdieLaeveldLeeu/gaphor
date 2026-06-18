@@ -115,6 +115,29 @@ def test_parses_action_definition_and_usage_together():
     )
 
 
+def test_parses_constraint_definition_and_usage():
+    pkg = parse("constraint def Limit;\nconstraint c : Limit;")
+    assert pkg.members == (
+        ast.ConstraintDefinition(name="Limit"),
+        ast.ConstraintUsage(name="c", type_name=("Limit",)),
+    )
+
+
+def test_parses_requirement_definition_and_usage():
+    pkg = parse("requirement def MassReq;\nrequirement r : MassReq;")
+    assert pkg.members == (
+        ast.RequirementDefinition(name="MassReq"),
+        ast.RequirementUsage(name="r", type_name=("MassReq",)),
+    )
+
+
+def test_parses_untyped_requirement_usage():
+    pkg = parse("requirement r;")
+    assert pkg == ast.Package(
+        members=(ast.RequirementUsage(name="r", type_name=None),)
+    )
+
+
 def test_parses_empty_package_semicolon_form():
     pkg = parse("package P;")
     assert pkg == ast.Package(

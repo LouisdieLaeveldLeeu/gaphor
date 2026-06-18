@@ -85,6 +85,34 @@ def drop_action_usage(
     return _project_element(element, diagram, x, y)
 
 
+@drop.register(sysml2.ConstraintDefinition, Diagram)
+def drop_constraint_definition(
+    element: sysml2.ConstraintDefinition, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
+@drop.register(sysml2.ConstraintUsage, Diagram)
+def drop_constraint_usage(
+    element: sysml2.ConstraintUsage, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
+@drop.register(sysml2.RequirementDefinition, Diagram)
+def drop_requirement_definition(
+    element: sysml2.RequirementDefinition, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
+@drop.register(sysml2.RequirementUsage, Diagram)
+def drop_requirement_usage(
+    element: sysml2.RequirementUsage, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
 @drop.register(kerml.FeatureTyping, Diagram)
 def drop_feature_typing(
     element: kerml.FeatureTyping, diagram: Diagram, x: float, y: float

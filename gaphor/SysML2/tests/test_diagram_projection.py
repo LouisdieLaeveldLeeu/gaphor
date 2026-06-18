@@ -5,6 +5,8 @@ symbol-only (invariant 4).
 
 from __future__ import annotations
 
+import pytest
+
 from gaphor.core.modeling import Diagram
 from gaphor.diagram.connectors import Connector
 from gaphor.diagram.drop import drop
@@ -15,10 +17,14 @@ from gaphor.SysML2.diagramitems import (
     ActionUsageItem,
     AttributeDefinitionItem,
     AttributeUsageItem,
+    ConstraintDefinitionItem,
+    ConstraintUsageItem,
     FeatureTypingItem,
     PackageItem,
     PartDefinitionItem,
     PartUsageItem,
+    RequirementDefinitionItem,
+    RequirementUsageItem,
 )
 from gaphor.SysML2.grammar.parser import parse
 from gaphor.SysML2.mapping import map_package
@@ -43,6 +49,15 @@ def test_item_registered_for_part_definition():
     assert get_diagram_item(sysml2.AttributeUsage) is AttributeUsageItem
     assert get_diagram_item(sysml2.ActionDefinition) is ActionDefinitionItem
     assert get_diagram_item(sysml2.ActionUsage) is ActionUsageItem
+    assert (
+        get_diagram_item(sysml2.ConstraintDefinition) is ConstraintDefinitionItem
+    )
+    assert get_diagram_item(sysml2.ConstraintUsage) is ConstraintUsageItem
+    assert (
+        get_diagram_item(sysml2.RequirementDefinition)
+        is RequirementDefinitionItem
+    )
+    assert get_diagram_item(sysml2.RequirementUsage) is RequirementUsageItem
     assert get_diagram_item(sysml2.PartDefinition) is PartDefinitionItem
 
 
@@ -308,6 +323,75 @@ def test_deleting_action_usage_removes_its_projection(element_factory):
     assert element_factory.lookup(item_id) is None
 
 
+@pytest.mark.parametrize(
+    ("element_cls", "item_cls"),
+    [
+        (sysml2.ConstraintDefinition, ConstraintDefinitionItem),
+        (sysml2.ConstraintUsage, ConstraintUsageItem),
+        (sysml2.RequirementDefinition, RequirementDefinitionItem),
+        (sysml2.RequirementUsage, RequirementUsageItem),
+    ],
+)
+def test_requirement_constraint_drop_projects_existing_element(
+    element_factory, element_cls, item_cls
+):
+    element = element_factory.create(element_cls)
+    element.declaredName = "X"
+    diagram = element_factory.create(Diagram)
+
+    item = drop(element, diagram, 0, 0)
+
+    assert isinstance(item, item_cls)
+    assert item.subject is element
+    assert item in diagram.ownedPresentation
+
+
+@pytest.mark.parametrize(
+    ("element_cls", "item_cls"),
+    [
+        (sysml2.ConstraintDefinition, ConstraintDefinitionItem),
+        (sysml2.ConstraintUsage, ConstraintUsageItem),
+        (sysml2.RequirementDefinition, RequirementDefinitionItem),
+        (sysml2.RequirementUsage, RequirementUsageItem),
+    ],
+)
+def test_requirement_constraint_projection_persists_and_reloads(
+    element_factory, saver, loader, element_cls, item_cls
+):
+    element = element_factory.create(element_cls)
+    diagram = element_factory.create(Diagram)
+    item = drop(element, diagram, 0, 0)
+    item_id, element_id = item.id, element.id
+
+    loader(saver())
+
+    reloaded_item = element_factory.lookup(item_id)
+    assert isinstance(reloaded_item, item_cls)
+    assert reloaded_item.subject is element_factory.lookup(element_id)
+
+
+@pytest.mark.parametrize(
+    "element_cls",
+    [
+        sysml2.ConstraintDefinition,
+        sysml2.ConstraintUsage,
+        sysml2.RequirementDefinition,
+        sysml2.RequirementUsage,
+    ],
+)
+def test_deleting_requirement_constraint_removes_its_projection(
+    element_factory, element_cls
+):
+    element = element_factory.create(element_cls)
+    diagram = element_factory.create(Diagram)
+    item = drop(element, diagram, 0, 0)
+    item_id = item.id
+
+    element.unlink()
+
+    assert element_factory.lookup(item_id) is None
+
+
 def _project_tracer(element_factory):
     """Map the tracer pair and project both items, returning (diagram, usage,
     definition, typing)."""
@@ -399,6 +483,34 @@ def test_action_feature_typing_projects_as_a_view_on_the_existing_typing(
     }
     assert usage in connected_subjects
     assert brake in connected_subjects
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == typings_before
+
+
+def test_requirement_feature_typing_projects_as_a_view_on_the_existing_typing(
+    element_factory,
+):
+    result = map_package(
+        parse("requirement def MassReq;\nrequirement r : MassReq;"), element_factory
+    )
+    req_def = result.elements_by_name["MassReq"]
+    usage = result.elements_by_name["r"]
+    typing = element_factory.lselect(kerml.FeatureTyping)[0]
+    diagram = element_factory.create(Diagram)
+    drop(req_def, diagram, 0, 0)
+    drop(usage, diagram, 100, 0)
+    typings_before = len(element_factory.lselect(kerml.FeatureTyping))
+
+    line = drop(typing, diagram, 50, 0)
+
+    assert isinstance(line, FeatureTypingItem)
+    assert line.subject is typing
+    connected_subjects = {
+        diagram.connections.get_connection(h).connected.subject
+        for h in line.handles()
+        if diagram.connections.get_connection(h)
+    }
+    assert usage in connected_subjects
+    assert req_def in connected_subjects
     assert len(element_factory.lselect(kerml.FeatureTyping)) == typings_before
 
 

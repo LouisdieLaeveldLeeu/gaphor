@@ -94,6 +94,18 @@ def _build_members(
             element = factory.create(sysml2.ActionUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name))
+        elif isinstance(member, ast.ConstraintDefinition):
+            element = factory.create(sysml2.ConstraintDefinition)
+        elif isinstance(member, ast.ConstraintUsage):
+            element = factory.create(sysml2.ConstraintUsage)
+            if member.type_name is not None:
+                typed_usages.append((element, namespace, member.type_name))
+        elif isinstance(member, ast.RequirementDefinition):
+            element = factory.create(sysml2.RequirementDefinition)
+        elif isinstance(member, ast.RequirementUsage):
+            element = factory.create(sysml2.RequirementUsage)
+            if member.type_name is not None:
+                typed_usages.append((element, namespace, member.type_name))
         elif isinstance(member, ast.PackageDefinition):
             element = factory.create(kerml.Package)
         else:  # pragma: no cover - AST node types are exhaustive

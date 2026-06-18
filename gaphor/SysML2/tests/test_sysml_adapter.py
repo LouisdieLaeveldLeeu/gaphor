@@ -43,6 +43,32 @@ def test_action_classes_generalize_the_kerml_supermodel():
     assert "OccurrenceDefinition" in def_mro and "Element" in def_mro
 
 
+def test_sysml_closure_contains_the_requirement_and_constraint_classes():
+    kernel = xmi_adapter.extract_sysml(SYSML_XMI)
+    names = {c.name for c in kernel.classes}
+    assert {
+        "ConstraintDefinition",
+        "ConstraintUsage",
+        "RequirementDefinition",
+        "RequirementUsage",
+    } <= names
+
+
+def test_requirement_constraint_classes_generalize_the_kerml_supermodel():
+    # RequirementUsage -> ConstraintUsage -> {OccurrenceUsage, BooleanExpression}
+    # and RequirementDefinition -> ConstraintDefinition -> {OccurrenceDefinition,
+    # Predicate}: the constraint expression supers (now in the kernel) are kept,
+    # and the chain reaches the KerML Feature/Element spine.
+    from gaphor.SysML2 import kerml
+
+    assert issubclass(sysml2.RequirementUsage, sysml2.ConstraintUsage)
+    assert issubclass(sysml2.RequirementDefinition, sysml2.ConstraintDefinition)
+    assert issubclass(sysml2.ConstraintUsage, kerml.BooleanExpression)
+    assert issubclass(sysml2.ConstraintUsage, kerml.Feature)
+    assert issubclass(sysml2.ConstraintDefinition, kerml.Predicate)
+    assert issubclass(sysml2.RequirementUsage, kerml.Feature)
+
+
 def test_action_classes_keep_their_behavior_step_supers():
     # Regression: ActionDefinition -> Behavior and ActionUsage -> Step are real
     # KerML generalizations that were silently dropped before the kernel carried

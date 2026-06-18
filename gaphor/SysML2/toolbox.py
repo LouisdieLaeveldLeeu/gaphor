@@ -142,13 +142,74 @@ actions = ToolSection(
 )
 
 
-sysml2_toolbox_actions: ToolboxDefinition = (packages, parts, attributes, actions)
+requirements = ToolSection(
+    gettext("Requirements"),
+    (
+        ToolDef(
+            "toolbox-constraint-definition",
+            gettext("Constraint Definition"),
+            "gaphor-constraint-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.ConstraintDefinitionItem,
+                sysml2_model.ConstraintDefinition,
+                config_func=_declared_name_config("ConstraintDefinition"),
+            ),
+            handle_index=SE,
+        ),
+        ToolDef(
+            "toolbox-constraint-usage",
+            gettext("Constraint Usage"),
+            "gaphor-constraint-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.ConstraintUsageItem,
+                sysml2_model.ConstraintUsage,
+                config_func=_declared_name_config("constraintUsage"),
+            ),
+            handle_index=SE,
+        ),
+        ToolDef(
+            "toolbox-requirement-definition",
+            gettext("Requirement Definition"),
+            "gaphor-requirement-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.RequirementDefinitionItem,
+                sysml2_model.RequirementDefinition,
+                config_func=_declared_name_config("RequirementDefinition"),
+            ),
+            handle_index=SE,
+        ),
+        ToolDef(
+            "toolbox-requirement-usage",
+            gettext("Requirement Usage"),
+            "gaphor-requirement-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.RequirementUsageItem,
+                sysml2_model.RequirementUsage,
+                config_func=_declared_name_config("requirementUsage"),
+            ),
+            handle_index=SE,
+        ),
+    ),
+)
+
+
+sysml2_toolbox_actions: ToolboxDefinition = (
+    packages,
+    parts,
+    attributes,
+    actions,
+    requirements,
+)
 
 sysml2_diagram_types: DiagramTypes = (
     SysML2DiagramType(
         SysML2Diagram,
         i18nize("SysML v2 Diagram"),
-        (packages, parts, attributes, actions),
+        (packages, parts, attributes, actions, requirements),
     ),
 )
 

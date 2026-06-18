@@ -91,6 +91,36 @@ class ActionDefinitionItem(Named, ElementPresentation[sysml2.ActionDefinition]):
         self.shape = _name_box(self)
 
 
+@represents(sysml2.ConstraintDefinition)
+class ConstraintDefinitionItem(
+    Named, ElementPresentation[sysml2.ConstraintDefinition]
+):
+    """A diagram view onto a SysML2 `ConstraintDefinition`."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id)
+        self.watch("subject[Element].declaredName", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _name_box(self)
+
+
+@represents(sysml2.RequirementDefinition)
+class RequirementDefinitionItem(
+    Named, ElementPresentation[sysml2.RequirementDefinition]
+):
+    """A diagram view onto a SysML2 `RequirementDefinition`."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id)
+        self.watch("subject[Element].declaredName", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _name_box(self)
+
+
 @represents(sysml2.PartUsage)
 class PartUsageItem(Named, ElementPresentation[sysml2.PartUsage]):
     """A diagram view onto a SysML2 `PartUsage` (its declared name)."""
@@ -120,6 +150,32 @@ class AttributeUsageItem(Named, ElementPresentation[sysml2.AttributeUsage]):
 @represents(sysml2.ActionUsage)
 class ActionUsageItem(Named, ElementPresentation[sysml2.ActionUsage]):
     """A diagram view onto a SysML2 `ActionUsage`."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id)
+        self.watch("subject[Element].declaredName", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _name_box(self)
+
+
+@represents(sysml2.ConstraintUsage)
+class ConstraintUsageItem(Named, ElementPresentation[sysml2.ConstraintUsage]):
+    """A diagram view onto a SysML2 `ConstraintUsage`."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id)
+        self.watch("subject[Element].declaredName", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _name_box(self)
+
+
+@represents(sysml2.RequirementUsage)
+class RequirementUsageItem(Named, ElementPresentation[sysml2.RequirementUsage]):
+    """A diagram view onto a SysML2 `RequirementUsage`."""
 
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)

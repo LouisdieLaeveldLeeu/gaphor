@@ -157,6 +157,43 @@ def test_action_in_package_cross_references_round_trip():
     ) in result.source_form
 
 
+def test_constraint_definition_and_usage_round_trip():
+    src = "constraint def Limit;\nconstraint c : Limit;"
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert ("ConstraintDefinition", "Root::Limit") in result.source_form
+    assert ("ConstraintUsage", "Root::c", "Root::Limit") in result.source_form
+
+
+def test_requirement_definition_and_usage_round_trip():
+    src = "requirement def MassReq;\nrequirement r : MassReq;"
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert ("RequirementDefinition", "Root::MassReq") in result.source_form
+    assert (
+        "RequirementUsage",
+        "Root::r",
+        "Root::MassReq",
+    ) in result.source_form
+
+
+def test_requirement_in_package_cross_references_round_trip():
+    src = (
+        "package Reqs { requirement def MassReq; } "
+        "package Sys { requirement r : Reqs::MassReq; }"
+    )
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert (
+        "RequirementUsage",
+        "Root::Sys::r",
+        "Root::Reqs::MassReq",
+    ) in result.source_form
+
+
 def test_empty_semicolon_package_round_trips():
     result = round_trip("package P;")
     assert result.preserved
