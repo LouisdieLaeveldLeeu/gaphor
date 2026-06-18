@@ -42,6 +42,7 @@ class Diagnostic:
 def validate(
     factory: ElementFactory,
     unresolved_types: dict[str, str] | None = None,
+    mistyped: dict[str, tuple[str, str]] | None = None,
 ) -> list[Diagnostic]:
     """Run the scoped M2 validation rules over all elements in `factory`.
 
@@ -49,6 +50,12 @@ def validate(
     not resolve during mapping (the mapper records these). The
     usage-without-valid-type rule reports them; a model loaded from `.gaphor`
     with no mapping context simply has none to report.
+
+    `mistyped` maps a usage element id -> (declared type name, resolved-type kind)
+    for a type that resolved but is the WRONG KIND for the usage (e.g.
+    `part p : AttributeDefinition`). These also produce no FeatureTyping; the
+    type-kind-mismatch rule reports them. Like unresolved types, this needs
+    mapping context, so a reloaded model has none to report.
     """
     diagnostics: list[Diagnostic] = []
     diagnostics.extend(_check_missing_owner(factory))
@@ -58,6 +65,7 @@ def validate(
     diagnostics.extend(
         _check_usage_without_valid_type(factory, unresolved_types or {})
     )
+    diagnostics.extend(_check_type_kind_mismatch(factory, mistyped or {}))
     return diagnostics
 
 
@@ -161,5 +169,30 @@ def _check_usage_without_valid_type(
             "usage-without-valid-type",
             f"usage {name!r} declares type {declared_type!r} which does not "
             f"resolve to a type",
+            usage_id,
+        )
+
+
+def _check_type_kind_mismatch(
+    factory: ElementFactory, mistyped: dict[str, tuple[str, str]]
+) -> Iterator[Diagnostic]:
+    """A usage typed by a resolvable Type of the WRONG KIND is an error.
+
+    Each usage kind is typed by exactly one definition kind (a part by a
+    PartDefinition, a requirement by a RequirementDefinition, ...). A declared
+    type that resolves to a Type of a different kind -- e.g.
+    `part p : AttributeDefinition` or `requirement r : ConstraintDefinition` --
+    is a kind mismatch: no FeatureTyping is created (the mapper records it here),
+    and it must be reported rather than silently accepted.
+    """
+    for usage_id, (declared_type, resolved_kind) in mistyped.items():
+        element = factory.lookup(usage_id)
+        name = element.declaredName if element is not None else None
+        usage_kind = type(element).__name__ if element is not None else "usage"
+        yield Diagnostic(
+            Severity.ERROR,
+            "type-kind-mismatch",
+            f"{usage_kind} {name!r} declares type {declared_type!r} which "
+            f"resolves to a {resolved_kind}, not the required definition kind",
             usage_id,
         )

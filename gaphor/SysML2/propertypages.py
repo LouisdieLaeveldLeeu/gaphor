@@ -281,12 +281,19 @@ def list_of_definitions(
         | sysml2.RequirementDefinition
     ],
 ) -> Gio.ListStore:
+    # Exact-kind filter (type(d) is definition_type), not isinstance: a usage is
+    # typed by exactly its definition kind, so a ConstraintUsage's dropdown must
+    # list ConstraintDefinitions only and NOT RequirementDefinitions (which
+    # subclass ConstraintDefinition). This mirrors the mapper's typing contract,
+    # so the UI cannot create a cross-kind mismatch the importer would reject.
     model = Gio.ListStore.new(LabelValue)
     model.append(LabelValue("", None))
-    for definition in sorted(
-        element_factory.select(definition_type),
-        key=_definition_label,
-    ):
+    definitions = [
+        d
+        for d in element_factory.select(definition_type)
+        if type(d) is definition_type
+    ]
+    for definition in sorted(definitions, key=_definition_label):
         label = _definition_label(definition)
         model.append(LabelValue(label, definition.id))
     return model

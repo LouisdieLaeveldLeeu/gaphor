@@ -19,8 +19,8 @@ honestly claimed (claim discipline: a cell advances only with a passing test).
   Persist. Grew from 18 in Phase E with the expression roots
   BooleanExpression/Predicate and their closure (Expression/Step/Function/
   Behavior), the supermodel the SysML constraint/requirement layer generalizes.
-- KerML Package: `alpha` (Parse..Round-trip).
-- SysML PartDefinition, PartUsage: `alpha` + Diagram (projection core).
+- KerML Package: `supported` (Phase C1 -- all nine cells).
+- SysML PartDefinition, PartUsage: `supported` (Phase B -- all nine cells).
 - SysML AttributeDefinition: `supported`; AttributeUsage: `alpha` (Z2 gate).
 - SysML ActionDefinition, ActionUsage: `alpha` (D1 semantic chain + D2 diagram +
   D3 UI-edit done -- all nine cells; held at alpha on a named behavioral
@@ -70,7 +70,11 @@ phases land.
 Each phase = a coherent, independently shippable, CI-green increment. STOP +
 human review at the end of every phase.
 
-### Phase A -- UI foundation (unblocks UI-edit for all constructs)
+Status legend: a phase marked **DONE** is implemented, tested, and committed (see
+the named commit); its description is kept as the record of what that phase did.
+Phases with no marker are not started.
+
+### Phase A -- UI foundation (unblocks UI-edit for all constructs) -- DONE (31a825639)
 Stand up the real modeling-language UI surface that every `supported` claim
 needs: `toolbox_definition`, `element_types`, `diagram_types`,
 `model_browser_model` for the SysML2 (and KerML where relevant) languages,
@@ -80,19 +84,19 @@ Exit: the language no longer raises on these; smoke tests can enumerate SysML2
 element/diagram metadata and instantiate the SysML2 diagram type; gates + CI
 green.
 
-### Phase B -- Promote PartDefinition / PartUsage to `supported`
+### Phase B -- Promote PartDefinition / PartUsage to `supported` -- DONE (94623bb3e)
 On the Phase A foundation: toolbox entries that create-and-project Part def/
 usage, property pages (rename, set type), and conformance tests for all nine
 cells. Diagram already done. Resolves the `alpha` caveat for these two.
 Exit: PartDefinition + PartUsage rows = `supported`, every cell tested.
 
-### Phase C1 -- Promote Package to `supported`
+### Phase C1 -- Promote Package to `supported` -- DONE (8fcee05ef)
 Add Package diagram projection (frame/box), toolbox entry, property page, and
 conformance tests for all nine cells. Keep this separate from Attribute work
 because package projection and namespace editing have a different risk profile.
 Exit: KerML Package row = `supported`, every cell tested.
 
-### Phase C2 -- Promote Attribute Definition/Usage
+### Phase C2 -- Promote Attribute Definition/Usage -- DONE (3315e8e62: AttributeDefinition supported; AttributeUsage alpha, Z2 gate)
 Add diagram projection for AttributeDefinition and AttributeUsage (boxes),
 toolbox entries, property pages, and conformance tests. Before claiming
 AttributeUsage `supported`, explicitly decide the stdlib-loader gate:
@@ -103,7 +107,7 @@ AttributeUsage-typed-by-AttributeDefinition may still reach `supported`.
 Exit: AttributeDefinition = `supported`; AttributeUsage = `supported` only if
 the stdlib/value-type gate is cleared, otherwise `alpha` with named dependency.
 
-### Phase D -- ActionUsage, split into three review gates
+### Phase D -- ActionUsage, split into three review gates -- DONE (D1 75f213bac, D2 3f4bf0c63, D3 1003c0890; ActionDefinition/Usage alpha, behavioral dependency)
 First not-started construct through the smaller vertical-tracer template:
 
 1. D1 semantic chain: grammar (`action`...), mapping onto the kernel,
@@ -116,11 +120,21 @@ First not-started construct through the smaller vertical-tracer template:
 Exit: ActionUsage row = `supported`, or `alpha` with a named dependency if D1-D3
 surface one.
 
-### Phase E -- RequirementUsage, split into three review gates
-Repeat the D1/D2/D3 pattern for RequirementUsage. Constraint or relationship
-semantics discovered here become explicit dependency gates rather than hidden
-scope creep.
-Exit: RequirementUsage row = `supported` or `alpha` with named dependency.
+### Phase E -- RequirementUsage, split into three review gates -- DONE (kernel-expansion 36b8d2234, D1+D2+D3 0b20d1576; kind-typing fix in a follow-up)
+Repeated the D1/D2/D3 pattern for RequirementUsage, and -- since RequirementUsage
+generalizes ConstraintUsage -- for ConstraintDefinition/Usage too. The predicted
+constraint dependency gate surfaced and was cleared as a prerequisite: the
+RequirementUsage -> ConstraintUsage -> BooleanExpression (and ...-> Predicate)
+chain needed KerML expression roots that were not in the kernel, so the kernel
+was first grown 18 -> 24 (BooleanExpression/Predicate + closure) with a generator
+fail-fast guard against dropped generalizations. A follow-up then made typing
+kind-specific (a usage is typed by exactly its own definition kind;
+`type-kind-mismatch` is an error), with the property-page dropdown filtered to the
+exact kind.
+Exit (reached): ConstraintDefinition/Usage and RequirementDefinition/Usage rows =
+`alpha`, all nine cells implemented and tested, held on the named dependency that
+the constraint boolean-expression body and requirement subject/assume/require
+parameters are unmodeled.
 
 ### Phase F -- PortUsage, split into three review gates
 Repeat the D1/D2/D3 pattern for PortUsage. Ports introduce interface,

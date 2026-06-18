@@ -58,11 +58,18 @@ references, never ids or raw text). M2 establishes the harness
 | SysML AttributeUsage (typed) | yes | `test_roundtrip.py` |
 | SysML ActionDefinition | yes | `test_roundtrip.py::test_action_definition_and_usage_round_trip` |
 | SysML ActionUsage (typed) | yes | `test_roundtrip.py` |
+| SysML ConstraintDefinition | yes | `test_roundtrip.py::test_constraint_definition_and_usage_round_trip` |
+| SysML ConstraintUsage (typed) | yes | `test_roundtrip.py` |
+| SysML RequirementDefinition | yes | `test_roundtrip.py::test_requirement_definition_and_usage_round_trip` |
+| SysML RequirementUsage (typed) | yes | `test_roundtrip.py` |
 
-Coverage: 7 constructs round-trip-covered. Package, PartDefinition, PartUsage,
+Coverage: 11 constructs round-trip-covered. Package, PartDefinition, PartUsage,
 and AttributeDefinition are `supported`: every matrix cell is implemented and
 focused-tested for the claimed surface. Resolution remains same-namespace +
-simple/qualified name (incl. nested + cross-package).
+simple/qualified name (incl. nested + cross-package). Typing is kind-specific: a
+usage is typed by exactly its own definition kind (a cross-kind type such as
+`part p : AttributeDefinition` is a `type-kind-mismatch` error, not silently
+accepted).
 
 ActionDefinition and ActionUsage have all nine cells implemented and
 focused-tested -- the seven semantic cells (D1), the Diagram cell (D2), and the

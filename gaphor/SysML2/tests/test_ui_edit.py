@@ -588,3 +588,25 @@ def test_constraint_usage_type_property_page_can_clear_type(
 
     assert kk.feature_type(usage) is None
     assert element_factory.lselect(kerml.FeatureTyping) == []
+
+
+def test_constraint_usage_dropdown_excludes_requirement_definitions(
+    element_factory,
+    event_manager,
+):
+    # Regression: RequirementDefinition subclasses ConstraintDefinition, but a
+    # plain ConstraintUsage must NOT be offered a RequirementDefinition (which
+    # the importer would reject as a cross-kind mismatch).
+    plain_constraint = element_factory.create(sysml2.ConstraintDefinition)
+    plain_constraint.declaredName = "Limit"
+    requirement_def = element_factory.create(sysml2.RequirementDefinition)
+    requirement_def.declaredName = "MassReq"
+    usage = element_factory.create(sysml2.ConstraintUsage)
+    usage.declaredName = "c"
+    property_page = ConstraintRequirementTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "constraint-usage-type")
+    values = {lv.value for lv in dropdown.get_model()}
+    assert plain_constraint.id in values
+    assert requirement_def.id not in values

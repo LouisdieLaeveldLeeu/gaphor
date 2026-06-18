@@ -26,6 +26,34 @@ from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2.grammar import ast
 
 
+# Each usage kind is typed by exactly one definition kind. The pairing is exact,
+# not by subclassing: a RequirementUsage must be typed by a RequirementDefinition
+# (not a plain ConstraintDefinition), and a ConstraintUsage by a
+# ConstraintDefinition (NOT a RequirementDefinition, even though that subclasses
+# ConstraintDefinition). This is the kind-specific typing contract the support
+# matrix describes; it is the single source of truth shared by the mapper (which
+# refuses a cross-kind type) and validation (which reports it).
+USAGE_DEFINITION_KIND: dict[type, type] = {
+    sysml2.PartUsage: sysml2.PartDefinition,
+    sysml2.AttributeUsage: sysml2.AttributeDefinition,
+    sysml2.ActionUsage: sysml2.ActionDefinition,
+    sysml2.ConstraintUsage: sysml2.ConstraintDefinition,
+    sysml2.RequirementUsage: sysml2.RequirementDefinition,
+}
+
+
+def type_matches_usage_kind(usage: kerml.Feature, target: kerml.Type) -> bool:
+    """Whether `target` is the exact definition kind that `usage` must be typed by.
+
+    Exact-type match (not isinstance), so a RequirementDefinition does not satisfy
+    a plain ConstraintUsage and a ConstraintDefinition does not satisfy a
+    RequirementUsage. A usage kind with no registered definition kind is treated
+    as not matchable (it has no valid textual typing yet).
+    """
+    required = USAGE_DEFINITION_KIND.get(type(usage))
+    return required is not None and type(target) is required
+
+
 @dataclass
 class MappingResult:
     root: kerml.Namespace
@@ -34,12 +62,16 @@ class MappingResult:
     # usage element id -> declared type name that did not resolve (for the
     # usage-without-valid-type validation rule).
     unresolved_types: dict[str, str] = field(default_factory=dict)
+    # usage element id -> (declared type name, resolved-type kind name) for a type
+    # that resolved but is the WRONG kind for the usage (cross-kind typing).
+    mistyped: dict[str, tuple[str, str]] = field(default_factory=dict)
 
 
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     """Build semantic elements for a parsed package into `factory`."""
     root = factory.create(kerml.Namespace)
     unresolved_types: dict[str, str] = {}
+    mistyped: dict[str, tuple[str, str]] = {}
 
     # Phase 1: build the whole ownership tree (definitions, usages, nested
     # packages) so every name exists before any type is resolved. Records each
@@ -48,21 +80,26 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     top_level = _build_members(pkg.members, root, factory, typed_usages)
 
     # Phase 2: resolve usage typing. Resolution is scoped: a simple name resolves
-    # in the usage's own namespace; a qualified name resolves from the root. A
-    # name that does not resolve, OR resolves to something that is not a Type
-    # (e.g. a Package), is recorded as unresolved for validation -- never crashed
-    # into FeatureTyping (which requires a Type) and never silently dropped.
+    # in the usage's own namespace; a qualified name resolves from the root.
+    # - does not resolve / resolves to a non-Type (e.g. a Package) -> unresolved.
+    # - resolves to a Type of the WRONG KIND (e.g. `part p : AttributeDefinition`)
+    #   -> mistyped: still no FeatureTyping, recorded for validation.
+    # Only an exact-kind match (part->PartDefinition, ...) creates the typing, so
+    # nothing is silently dropped and no cross-kind typing is ever stored.
     for usage, namespace, type_name in typed_usages:
         target = _resolve_type(root, namespace, type_name)
-        if isinstance(target, kerml.Type):
+        if not isinstance(target, kerml.Type):
+            unresolved_types[usage.id] = "::".join(type_name)
+        elif type_matches_usage_kind(usage, target):
             _set_type(usage, target)
         else:
-            unresolved_types[usage.id] = "::".join(type_name)
+            mistyped[usage.id] = ("::".join(type_name), type(target).__name__)
 
     return MappingResult(
         root=root,
         elements_by_name=top_level,
         unresolved_types=unresolved_types,
+        mistyped=mistyped,
     )
 
 

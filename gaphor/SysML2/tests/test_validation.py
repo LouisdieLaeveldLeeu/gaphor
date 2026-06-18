@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from gaphor.core.modeling import ElementFactory
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
@@ -164,3 +166,61 @@ def test_severity_vocabulary_is_the_conformance_split(element_factory):
     assert all(isinstance(d.severity, Severity) for d in diagnostics)
     # All four M2 rules are ERROR-class per the conformance policy.
     assert all(d.severity is Severity.ERROR for d in diagnostics)
+
+
+# --- cross-kind typing: a usage typed by the wrong definition kind -----------
+
+
+@pytest.mark.parametrize(
+    "src",
+    [
+        "part def PD;\nattribute a : PD;",
+        "attribute def AD;\npart p : AD;",
+        "part def PD;\naction a : PD;",
+        "action def AcD;\npart p : AcD;",
+        "requirement def RD;\nconstraint c : RD;",
+        "constraint def CD;\nrequirement r : CD;",
+        "attribute def AD;\nconstraint c : AD;",
+    ],
+)
+def test_cross_kind_typing_is_reported_not_accepted(element_factory, src):
+    # A usage typed by a resolvable Type of the WRONG kind must be a
+    # type-kind-mismatch error, and must NOT create a FeatureTyping.
+    result = map_package(parse(src), element_factory)
+    diagnostics = validate(
+        element_factory, result.unresolved_types, result.mistyped
+    )
+    assert "type-kind-mismatch" in _rules(diagnostics)
+    assert has_errors(diagnostics)
+    assert element_factory.lselect(kerml.FeatureTyping) == []
+
+
+@pytest.mark.parametrize(
+    "src",
+    [
+        "part def PD;\npart p : PD;",
+        "attribute def AD;\nattribute a : AD;",
+        "action def AcD;\naction a : AcD;",
+        "constraint def CD;\nconstraint c : CD;",
+        "requirement def RD;\nrequirement r : RD;",
+    ],
+)
+def test_same_kind_typing_is_accepted(element_factory, src):
+    result = map_package(parse(src), element_factory)
+    diagnostics = validate(
+        element_factory, result.unresolved_types, result.mistyped
+    )
+    assert "type-kind-mismatch" not in _rules(diagnostics)
+    assert not has_errors(diagnostics)
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+
+def test_cross_kind_typing_creates_no_typing_in_mapper(element_factory):
+    # Mapper-level: the wrong-kind type is recorded in `mistyped`, not stored.
+    result = map_package(
+        parse("attribute def AD;\npart p : AD;"), element_factory
+    )
+    assert element_factory.lselect(kerml.FeatureTyping) == []
+    p = result.elements_by_name["p"]
+    assert p.id in result.mistyped
+    assert result.mistyped[p.id][1] == "AttributeDefinition"

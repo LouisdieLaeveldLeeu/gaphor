@@ -157,7 +157,7 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
     # Full diagnostics use mapping context (e.g. an unresolvable declared type
     # name, which is only known at mapping time). The model-derived subset is
     # what can be recomputed from a persisted model with no mapping context.
-    source_diagnostics = validate(factory, result.unresolved_types)
+    source_diagnostics = validate(factory, result.unresolved_types, result.mistyped)
     source_model_diagnostics = validate(factory)
     root_id = result.root.id
 
