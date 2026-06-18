@@ -37,9 +37,27 @@ def test_definition_stays_definition_usage_stays_usage(element_factory):
     assert "part Engine" not in text.replace("part def Engine", "")
 
 
+def test_exports_action_definition_and_typed_usage(element_factory):
+    result = map_package(
+        parse("action def Brake;\naction emergencyBrake : Brake;"), element_factory
+    )
+    text = export_namespace(result.root)
+    assert "action def Brake;" in text
+    assert "action emergencyBrake : Brake;" in text
+    # The action definition must not be emitted as a usage, nor the usage as a def.
+    assert "action def emergencyBrake" not in text
+
+
 def test_export_is_reparseable(element_factory):
     src = "part def Engine;\npart vehicleEngine : Engine;"
     result = map_package(parse(src), element_factory)
     exported = export_namespace(result.root)
     # The exported text parses back to the same AST.
+    assert parse(exported) == parse(src)
+
+
+def test_action_export_is_reparseable(element_factory):
+    src = "action def Brake;\naction emergencyBrake : Brake;"
+    result = map_package(parse(src), element_factory)
+    exported = export_namespace(result.root)
     assert parse(exported) == parse(src)

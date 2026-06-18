@@ -101,6 +101,22 @@ def test_attribute_usage_typed_by_attribute_definition(element_factory):
     assert mass in list(typings[0].type)
 
 
+def test_action_usage_typed_by_action_definition(element_factory):
+    result = map_package(
+        parse("action def Brake;\naction emergencyBrake : Brake;"), element_factory
+    )
+    brake = result.elements_by_name["Brake"]
+    emergency = result.elements_by_name["emergencyBrake"]
+    assert isinstance(brake, sysml2.ActionDefinition)
+    assert isinstance(emergency, sysml2.ActionUsage)
+    # The action usage is a KerML Feature on the kernel chain.
+    assert isinstance(emergency, kerml.Feature)
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 1
+    assert emergency in list(typings[0].typedFeature)
+    assert brake in list(typings[0].type)
+
+
 def test_unresolved_type_leaves_usage_untyped(element_factory):
     # Forward/undefined reference: no FeatureTyping is created; validation (a
     # later sub-step) is responsible for reporting it.

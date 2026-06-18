@@ -35,7 +35,11 @@ class Definition(_Classifier):
     isVariation: _attribute[bool] = _attribute("isVariation", bool)
 
 
-class AttributeDefinition(Definition, _DataType):
+class OccurrenceDefinition(Definition, _Class):
+    isIndividual: _attribute[bool] = _attribute("isIndividual", bool)
+
+
+class ActionDefinition(OccurrenceDefinition):
     pass
 
 
@@ -43,21 +47,25 @@ class Usage(_Feature):
     isVariation: _attribute[bool] = _attribute("isVariation", bool)
 
 
+class OccurrenceUsage(Usage):
+    isIndividual: _attribute[bool] = _attribute("isIndividual", bool)
+    portionKind = _enumeration("portionKind", PortionKind, PortionKind.timeslice)
+
+
+class ActionUsage(OccurrenceUsage):
+    pass
+
+
+class AttributeDefinition(Definition, _DataType):
+    pass
+
+
 class AttributeUsage(Usage):
     pass
 
 
-class OccurrenceDefinition(Definition, _Class):
-    isIndividual: _attribute[bool] = _attribute("isIndividual", bool)
-
-
 class ItemDefinition(OccurrenceDefinition, _Structure):
     pass
-
-
-class OccurrenceUsage(Usage):
-    isIndividual: _attribute[bool] = _attribute("isIndividual", bool)
-    portionKind = _enumeration("portionKind", PortionKind, PortionKind.timeslice)
 
 
 class ItemUsage(OccurrenceUsage):

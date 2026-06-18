@@ -32,7 +32,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML AttributeDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML ActionUsage | no | no | no | no | no | no | no | no | no | not-started |
+| SysML ActionDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
+| SysML ActionUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML RequirementUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML PortUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML ConnectionUsage | no | no | no | no | no | no | no | no | no | not-started |
@@ -52,11 +53,22 @@ references, never ids or raw text). M2 establishes the harness
 | KerML Package (nested) | yes | `test_roundtrip.py::test_nested_package_round_trips` |
 | SysML AttributeDefinition | yes | `test_roundtrip.py::test_attribute_definition_and_usage_round_trip` |
 | SysML AttributeUsage (typed) | yes | `test_roundtrip.py` |
+| SysML ActionDefinition | yes | `test_roundtrip.py::test_action_definition_and_usage_round_trip` |
+| SysML ActionUsage (typed) | yes | `test_roundtrip.py` |
 
-Coverage: 5 constructs round-trip-covered. Package, PartDefinition, PartUsage,
+Coverage: 7 constructs round-trip-covered. Package, PartDefinition, PartUsage,
 and AttributeDefinition are `supported`: every matrix cell is implemented and
 focused-tested for the claimed surface. Resolution remains same-namespace +
 simple/qualified name (incl. nested + cross-package).
+
+ActionDefinition and ActionUsage are `alpha` after roadmap phase D1 (the
+semantic chain). The seven semantic cells -- Parse, Import, Create-API, Persist,
+Validate, Export, Round-trip -- are implemented and focused-tested for untyped
+actions and actions typed by an ActionDefinition through KerML FeatureTyping
+(`action def Brake; action emergencyBrake : Brake;`). They are held at `alpha`
+because the Diagram and UI-edit cells are not yet built: those are roadmap phases
+D2 (diagram projection) and D3 (toolbox/property-page UI-edit), each with its own
+review gate. ActionUsage is promoted to `supported` only once D2 and D3 land.
 
 AttributeUsage stays `alpha` on a named dependency. Every one of its cells is
 implemented and focused-tested -- including the Diagram and UI-edit cells added

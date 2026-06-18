@@ -57,6 +57,28 @@
 <owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
 <package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
 </UML:Enumeration>
+<UML:Class id="ac4ba788-2d4b-5d94-91a6-0021b1aecc01">
+<name><val>ActionDefinition</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="036b73b8-f098-5715-b80a-fb5c1e43aa24"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
+<UML:Class id="19d550ae-b47c-5908-94c6-f438efce8984">
+<name><val>ActionUsage</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="eebd68b3-36af-5ac7-96bd-5f5878979c82"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
 <UML:Class id="a5583a5f-40a8-53f2-9bc4-b09d738bc151">
 <name><val>AttributeDefinition</val></name>
 <ownedAttribute><reflist>
@@ -171,6 +193,14 @@
 <owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
 <package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
 </UML:Class>
+<UML:Generalization id="036b73b8-f098-5715-b80a-fb5c1e43aa24">
+<general><ref refid="0fe1f9f7-1d81-5cae-b50d-143b07f39321"/></general>
+<specific><ref refid="ac4ba788-2d4b-5d94-91a6-0021b1aecc01"/></specific>
+</UML:Generalization>
+<UML:Generalization id="eebd68b3-36af-5ac7-96bd-5f5878979c82">
+<general><ref refid="9bd38d4d-ffa0-52b5-b2f2-eb107a0fea9d"/></general>
+<specific><ref refid="19d550ae-b47c-5908-94c6-f438efce8984"/></specific>
+</UML:Generalization>
 <UML:Generalization id="1e129c91-78fe-5ada-acc4-c8d320645ff2">
 <general><ref refid="91895e05-7bd5-50bf-b36b-e90d3d8955e6"/></general>
 <specific><ref refid="a5583a5f-40a8-53f2-9bc4-b09d738bc151"/></specific>

@@ -888,6 +888,8 @@ SYSML_SEED = (
     "PartUsage",
     "AttributeDefinition",
     "AttributeUsage",
+    "ActionDefinition",
+    "ActionUsage",
 )
 
 # KerML classes that the generated SysML kernel must already provide as a

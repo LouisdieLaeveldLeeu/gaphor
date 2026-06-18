@@ -68,6 +68,16 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                         _usage_type_qualified_name(member) or "",
                     )
                 )
+            elif isinstance(member, sysml2.ActionDefinition):
+                entries.add(("ActionDefinition", kk.qualified_name(member)))
+            elif isinstance(member, sysml2.ActionUsage):
+                entries.add(
+                    (
+                        "ActionUsage",
+                        kk.qualified_name(member),
+                        _usage_type_qualified_name(member) or "",
+                    )
+                )
 
     visit(root)
     return frozenset(entries)

@@ -83,6 +83,22 @@ def test_attribute_usage_unresolved_type_is_reported(element_factory):
     assert has_errors(diagnostics)
 
 
+def test_valid_action_tracer_model_has_no_errors(element_factory):
+    result = map_package(
+        parse("action def Brake;\naction emergencyBrake : Brake;"), element_factory
+    )
+    diagnostics = validate(element_factory, result.unresolved_types)
+    assert not has_errors(diagnostics)
+
+
+def test_action_usage_unresolved_type_is_reported(element_factory):
+    # The usage-without-valid-type rule must cover ActionUsage too.
+    result = map_package(parse("action a : Missing;"), element_factory)
+    diagnostics = validate(element_factory, result.unresolved_types)
+    assert "usage-without-valid-type" in _rules(diagnostics)
+    assert has_errors(diagnostics)
+
+
 def test_typing_by_non_type_is_reported_not_crashed():
     # Regression: a name that resolves to a non-Type (a Package) must be a
     # diagnostic, not a TypeError crash in the mapper.

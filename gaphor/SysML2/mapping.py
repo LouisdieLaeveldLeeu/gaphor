@@ -88,6 +88,12 @@ def _build_members(
             element = factory.create(sysml2.AttributeUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name))
+        elif isinstance(member, ast.ActionDefinition):
+            element = factory.create(sysml2.ActionDefinition)
+        elif isinstance(member, ast.ActionUsage):
+            element = factory.create(sysml2.ActionUsage)
+            if member.type_name is not None:
+                typed_usages.append((element, namespace, member.type_name))
         elif isinstance(member, ast.PackageDefinition):
             element = factory.create(kerml.Package)
         else:  # pragma: no cover - AST node types are exhaustive

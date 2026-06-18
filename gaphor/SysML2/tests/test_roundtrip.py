@@ -129,6 +129,34 @@ def test_attribute_in_package_cross_references_round_trip():
     ) in result.source_form
 
 
+def test_action_definition_and_usage_round_trip():
+    src = "action def Brake;\naction emergencyBrake : Brake;"
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert ("ActionDefinition", "Root::Brake") in result.source_form
+    assert (
+        "ActionUsage",
+        "Root::emergencyBrake",
+        "Root::Brake",
+    ) in result.source_form
+
+
+def test_action_in_package_cross_references_round_trip():
+    src = (
+        "package Behaviors { action def Brake; } "
+        "package Controls { action b : Behaviors::Brake; }"
+    )
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert (
+        "ActionUsage",
+        "Root::Controls::b",
+        "Root::Behaviors::Brake",
+    ) in result.source_form
+
+
 def test_empty_semicolon_package_round_trips():
     result = round_trip("package P;")
     assert result.preserved

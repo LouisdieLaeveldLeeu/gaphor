@@ -1,10 +1,11 @@
 """Export semantic elements back to SysML v2 text.
 
-Walks a namespace's members and re-emits valid SysML text: a PartDefinition
-stays a definition, a PartUsage stays a usage (with its typing read back from
-its FeatureTyping), and a Package re-emits as `package Name { ... }` with its
-members exported recursively and indented. The output is re-parseable by
-`grammar.parser`, which the round-trip harness relies on.
+Walks a namespace's members and re-emits valid SysML text: each definition
+(part/attribute/action) stays a definition, each usage (part/attribute/action)
+stays a usage (with its typing read back from its FeatureTyping), and a Package
+re-emits as `package Name { ... }` with its members exported recursively and
+indented. The output is re-parseable by `grammar.parser`, which the round-trip
+harness relies on.
 """
 
 from __future__ import annotations
@@ -31,14 +32,22 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         if inner:
             return f"{pad}package {element.declaredName} {{\n{inner}{pad}}}\n"
         return f"{pad}package {element.declaredName} {{ }}\n"
+    # Definitions before usages, and the most-derived class before its bases:
+    # PartDefinition is an ItemDefinition/OccurrenceDefinition but must render as
+    # `part def`, and ActionDefinition is an OccurrenceDefinition that must render
+    # as `action def`, so the specific classes are checked first.
     if isinstance(element, sysml2.PartDefinition):
         return f"{pad}part def {element.declaredName};\n"
     if isinstance(element, sysml2.AttributeDefinition):
         return f"{pad}attribute def {element.declaredName};\n"
+    if isinstance(element, sysml2.ActionDefinition):
+        return f"{pad}action def {element.declaredName};\n"
     if isinstance(element, sysml2.PartUsage):
         return f"{pad}part {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.AttributeUsage):
         return f"{pad}attribute {_usage_decl(element, root)};\n"
+    if isinstance(element, sysml2.ActionUsage):
+        return f"{pad}action {_usage_decl(element, root)};\n"
     return ""
 
 

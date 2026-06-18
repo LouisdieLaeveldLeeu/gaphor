@@ -88,6 +88,33 @@ def test_parses_attribute_and_part_together():
     )
 
 
+def test_parses_action_definition():
+    pkg = parse("action def Brake;")
+    assert pkg == ast.Package(members=(ast.ActionDefinition(name="Brake"),))
+
+
+def test_parses_untyped_action_usage():
+    pkg = parse("action brake;")
+    assert pkg == ast.Package(
+        members=(ast.ActionUsage(name="brake", type_name=None),)
+    )
+
+
+def test_parses_typed_action_usage():
+    pkg = parse("action emergencyBrake : Brake;")
+    assert pkg == ast.Package(
+        members=(ast.ActionUsage(name="emergencyBrake", type_name=("Brake",)),)
+    )
+
+
+def test_parses_action_definition_and_usage_together():
+    pkg = parse("action def Brake;\naction emergencyBrake : Brake;")
+    assert pkg.members == (
+        ast.ActionDefinition(name="Brake"),
+        ast.ActionUsage(name="emergencyBrake", type_name=("Brake",)),
+    )
+
+
 def test_parses_empty_package_semicolon_form():
     pkg = parse("package P;")
     assert pkg == ast.Package(

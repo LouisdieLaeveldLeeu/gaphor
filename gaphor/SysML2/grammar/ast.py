@@ -41,6 +41,21 @@ class AttributeUsage:
 
 
 @dataclass(frozen=True)
+class ActionDefinition:
+    """`action def <name> ;`"""
+
+    name: str
+
+
+@dataclass(frozen=True)
+class ActionUsage:
+    """`action <name> [ : <type> ] ;`"""
+
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
 class PackageDefinition:
     """`package <name> { <members> }` -- a named, nestable container."""
 
@@ -51,7 +66,7 @@ class PackageDefinition:
 # A member is any construct that can appear in a (package) body.
 Member = (
     "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage "
-    "| PackageDefinition"
+    "| ActionDefinition | ActionUsage | PackageDefinition"
 )
 
 
@@ -61,6 +76,6 @@ class Package:
 
     members: tuple[
         "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage"
-        " | PackageDefinition",
+        " | ActionDefinition | ActionUsage | PackageDefinition",
         ...,
     ] = field(default_factory=tuple)

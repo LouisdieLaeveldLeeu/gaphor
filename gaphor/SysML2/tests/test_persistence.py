@@ -111,6 +111,24 @@ def test_nested_package_persists_and_reloads(element_factory, saver, loader):
     assert kk.qualified_name(engine) == "Root::Outer::Inner::Engine"
 
 
+def test_action_tracer_persists_with_typing(element_factory, saver, loader):
+    result = map_package(
+        parse("action def Brake;\naction emergencyBrake : Brake;"), element_factory
+    )
+    ids = _ids(result)
+
+    loader(saver())
+
+    brake = element_factory.lookup(ids["Brake"])
+    emergency = element_factory.lookup(ids["emergencyBrake"])
+    assert isinstance(brake, sysml2.ActionDefinition)
+    assert isinstance(emergency, sysml2.ActionUsage)
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 1
+    assert emergency in list(typings[0].typedFeature)
+    assert brake in list(typings[0].type)
+
+
 def test_qualified_names_survive_reload(element_factory, saver, loader):
     result = map_package(parse(TRACER), element_factory)
     result.root.declaredName = "Vehicles"

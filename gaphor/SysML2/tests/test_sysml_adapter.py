@@ -25,6 +25,24 @@ def test_sysml_closure_contains_the_tracer_pair():
     assert {"PartDefinition", "PartUsage"} <= names
 
 
+def test_sysml_closure_contains_the_action_pair():
+    kernel = xmi_adapter.extract_sysml(SYSML_XMI)
+    names = {c.name for c in kernel.classes}
+    assert {"ActionDefinition", "ActionUsage"} <= names
+
+
+def test_action_classes_generalize_the_kerml_supermodel():
+    # The faithful SysML -> KerML chain: ActionUsage is a KerML Feature; the
+    # action definition reaches the kernel Element/Classifier roots.
+    from gaphor.SysML2 import kerml
+
+    assert issubclass(sysml2.ActionUsage, kerml.Feature)
+    mro = [c.__name__ for c in sysml2.ActionUsage.__mro__]
+    assert "OccurrenceUsage" in mro and "Usage" in mro and "Feature" in mro
+    def_mro = [c.__name__ for c in sysml2.ActionDefinition.__mro__]
+    assert "OccurrenceDefinition" in def_mro and "Element" in def_mro
+
+
 def test_part_classes_generalize_the_kerml_supermodel():
     # The faithful SysML -> KerML chain is preserved in the generated module.
     from gaphor.SysML2 import kerml
