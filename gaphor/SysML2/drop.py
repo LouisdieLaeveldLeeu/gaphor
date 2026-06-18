@@ -71,6 +71,20 @@ def drop_attribute_usage(
     return _project_element(element, diagram, x, y)
 
 
+@drop.register(sysml2.ActionDefinition, Diagram)
+def drop_action_definition(
+    element: sysml2.ActionDefinition, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
+@drop.register(sysml2.ActionUsage, Diagram)
+def drop_action_usage(
+    element: sysml2.ActionUsage, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
 @drop.register(kerml.FeatureTyping, Diagram)
 def drop_feature_typing(
     element: kerml.FeatureTyping, diagram: Diagram, x: float, y: float

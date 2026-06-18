@@ -78,6 +78,19 @@ class AttributeDefinitionItem(Named, ElementPresentation[sysml2.AttributeDefinit
         self.shape = _name_box(self)
 
 
+@represents(sysml2.ActionDefinition)
+class ActionDefinitionItem(Named, ElementPresentation[sysml2.ActionDefinition]):
+    """A diagram view onto a SysML2 `ActionDefinition`."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id)
+        self.watch("subject[Element].declaredName", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _name_box(self)
+
+
 @represents(sysml2.PartUsage)
 class PartUsageItem(Named, ElementPresentation[sysml2.PartUsage]):
     """A diagram view onto a SysML2 `PartUsage` (its declared name)."""
@@ -94,6 +107,19 @@ class PartUsageItem(Named, ElementPresentation[sysml2.PartUsage]):
 @represents(sysml2.AttributeUsage)
 class AttributeUsageItem(Named, ElementPresentation[sysml2.AttributeUsage]):
     """A diagram view onto a SysML2 `AttributeUsage`."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id)
+        self.watch("subject[Element].declaredName", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _name_box(self)
+
+
+@represents(sysml2.ActionUsage)
+class ActionUsageItem(Named, ElementPresentation[sysml2.ActionUsage]):
+    """A diagram view onto a SysML2 `ActionUsage`."""
 
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)

@@ -32,8 +32,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML AttributeDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML ActionDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
-| SysML ActionUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
+| SysML ActionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
+| SysML ActionUsage | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
 | SysML RequirementUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML PortUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML ConnectionUsage | no | no | no | no | no | no | no | no | no | not-started |
@@ -61,14 +61,17 @@ and AttributeDefinition are `supported`: every matrix cell is implemented and
 focused-tested for the claimed surface. Resolution remains same-namespace +
 simple/qualified name (incl. nested + cross-package).
 
-ActionDefinition and ActionUsage are `alpha` after roadmap phase D1 (the
-semantic chain). The seven semantic cells -- Parse, Import, Create-API, Persist,
-Validate, Export, Round-trip -- are implemented and focused-tested for untyped
-actions and actions typed by an ActionDefinition through KerML FeatureTyping
-(`action def Brake; action emergencyBrake : Brake;`). They are held at `alpha`
-because the Diagram and UI-edit cells are not yet built: those are roadmap phases
-D2 (diagram projection) and D3 (toolbox/property-page UI-edit), each with its own
-review gate. ActionUsage is promoted to `supported` only once D2 and D3 land.
+ActionDefinition and ActionUsage are `alpha`. The seven semantic cells (D1) plus
+the Diagram cell (D2) are implemented and focused-tested for untyped actions and
+actions typed by an ActionDefinition through KerML FeatureTyping
+(`action def Brake; action emergencyBrake : Brake;`); the action FeatureTyping
+also projects as a connected line view. The UI-edit cell is roadmap phase D3
+(toolbox/property-page), still pending its review gate. These rows are held at
+`alpha` on a named behavioral dependency: SysML actions also carry behavior not
+modeled here -- action bodies / nested steps, succession and flow connections,
+and parameters. The declaration-and-typing surface is proven, but the rows stay
+`alpha` (not `supported`) until that behavioral surface is scheduled and built,
+even once D3 makes every cell `yes`.
 
 AttributeUsage stays `alpha` on a named dependency. Every one of its cells is
 implemented and focused-tested -- including the Diagram and UI-edit cells added
@@ -81,10 +84,10 @@ lands and `attribute x : Real` round-trips. This is the C2 standard-library gate
 decision, taken explicitly per the roadmap.
 
 Diagram cell scope. `Diagram=yes` for Package, PartDefinition, PartUsage,
-AttributeDefinition, and AttributeUsage means a diagram item (an
-`ElementPresentation`) projects an EXISTING semantic element via Gaphor's
-`subject` mechanism (never symbol-only), the view->element link persists and
-reloads through `.gaphor`, and deleting the element removes its projection.
+AttributeDefinition, AttributeUsage, ActionDefinition, and ActionUsage means a
+diagram item (an `ElementPresentation`) projects an EXISTING semantic element via
+Gaphor's `subject` mechanism (never symbol-only), the view->element link persists
+and reloads through `.gaphor`, and deleting the element removes its projection.
 Package projection is a package frame/box view of the namespace; semantic
 namespace ownership remains in the KerML ownership spine.
 

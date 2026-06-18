@@ -11,6 +11,8 @@ from gaphor.diagram.drop import drop
 from gaphor.diagram.presentation import connect
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2.diagramitems import (
+    ActionDefinitionItem,
+    ActionUsageItem,
     AttributeDefinitionItem,
     AttributeUsageItem,
     FeatureTypingItem,
@@ -39,6 +41,8 @@ def test_item_registered_for_part_definition():
     assert get_diagram_item(kerml.Package) is PackageItem
     assert get_diagram_item(sysml2.AttributeDefinition) is AttributeDefinitionItem
     assert get_diagram_item(sysml2.AttributeUsage) is AttributeUsageItem
+    assert get_diagram_item(sysml2.ActionDefinition) is ActionDefinitionItem
+    assert get_diagram_item(sysml2.ActionUsage) is ActionUsageItem
     assert get_diagram_item(sysml2.PartDefinition) is PartDefinitionItem
 
 
@@ -222,6 +226,88 @@ def test_deleting_attribute_usage_removes_its_projection(element_factory):
     assert element_factory.lookup(item_id) is None
 
 
+def test_action_definition_drop_projects_an_existing_element(element_factory):
+    brake = element_factory.create(sysml2.ActionDefinition)
+    brake.declaredName = "Brake"
+    diagram = element_factory.create(Diagram)
+
+    item = drop(brake, diagram, 0, 0)
+
+    assert isinstance(item, ActionDefinitionItem)
+    assert item.subject is brake
+    assert item in diagram.ownedPresentation
+
+
+def test_action_usage_drop_projects_an_existing_element(element_factory):
+    usage = element_factory.create(sysml2.ActionUsage)
+    usage.declaredName = "emergencyBrake"
+    diagram = element_factory.create(Diagram)
+
+    item = drop(usage, diagram, 0, 0)
+
+    assert isinstance(item, ActionUsageItem)
+    assert item.subject is usage
+    assert item in diagram.ownedPresentation
+
+
+def test_action_definition_projection_subject_persists_and_reloads(
+    element_factory, saver, loader
+):
+    result = map_package(parse("action def Brake;"), element_factory)
+    brake = result.elements_by_name["Brake"]
+    diagram = element_factory.create(Diagram)
+    item = drop(brake, diagram, 0, 0)
+    item_id, brake_id = item.id, brake.id
+
+    loader(saver())
+
+    reloaded_item = element_factory.lookup(item_id)
+    reloaded_brake = element_factory.lookup(brake_id)
+    assert isinstance(reloaded_item, ActionDefinitionItem)
+    assert reloaded_item.subject is reloaded_brake
+
+
+def test_action_usage_projection_subject_persists_and_reloads(
+    element_factory, saver, loader
+):
+    result = map_package(
+        parse("action def Brake;\naction emergencyBrake : Brake;"), element_factory
+    )
+    usage = result.elements_by_name["emergencyBrake"]
+    diagram = element_factory.create(Diagram)
+    item = drop(usage, diagram, 0, 0)
+    item_id, usage_id = item.id, usage.id
+
+    loader(saver())
+
+    reloaded_item = element_factory.lookup(item_id)
+    reloaded_usage = element_factory.lookup(usage_id)
+    assert isinstance(reloaded_item, ActionUsageItem)
+    assert reloaded_item.subject is reloaded_usage
+
+
+def test_deleting_action_definition_removes_its_projection(element_factory):
+    brake = element_factory.create(sysml2.ActionDefinition)
+    diagram = element_factory.create(Diagram)
+    item = drop(brake, diagram, 0, 0)
+    item_id = item.id
+
+    brake.unlink()
+
+    assert element_factory.lookup(item_id) is None
+
+
+def test_deleting_action_usage_removes_its_projection(element_factory):
+    usage = element_factory.create(sysml2.ActionUsage)
+    diagram = element_factory.create(Diagram)
+    item = drop(usage, diagram, 0, 0)
+    item_id = item.id
+
+    usage.unlink()
+
+    assert element_factory.lookup(item_id) is None
+
+
 def _project_tracer(element_factory):
     """Map the tracer pair and project both items, returning (diagram, usage,
     definition, typing)."""
@@ -248,6 +334,19 @@ def _project_attribute_tracer(element_factory):
     drop(mass, diagram, 0, 0)
     drop(usage, diagram, 100, 0)
     return diagram, usage, mass, typing
+
+
+def _project_action_tracer(element_factory):
+    result = map_package(
+        parse("action def Brake;\naction emergencyBrake : Brake;"), element_factory
+    )
+    brake = result.elements_by_name["Brake"]
+    usage = result.elements_by_name["emergencyBrake"]
+    typing = element_factory.lselect(kerml.FeatureTyping)[0]
+    diagram = element_factory.create(Diagram)
+    drop(brake, diagram, 0, 0)
+    drop(usage, diagram, 100, 0)
+    return diagram, usage, brake, typing
 
 
 def test_feature_typing_projects_as_a_view_on_the_existing_typing(element_factory):
@@ -280,6 +379,26 @@ def test_attribute_feature_typing_projects_as_a_view_on_the_existing_typing(
     }
     assert usage in connected_subjects
     assert mass in connected_subjects
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == typings_before
+
+
+def test_action_feature_typing_projects_as_a_view_on_the_existing_typing(
+    element_factory,
+):
+    diagram, usage, brake, typing = _project_action_tracer(element_factory)
+    typings_before = len(element_factory.lselect(kerml.FeatureTyping))
+
+    line = drop(typing, diagram, 50, 0)
+
+    assert isinstance(line, FeatureTypingItem)
+    assert line.subject is typing
+    connected_subjects = {
+        diagram.connections.get_connection(h).connected.subject
+        for h in line.handles()
+        if diagram.connections.get_connection(h)
+    }
+    assert usage in connected_subjects
+    assert brake in connected_subjects
     assert len(element_factory.lselect(kerml.FeatureTyping)) == typings_before
 
 
