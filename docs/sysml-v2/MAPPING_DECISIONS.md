@@ -221,3 +221,51 @@ M2 scope only:
 - unresolved-symbol diagnostic.
 
 Do not implement inheritance, visibility, aliases, or feature chains during the first tracer.
+
+## Z2a Blocker: standard model libraries are KPAR-only (recorded 2026-06-18)
+
+Phase Z2 (read-only standard-library loader) would promote AttributeUsage to
+`supported` by resolving `attribute x : Real` against the normative value-type
+library. Per the agreed plan, Z2a was to come first: pin the real OMG model
+libraries, hash them, document provenance, and add existence tests for
+Real/String/Boolean/Integer/ScalarValues -- with the explicit rule "if the
+library files cannot be located or are not published in a stable release bundle,
+pause and document the blocker rather than fall back to a curated subset."
+
+Finding (verified 2026-06-18 against the OMG About pages for the pinned 20250201
+release): the standard model libraries are published **exclusively as `.kpar`
+archives**, with no XMI or plain-text `.kerml`/`.sysml` form:
+
+- KerML: `Semantic-Library.kpar` (ptc/25-04-17), `Data-Type-Library.kpar`
+  (ptc/25-04-18, defines Real/String/Boolean/Integer), `Function-Library.kpar`
+  (ptc/25-04-19).
+- SysML: `Systems-Library.kpar` (ptc/25-04-24) and six domain libraries
+  (Analysis, Cause-and-Effect, Geometry, Metadata, Quantities-and-Units,
+  Requirement-Derivation), all `.kpar`.
+- The only plain-text artifact in the release is an example model
+  (`ptc/25-04-31.sysml`, the Simple Vehicle Model), not a library.
+- Our pinned artifacts (`KerML.xmi`, `SysML.xmi`) are abstract-syntax only;
+  `Real` appears 0 times in them.
+
+This is a blocker, not a path:
+
+1. **Scope conflict.** `.kpar` (KPAR) is explicitly named in the kickoff's
+   NON_GOALS ("KPAR & the SysML v2 API client") as out of scope for this whole
+   effort. Pinning and depending on KPAR archives would contradict that exclusion.
+2. **Format.** `.kpar` is a zip-based project archive, not the MOF XMI our
+   generator path consumes; a faithful loader would need a KPAR
+   reader/unzip + the textual library syntax inside, which is itself a
+   larger build than "load a pinned XMI".
+3. **Fetch.** The download tool available here converts pages to markdown and
+   cannot retrieve a binary zip archive intact, so even pinning the bytes is not
+   possible from this environment without a separate approved binary-download
+   step.
+
+Decision: PAUSE Z2 and do NOT fall back to a hand-authored curated value-type
+subset (per the standing instruction). AttributeUsage remains `alpha` with the
+stdlib dependency named. Resuming Z2 requires an explicit decision on one of:
+(a) relax the KPAR NON_GOAL and add a pinned-KPAR reader (binary fetch + unzip +
+the library textual syntax); (b) approve a binary download of the `.kpar`
+artifacts plus a converter to a pinned XMI/text form; or (c) accept a curated
+value-type subset as an explicit, documented exception to the "pin the real
+source" rule. No code was written for Z2.
