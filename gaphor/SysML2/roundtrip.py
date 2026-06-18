@@ -100,6 +100,16 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                         _usage_type_qualified_name(member) or "",
                     )
                 )
+            elif isinstance(member, sysml2.PortDefinition):
+                entries.add(("PortDefinition", kk.qualified_name(member)))
+            elif isinstance(member, sysml2.PortUsage):
+                entries.add(
+                    (
+                        "PortUsage",
+                        kk.qualified_name(member),
+                        _usage_type_qualified_name(member) or "",
+                    )
+                )
 
     visit(root)
     return frozenset(entries)

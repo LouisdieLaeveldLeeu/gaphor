@@ -30,6 +30,8 @@ new_builder = new_resource_builder("gaphor.SysML2")
 @PropertyPages.register(sysml2.ConstraintUsage)
 @PropertyPages.register(sysml2.RequirementDefinition)
 @PropertyPages.register(sysml2.RequirementUsage)
+@PropertyPages.register(sysml2.PortDefinition)
+@PropertyPages.register(sysml2.PortUsage)
 @PropertyPages.register(sysml2.PartDefinition)
 @PropertyPages.register(sysml2.PartUsage)
 class DeclaredNamePropertyPage(PropertyPageBase):
@@ -49,6 +51,8 @@ class DeclaredNamePropertyPage(PropertyPageBase):
             | sysml2.ConstraintUsage
             | sysml2.RequirementDefinition
             | sysml2.RequirementUsage
+            | sysml2.PortDefinition
+            | sysml2.PortUsage
             | sysml2.PartDefinition
             | sysml2.PartUsage
         ),
@@ -271,6 +275,47 @@ class ConstraintRequirementTypePropertyPage(PropertyPageBase):
                 kk.set_feature_type(self.subject, None)
 
 
+@PropertyPages.register(sysml2.PortUsage)
+class PortUsageTypePropertyPage(PropertyPageBase):
+    """Set the PortDefinition type for a PortUsage (unconjugated)."""
+
+    order = 20
+
+    def __init__(self, subject: sysml2.PortUsage, event_manager):
+        super().__init__()
+        self.subject = subject
+        self.event_manager = event_manager
+
+    def construct(self):
+        builder = new_builder("port-usage-type-editor")
+
+        dropdown = builder.get_object("port-usage-type")
+        model = list_of_definitions(self.subject.model, sysml2.PortDefinition)
+        dropdown.set_model(model)
+
+        if isinstance(type_ := kk.feature_type(self.subject), sysml2.PortDefinition):
+            selected = next(
+                (n for n, lv in enumerate(model) if lv.value == type_.id),
+                None,
+            )
+            if selected is not None:
+                dropdown.set_selected(selected)
+
+        dropdown.connect("notify::selected", self._on_type_changed)
+
+        return builder.get_object("port-usage-type-editor")
+
+    def _on_type_changed(self, dropdown, _pspec):
+        selected = dropdown.get_selected_item()
+        with Transaction(self.event_manager, context="editing"):
+            if selected and selected.value:
+                type_ = self.subject.model.lookup(selected.value)
+                assert isinstance(type_, sysml2.PortDefinition)
+                kk.set_feature_type(self.subject, type_)
+            else:
+                kk.set_feature_type(self.subject, None)
+
+
 def list_of_definitions(
     element_factory,
     definition_type: type[
@@ -279,6 +324,7 @@ def list_of_definitions(
         | sysml2.ActionDefinition
         | sysml2.ConstraintDefinition
         | sysml2.RequirementDefinition
+        | sysml2.PortDefinition
     ],
 ) -> Gio.ListStore:
     # Exact-kind filter (type(d) is definition_type), not isinstance: a usage is
@@ -304,7 +350,8 @@ def _definition_label(
     | sysml2.AttributeDefinition
     | sysml2.ActionDefinition
     | sysml2.ConstraintDefinition
-    | sysml2.RequirementDefinition,
+    | sysml2.RequirementDefinition
+    | sysml2.PortDefinition,
 ) -> str:
     qualified_name = kk.qualified_name(definition).lstrip(kk.QUALIFIED_NAME_SEPARATOR)
     return qualified_name or definition.declaredName or type(definition).__name__

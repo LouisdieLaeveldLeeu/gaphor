@@ -228,6 +228,29 @@
 <owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
 <package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
 </UML:Class>
+<UML:Class id="d19e527c-3f86-5430-8e32-79e4f361c5f8">
+<name><val>PortDefinition</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="b3c1621f-3d40-57eb-8827-38032e473054"/>
+<ref refid="208b3959-b6b7-50fd-b424-0829dc15e1a4"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
+<UML:Class id="fb4ebce5-6eb6-50cb-9582-432860790390">
+<name><val>PortUsage</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="6a9993a3-c431-556d-9094-a00f51f53dd0"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
 <UML:Class id="7bd3bb72-baa2-5fd9-a1fd-9db422b1a690">
 <name><val>RequirementDefinition</val></name>
 <ownedAttribute><reflist>
@@ -340,6 +363,18 @@
 <UML:Generalization id="891826ce-84ce-518d-8daa-c9b54f7481f1">
 <general><ref refid="d29bd730-6feb-5296-b2e7-29b77d9ca6b5"/></general>
 <specific><ref refid="bf8166f1-958e-59f8-9413-21001aed4cdd"/></specific>
+</UML:Generalization>
+<UML:Generalization id="b3c1621f-3d40-57eb-8827-38032e473054">
+<general><ref refid="39c7820a-c5bf-51dd-8f2b-ac20c08a407e"/></general>
+<specific><ref refid="d19e527c-3f86-5430-8e32-79e4f361c5f8"/></specific>
+</UML:Generalization>
+<UML:Generalization id="208b3959-b6b7-50fd-b424-0829dc15e1a4">
+<general><ref refid="0fe1f9f7-1d81-5cae-b50d-143b07f39321"/></general>
+<specific><ref refid="d19e527c-3f86-5430-8e32-79e4f361c5f8"/></specific>
+</UML:Generalization>
+<UML:Generalization id="6a9993a3-c431-556d-9094-a00f51f53dd0">
+<general><ref refid="9bd38d4d-ffa0-52b5-b2f2-eb107a0fea9d"/></general>
+<specific><ref refid="fb4ebce5-6eb6-50cb-9582-432860790390"/></specific>
 </UML:Generalization>
 <UML:Generalization id="29d77c7f-6bc4-547e-a9ad-a7c377aad3fb">
 <general><ref refid="f67d12c4-cea7-54cf-ad89-f610613d1b96"/></general>

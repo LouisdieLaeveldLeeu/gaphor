@@ -156,6 +156,24 @@ def test_requirement_tracer_persists_with_typing(element_factory, saver, loader)
     assert typed[r] is req_def
 
 
+def test_port_tracer_persists_with_typing(element_factory, saver, loader):
+    result = map_package(
+        parse("port def Fuel;\nport p : Fuel;"), element_factory
+    )
+    ids = _ids(result)
+
+    loader(saver())
+
+    fuel = element_factory.lookup(ids["Fuel"])
+    p = element_factory.lookup(ids["p"])
+    assert isinstance(fuel, sysml2.PortDefinition)
+    assert isinstance(p, sysml2.PortUsage)
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 1
+    assert p in list(typings[0].typedFeature)
+    assert fuel in list(typings[0].type)
+
+
 def test_qualified_names_survive_reload(element_factory, saver, loader):
     result = map_package(parse(TRACER), element_factory)
     result.root.declaredName = "Vehicles"

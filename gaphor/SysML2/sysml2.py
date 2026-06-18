@@ -92,6 +92,14 @@ class PartUsage(ItemUsage):
     pass
 
 
+class PortDefinition(OccurrenceDefinition, _Structure):
+    pass
+
+
+class PortUsage(OccurrenceUsage):
+    pass
+
+
 class RequirementDefinition(ConstraintDefinition):
     reqId: _attribute[str] = _attribute("reqId", str)
 

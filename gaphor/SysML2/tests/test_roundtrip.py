@@ -194,6 +194,30 @@ def test_requirement_in_package_cross_references_round_trip():
     ) in result.source_form
 
 
+def test_port_definition_and_usage_round_trip():
+    src = "port def Fuel;\nport p : Fuel;"
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert ("PortDefinition", "Root::Fuel") in result.source_form
+    assert ("PortUsage", "Root::p", "Root::Fuel") in result.source_form
+
+
+def test_port_in_package_cross_references_round_trip():
+    src = (
+        "package Ifaces { port def Fuel; } "
+        "package Sys { port p : Ifaces::Fuel; }"
+    )
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert (
+        "PortUsage",
+        "Root::Sys::p",
+        "Root::Ifaces::Fuel",
+    ) in result.source_form
+
+
 def test_empty_semicolon_package_round_trips():
     result = round_trip("package P;")
     assert result.preserved

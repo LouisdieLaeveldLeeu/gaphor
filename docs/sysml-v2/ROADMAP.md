@@ -29,7 +29,11 @@ honestly claimed (claim discipline: a cell advances only with a passing test).
   D1+D2+D3 done -- all nine cells; held at alpha on a named dependency: the
   constraint boolean-expression body and requirement subject/assume/require
   parameters are unmodeled).
-- SysML PortUsage, ConnectionUsage: `not-started`.
+- SysML PortDefinition, PortUsage: `alpha` (Phase F D1+D2+D3 done -- all nine
+  cells; held at alpha on a named dependency: port conjugation (`~P`) and
+  interface/flow semantics are unmodeled, and Conjugation is intentionally not in
+  the kernel).
+- SysML ConnectionUsage: `not-started`.
 - Resolution scope so far: same-namespace + simple qualified name (incl. nested
   + cross-package). No inheritance / visibility / aliases / feature chains.
 
@@ -136,11 +140,17 @@ Exit (reached): ConstraintDefinition/Usage and RequirementDefinition/Usage rows 
 the constraint boolean-expression body and requirement subject/assume/require
 parameters are unmodeled.
 
-### Phase F -- PortUsage, split into three review gates
-Repeat the D1/D2/D3 pattern for PortUsage. Ports introduce interface,
-conjugation, and feature-chain semantics; expect dependency gates to surface and
-cap honestly if they do.
-Exit: PortUsage row = `supported` or `alpha` with named dependency.
+### Phase F -- PortUsage, split into three review gates -- DONE (D1+D2+D3; PortDefinition/Usage alpha, conjugation/interface dependency)
+Repeated the D1/D2/D3 pattern for PortDefinition/PortUsage. No kernel growth was
+needed -- their supers (Structure, OccurrenceDefinition, OccurrenceUsage) are
+already in the model, and the emitter guard confirmed no dropped supers. The
+predicted port dependency gate is named and deferred rather than half-built:
+conjugation (`~P`, PortConjugation / KerML `Conjugation`) and interface / flow
+semantics are NOT modeled, and Conjugation was deliberately NOT pulled into the
+kernel as unused structure.
+Exit (reached): PortDefinition/PortUsage rows = `alpha`, all nine cells
+implemented and tested for unconjugated ports typed by a PortDefinition, held on
+the named conjugation/interface dependency.
 
 ### Phase G -- ConnectionUsage, split into three review gates
 Repeat the D1/D2/D3 pattern for ConnectionUsage. This is a relationship-style

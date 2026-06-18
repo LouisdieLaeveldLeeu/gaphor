@@ -197,19 +197,51 @@ requirements = ToolSection(
 )
 
 
+ports = ToolSection(
+    gettext("Ports"),
+    (
+        ToolDef(
+            "toolbox-port-definition",
+            gettext("Port Definition"),
+            "gaphor-proxy-port-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.PortDefinitionItem,
+                sysml2_model.PortDefinition,
+                config_func=_declared_name_config("PortDefinition"),
+            ),
+            handle_index=SE,
+        ),
+        ToolDef(
+            "toolbox-port-usage",
+            gettext("Port Usage"),
+            "gaphor-proxy-port-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.PortUsageItem,
+                sysml2_model.PortUsage,
+                config_func=_declared_name_config("portUsage"),
+            ),
+            handle_index=SE,
+        ),
+    ),
+)
+
+
 sysml2_toolbox_actions: ToolboxDefinition = (
     packages,
     parts,
     attributes,
     actions,
     requirements,
+    ports,
 )
 
 sysml2_diagram_types: DiagramTypes = (
     SysML2DiagramType(
         SysML2Diagram,
         i18nize("SysML v2 Diagram"),
-        (packages, parts, attributes, actions, requirements),
+        (packages, parts, attributes, actions, requirements, ports),
     ),
 )
 

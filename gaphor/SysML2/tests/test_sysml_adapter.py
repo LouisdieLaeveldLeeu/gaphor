@@ -69,6 +69,24 @@ def test_requirement_constraint_classes_generalize_the_kerml_supermodel():
     assert issubclass(sysml2.RequirementUsage, kerml.Feature)
 
 
+def test_sysml_closure_contains_the_port_classes():
+    kernel = xmi_adapter.extract_sysml(SYSML_XMI)
+    names = {c.name for c in kernel.classes}
+    assert {"PortDefinition", "PortUsage"} <= names
+
+
+def test_port_classes_generalize_the_kerml_supermodel():
+    # PortDefinition -> {Structure, OccurrenceDefinition}; PortUsage ->
+    # OccurrenceUsage -> ... -> Feature. No kernel growth was needed (all supers
+    # already present), and nothing is dropped.
+    from gaphor.SysML2 import kerml
+
+    assert issubclass(sysml2.PortDefinition, kerml.Structure)
+    assert issubclass(sysml2.PortUsage, kerml.Feature)
+    mro = [c.__name__ for c in sysml2.PortUsage.__mro__]
+    assert "OccurrenceUsage" in mro and "Feature" in mro
+
+
 def test_action_classes_keep_their_behavior_step_supers():
     # Regression: ActionDefinition -> Behavior and ActionUsage -> Step are real
     # KerML generalizations that were silently dropped before the kernel carried

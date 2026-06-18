@@ -121,6 +121,19 @@ class RequirementDefinitionItem(
         self.shape = _name_box(self)
 
 
+@represents(sysml2.PortDefinition)
+class PortDefinitionItem(Named, ElementPresentation[sysml2.PortDefinition]):
+    """A diagram view onto a SysML2 `PortDefinition`."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id)
+        self.watch("subject[Element].declaredName", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _name_box(self)
+
+
 @represents(sysml2.PartUsage)
 class PartUsageItem(Named, ElementPresentation[sysml2.PartUsage]):
     """A diagram view onto a SysML2 `PartUsage` (its declared name)."""
@@ -176,6 +189,19 @@ class ConstraintUsageItem(Named, ElementPresentation[sysml2.ConstraintUsage]):
 @represents(sysml2.RequirementUsage)
 class RequirementUsageItem(Named, ElementPresentation[sysml2.RequirementUsage]):
     """A diagram view onto a SysML2 `RequirementUsage`."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id)
+        self.watch("subject[Element].declaredName", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _name_box(self)
+
+
+@represents(sysml2.PortUsage)
+class PortUsageItem(Named, ElementPresentation[sysml2.PortUsage]):
+    """A diagram view onto a SysML2 `PortUsage`."""
 
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)

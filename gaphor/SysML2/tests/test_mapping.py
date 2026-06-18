@@ -151,6 +151,21 @@ def test_requirement_usage_typed_by_requirement_definition(element_factory):
     assert req_def in list(typings[0].type)
 
 
+def test_port_usage_typed_by_port_definition(element_factory):
+    result = map_package(
+        parse("port def Fuel;\nport p : Fuel;"), element_factory
+    )
+    fuel = result.elements_by_name["Fuel"]
+    p = result.elements_by_name["p"]
+    assert isinstance(fuel, sysml2.PortDefinition)
+    assert isinstance(p, sysml2.PortUsage)
+    assert isinstance(p, kerml.Feature)
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 1
+    assert p in list(typings[0].typedFeature)
+    assert fuel in list(typings[0].type)
+
+
 def test_unresolved_type_leaves_usage_untyped(element_factory):
     # Forward/undefined reference: no FeatureTyping is created; validation (a
     # later sub-step) is responsible for reporting it.

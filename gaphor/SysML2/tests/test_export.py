@@ -90,3 +90,20 @@ def test_requirement_and_constraint_export_is_reparseable(element_factory):
     result = map_package(parse(src), element_factory)
     exported = export_namespace(result.root)
     assert parse(exported) == parse(src)
+
+
+def test_exports_port_definition_and_typed_usage(element_factory):
+    result = map_package(
+        parse("port def Fuel;\nport p : Fuel;"), element_factory
+    )
+    text = export_namespace(result.root)
+    assert "port def Fuel;" in text
+    assert "port p : Fuel;" in text
+    assert "port def p" not in text
+
+
+def test_port_export_is_reparseable(element_factory):
+    src = "port def Fuel;\nport p : Fuel;"
+    result = map_package(parse(src), element_factory)
+    exported = export_namespace(result.root)
+    assert parse(exported) == parse(src)

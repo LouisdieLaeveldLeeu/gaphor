@@ -919,6 +919,13 @@ SYSML_SEED = (
     "ConstraintUsage",
     "RequirementDefinition",
     "RequirementUsage",
+    # PortDefinition/Usage for the declaration-and-typing surface. Their supers
+    # (Structure, OccurrenceDefinition, OccurrenceUsage) are already in the
+    # model, so no kernel growth is needed. Port conjugation (PortConjugation /
+    # KerML Conjugation) and interface/flow semantics are deliberately NOT pulled
+    # in -- that is a named later dependency, not unused structure added now.
+    "PortDefinition",
+    "PortUsage",
 )
 
 # KerML classes that the generated SysML kernel must already provide as a

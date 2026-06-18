@@ -138,6 +138,19 @@ def test_parses_untyped_requirement_usage():
     )
 
 
+def test_parses_port_definition_and_usage():
+    pkg = parse("port def Fuel;\nport p : Fuel;")
+    assert pkg.members == (
+        ast.PortDefinition(name="Fuel"),
+        ast.PortUsage(name="p", type_name=("Fuel",)),
+    )
+
+
+def test_parses_untyped_port_usage():
+    pkg = parse("port p;")
+    assert pkg == ast.Package(members=(ast.PortUsage(name="p", type_name=None),))
+
+
 def test_parses_empty_package_semicolon_form():
     pkg = parse("package P;")
     assert pkg == ast.Package(

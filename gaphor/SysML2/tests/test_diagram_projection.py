@@ -23,6 +23,8 @@ from gaphor.SysML2.diagramitems import (
     PackageItem,
     PartDefinitionItem,
     PartUsageItem,
+    PortDefinitionItem,
+    PortUsageItem,
     RequirementDefinitionItem,
     RequirementUsageItem,
 )
@@ -58,6 +60,8 @@ def test_item_registered_for_part_definition():
         is RequirementDefinitionItem
     )
     assert get_diagram_item(sysml2.RequirementUsage) is RequirementUsageItem
+    assert get_diagram_item(sysml2.PortDefinition) is PortDefinitionItem
+    assert get_diagram_item(sysml2.PortUsage) is PortUsageItem
     assert get_diagram_item(sysml2.PartDefinition) is PartDefinitionItem
 
 
@@ -390,6 +394,89 @@ def test_deleting_requirement_constraint_removes_its_projection(
     element.unlink()
 
     assert element_factory.lookup(item_id) is None
+
+
+@pytest.mark.parametrize(
+    ("element_cls", "item_cls"),
+    [
+        (sysml2.PortDefinition, PortDefinitionItem),
+        (sysml2.PortUsage, PortUsageItem),
+    ],
+)
+def test_port_drop_projects_existing_element(element_factory, element_cls, item_cls):
+    element = element_factory.create(element_cls)
+    element.declaredName = "X"
+    diagram = element_factory.create(Diagram)
+
+    item = drop(element, diagram, 0, 0)
+
+    assert isinstance(item, item_cls)
+    assert item.subject is element
+    assert item in diagram.ownedPresentation
+
+
+@pytest.mark.parametrize(
+    ("element_cls", "item_cls"),
+    [
+        (sysml2.PortDefinition, PortDefinitionItem),
+        (sysml2.PortUsage, PortUsageItem),
+    ],
+)
+def test_port_projection_persists_and_reloads(
+    element_factory, saver, loader, element_cls, item_cls
+):
+    element = element_factory.create(element_cls)
+    diagram = element_factory.create(Diagram)
+    item = drop(element, diagram, 0, 0)
+    item_id, element_id = item.id, element.id
+
+    loader(saver())
+
+    reloaded_item = element_factory.lookup(item_id)
+    assert isinstance(reloaded_item, item_cls)
+    assert reloaded_item.subject is element_factory.lookup(element_id)
+
+
+@pytest.mark.parametrize(
+    "element_cls", [sysml2.PortDefinition, sysml2.PortUsage]
+)
+def test_deleting_port_removes_its_projection(element_factory, element_cls):
+    element = element_factory.create(element_cls)
+    diagram = element_factory.create(Diagram)
+    item = drop(element, diagram, 0, 0)
+    item_id = item.id
+
+    element.unlink()
+
+    assert element_factory.lookup(item_id) is None
+
+
+def test_port_feature_typing_projects_as_a_view_on_the_existing_typing(
+    element_factory,
+):
+    result = map_package(
+        parse("port def Fuel;\nport p : Fuel;"), element_factory
+    )
+    fuel = result.elements_by_name["Fuel"]
+    usage = result.elements_by_name["p"]
+    typing = element_factory.lselect(kerml.FeatureTyping)[0]
+    diagram = element_factory.create(Diagram)
+    drop(fuel, diagram, 0, 0)
+    drop(usage, diagram, 100, 0)
+    typings_before = len(element_factory.lselect(kerml.FeatureTyping))
+
+    line = drop(typing, diagram, 50, 0)
+
+    assert isinstance(line, FeatureTypingItem)
+    assert line.subject is typing
+    connected_subjects = {
+        diagram.connections.get_connection(h).connected.subject
+        for h in line.handles()
+        if diagram.connections.get_connection(h)
+    }
+    assert usage in connected_subjects
+    assert fuel in connected_subjects
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == typings_before
 
 
 def _project_tracer(element_factory):

@@ -18,6 +18,8 @@ from gaphor.SysML2.diagramitems import (
     PackageItem,
     PartDefinitionItem,
     PartUsageItem,
+    PortDefinitionItem,
+    PortUsageItem,
     RequirementDefinitionItem,
     RequirementUsageItem,
 )
@@ -29,6 +31,7 @@ from gaphor.SysML2.propertypages import (
     ConstraintRequirementTypePropertyPage,
     DeclaredNamePropertyPage,
     PartUsageTypePropertyPage,
+    PortUsageTypePropertyPage,
 )
 
 # Importing the module registers the property pages through decorators.
@@ -182,6 +185,37 @@ def test_requirement_constraint_toolbox_entries_create_element_and_projection(
     assert item in item.subject.presentation
 
 
+@pytest.mark.parametrize(
+    ("tool_id", "item_cls", "element_cls", "default_name"),
+    [
+        (
+            "toolbox-port-definition",
+            PortDefinitionItem,
+            sysml2.PortDefinition,
+            "PortDefinition",
+        ),
+        (
+            "toolbox-port-usage",
+            PortUsageItem,
+            sysml2.PortUsage,
+            "portUsage",
+        ),
+    ],
+)
+def test_port_toolbox_entries_create_element_and_projection(
+    element_factory, tool_id, item_cls, element_cls, default_name
+):
+    diagram = element_factory.create(SysML2Diagram)
+
+    item = _toolbox_item(tool_id, diagram)
+
+    assert isinstance(item, item_cls)
+    assert isinstance(item.subject, element_cls)
+    assert item.subject.declaredName == default_name
+    assert item in diagram.ownedPresentation
+    assert item in item.subject.presentation
+
+
 def test_property_pages_are_registered_for_part_constructs(element_factory):
     package = element_factory.create(kerml.Package)
     attribute_definition = element_factory.create(sysml2.AttributeDefinition)
@@ -192,6 +226,8 @@ def test_property_pages_are_registered_for_part_constructs(element_factory):
     constraint_usage = element_factory.create(sysml2.ConstraintUsage)
     requirement_definition = element_factory.create(sysml2.RequirementDefinition)
     requirement_usage = element_factory.create(sysml2.RequirementUsage)
+    port_definition = element_factory.create(sysml2.PortDefinition)
+    port_usage = element_factory.create(sysml2.PortUsage)
     part_definition = element_factory.create(sysml2.PartDefinition)
     part_usage = element_factory.create(sysml2.PartUsage)
 
@@ -204,6 +240,8 @@ def test_property_pages_are_registered_for_part_constructs(element_factory):
     constraint_usage_pages = set(PropertyPages.find(constraint_usage))
     requirement_definition_pages = set(PropertyPages.find(requirement_definition))
     requirement_usage_pages = set(PropertyPages.find(requirement_usage))
+    port_definition_pages = set(PropertyPages.find(port_definition))
+    port_usage_pages = set(PropertyPages.find(port_usage))
     definition_pages = set(PropertyPages.find(part_definition))
     usage_pages = set(PropertyPages.find(part_usage))
 
@@ -216,6 +254,8 @@ def test_property_pages_are_registered_for_part_constructs(element_factory):
     assert DeclaredNamePropertyPage in constraint_usage_pages
     assert DeclaredNamePropertyPage in requirement_definition_pages
     assert DeclaredNamePropertyPage in requirement_usage_pages
+    assert DeclaredNamePropertyPage in port_definition_pages
+    assert DeclaredNamePropertyPage in port_usage_pages
     assert DeclaredNamePropertyPage in definition_pages
     assert DeclaredNamePropertyPage in usage_pages
     assert AttributeUsageTypePropertyPage in attribute_usage_pages
@@ -238,11 +278,17 @@ def test_property_pages_are_registered_for_part_constructs(element_factory):
         if p is ConstraintRequirementTypePropertyPage
     ]
     assert len(type_pages_for_requirement) == 1
+    assert PortUsageTypePropertyPage in port_usage_pages
+    assert PortUsageTypePropertyPage not in port_definition_pages
+    assert PortUsageTypePropertyPage not in usage_pages
+    assert PortUsageTypePropertyPage not in constraint_usage_pages
+    assert ConstraintRequirementTypePropertyPage not in port_usage_pages
     assert PartUsageTypePropertyPage in usage_pages
     assert PartUsageTypePropertyPage not in definition_pages
     assert PartUsageTypePropertyPage not in attribute_usage_pages
     assert PartUsageTypePropertyPage not in action_usage_pages
     assert PartUsageTypePropertyPage not in requirement_usage_pages
+    assert PartUsageTypePropertyPage not in port_usage_pages
 
 
 def test_declared_name_property_page_renames_part_definition(
@@ -610,3 +656,77 @@ def test_constraint_usage_dropdown_excludes_requirement_definitions(
     values = {lv.value for lv in dropdown.get_model()}
     assert plain_constraint.id in values
     assert requirement_def.id not in values
+
+
+@pytest.mark.parametrize(
+    ("element_cls", "new_name"),
+    [
+        (sysml2.PortDefinition, "Fuel"),
+        (sysml2.PortUsage, "p"),
+    ],
+)
+def test_declared_name_property_page_renames_port(
+    element_factory, event_manager, element_cls, new_name
+):
+    element = element_factory.create(element_cls)
+    property_page = DeclaredNamePropertyPage(element, event_manager)
+
+    widget = property_page.construct()
+    entry = find(widget, "declared-name")
+    entry.set_text(new_name)
+
+    assert element.declaredName == new_name
+
+
+def test_port_usage_type_property_page_sets_and_replaces_type(
+    element_factory,
+    event_manager,
+):
+    fuel = element_factory.create(sysml2.PortDefinition)
+    fuel.declaredName = "Fuel"
+    power = element_factory.create(sysml2.PortDefinition)
+    power.declaredName = "Power"
+    engine = element_factory.create(sysml2.PartDefinition)
+    engine.declaredName = "Engine"
+    usage = element_factory.create(sysml2.PortUsage)
+    usage.declaredName = "p"
+    property_page = PortUsageTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "port-usage-type")
+    # The dropdown lists PortDefinitions only -- not PartDefinitions.
+    values = {lv.value for lv in dropdown.get_model()}
+    assert fuel.id in values
+    assert power.id in values
+    assert engine.id not in values
+
+    fuel_index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == fuel.id
+    )
+    dropdown.set_selected(fuel_index)
+    assert kk.feature_type(usage) is fuel
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+    power_index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == power.id
+    )
+    dropdown.set_selected(power_index)
+    assert kk.feature_type(usage) is power
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+
+def test_port_usage_type_property_page_can_clear_type(
+    element_factory,
+    event_manager,
+):
+    fuel = element_factory.create(sysml2.PortDefinition)
+    usage = element_factory.create(sysml2.PortUsage)
+    kk.set_feature_type(usage, fuel)
+    property_page = PortUsageTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "port-usage-type")
+    dropdown.set_selected(0)
+
+    assert kk.feature_type(usage) is None
+    assert element_factory.lselect(kerml.FeatureTyping) == []

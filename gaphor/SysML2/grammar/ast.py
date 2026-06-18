@@ -86,6 +86,21 @@ class RequirementUsage:
 
 
 @dataclass(frozen=True)
+class PortDefinition:
+    """`port def <name> ;`"""
+
+    name: str
+
+
+@dataclass(frozen=True)
+class PortUsage:
+    """`port <name> [ : <type> ] ;` (unconjugated)."""
+
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
 class PackageDefinition:
     """`package <name> { <members> }` -- a named, nestable container."""
 
@@ -97,7 +112,8 @@ class PackageDefinition:
 Member = (
     "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage "
     "| ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage "
-    "| RequirementDefinition | RequirementUsage | PackageDefinition"
+    "| RequirementDefinition | RequirementUsage | PortDefinition | PortUsage "
+    "| PackageDefinition"
 )
 
 
@@ -108,6 +124,7 @@ class Package:
     members: tuple[
         "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage"
         " | ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage"
-        " | RequirementDefinition | RequirementUsage | PackageDefinition",
+        " | RequirementDefinition | RequirementUsage | PortDefinition | PortUsage"
+        " | PackageDefinition",
         ...,
     ] = field(default_factory=tuple)

@@ -113,6 +113,20 @@ def drop_requirement_usage(
     return _project_element(element, diagram, x, y)
 
 
+@drop.register(sysml2.PortDefinition, Diagram)
+def drop_port_definition(
+    element: sysml2.PortDefinition, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
+@drop.register(sysml2.PortUsage, Diagram)
+def drop_port_usage(
+    element: sysml2.PortUsage, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
 @drop.register(kerml.FeatureTyping, Diagram)
 def drop_feature_typing(
     element: kerml.FeatureTyping, diagram: Diagram, x: float, y: float

@@ -48,6 +48,8 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         return f"{pad}requirement def {element.declaredName};\n"
     if isinstance(element, sysml2.ConstraintDefinition):
         return f"{pad}constraint def {element.declaredName};\n"
+    if isinstance(element, sysml2.PortDefinition):
+        return f"{pad}port def {element.declaredName};\n"
     if isinstance(element, sysml2.PartUsage):
         return f"{pad}part {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.AttributeUsage):
@@ -58,6 +60,8 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         return f"{pad}requirement {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.ConstraintUsage):
         return f"{pad}constraint {_usage_decl(element, root)};\n"
+    if isinstance(element, sysml2.PortUsage):
+        return f"{pad}port {_usage_decl(element, root)};\n"
     return ""
 
 
