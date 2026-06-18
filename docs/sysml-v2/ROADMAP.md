@@ -20,8 +20,9 @@ honestly claimed (claim discipline: a cell advances only with a passing test).
 - KerML Package: `alpha` (Parse..Round-trip).
 - SysML PartDefinition, PartUsage: `alpha` + Diagram (projection core).
 - SysML AttributeDefinition: `supported`; AttributeUsage: `alpha` (Z2 gate).
-- SysML ActionDefinition, ActionUsage: `alpha` (D1 semantic chain done; D2/D3
-  diagram + UI-edit pending).
+- SysML ActionDefinition, ActionUsage: `alpha` (D1 semantic chain + D2 diagram +
+  D3 UI-edit done -- all nine cells; held at alpha on a named behavioral
+  dependency: action bodies / succession-flow / parameters).
 - SysML RequirementUsage, PortUsage, ConnectionUsage: `not-started`.
 - Resolution scope so far: same-namespace + simple qualified name (incl. nested
   + cross-package). No inheritance / visibility / aliases / feature chains.
