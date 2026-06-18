@@ -13,12 +13,14 @@ from gaphor.diagram.propertypages import (
     new_resource_builder,
     unsubscribe_all_on_destroy,
 )
+from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import sysml2
 
 new_builder = new_resource_builder("gaphor.SysML2")
 
 
+@PropertyPages.register(kerml.Package)
 @PropertyPages.register(sysml2.PartDefinition)
 @PropertyPages.register(sysml2.PartUsage)
 class DeclaredNamePropertyPage(PropertyPageBase):
@@ -27,7 +29,9 @@ class DeclaredNamePropertyPage(PropertyPageBase):
     order = 10
 
     def __init__(
-        self, subject: sysml2.PartDefinition | sysml2.PartUsage, event_manager
+        self,
+        subject: kerml.Package | sysml2.PartDefinition | sysml2.PartUsage,
+        event_manager,
     ):
         super().__init__()
         self.subject = subject

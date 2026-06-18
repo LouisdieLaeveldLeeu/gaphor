@@ -6,9 +6,8 @@ SysML2 element, bound through Gaphor's subject mechanism. Items are created by
 projecting an element that already exists (see `drop.py`), so there is no
 symbol-only state -- delete the element and its projection goes with it.
 
-This is the projection-core slice: a named box for `PartDefinition`. The shape
-shows the element's declared name; the GTK/toolbox/property-page surface beyond
-this is later work.
+Shapes show the subject's declared name. Diagram items remain views: semantic
+elements are created or imported first, then projected through `subject`.
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ from gaphor.diagram.presentation import (
     LinePresentation,
     Named,
 )
-from gaphor.diagram.shapes import Box, Text, draw_border
+from gaphor.diagram.shapes import Box, Text, cairo_state, draw_border, stroke
 from gaphor.diagram.support import represents
 from gaphor.SysML2 import kerml, sysml2
 
@@ -30,6 +29,27 @@ def _name_box(item):
         Text(text=lambda: (item.subject.declaredName if item.subject else "") or ""),
         draw=draw_border,
     )
+
+
+def _package_box(item):
+    """A package frame showing the item's subject's declared name."""
+    return Box(
+        Text(text=lambda: (item.subject.declaredName if item.subject else "") or ""),
+        draw=draw_package,
+    )
+
+
+@represents(kerml.Package)
+class PackageItem(Named, ElementPresentation[kerml.Package]):
+    """A diagram view onto a KerML `Package` namespace."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id, width=120, height=80)
+        self.watch("subject[Element].declaredName", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _package_box(self)
 
 
 @represents(sysml2.PartDefinition)
@@ -78,3 +98,21 @@ class FeatureTypingItem(LinePresentation):
         cr.move_to(15, -10)
         cr.line_to(0, 0)
         cr.line_to(15, 10)
+
+
+def draw_package(box, context: DrawContext, bounding_box):
+    """Draw a simple package frame with a tab."""
+    with cairo_state(context.cairo) as cr:
+        o = 0.0
+        h = bounding_box.height
+        w = bounding_box.width
+        tab_width = min(50, w * 0.45)
+        tab_height = min(20, h * 0.3)
+        cr.move_to(tab_width, tab_height)
+        cr.line_to(tab_width, o)
+        cr.line_to(o, o)
+        cr.line_to(o, h)
+        cr.line_to(w, h)
+        cr.line_to(w, tab_height)
+        cr.line_to(o, tab_height)
+        stroke(context, fill=True)

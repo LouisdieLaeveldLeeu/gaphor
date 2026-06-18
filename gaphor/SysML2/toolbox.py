@@ -17,6 +17,7 @@ from gaphor.diagram.diagramtoolbox import (
     new_item_factory,
 )
 from gaphor.i18n import gettext, i18nize
+from gaphor.SysML2 import kerml
 from gaphor.SysML2 import sysml2 as sysml2_model
 from gaphor.SysML2 import diagramitems as sysml2_items
 from gaphor.SysML2.diagramtype import SysML2Diagram, SysML2DiagramType
@@ -28,6 +29,25 @@ def _declared_name_config(default_name: str):
             item.subject.declaredName = default_name
 
     return config
+
+
+packages = ToolSection(
+    gettext("Packages"),
+    (
+        ToolDef(
+            "toolbox-package",
+            gettext("Package"),
+            "gaphor-package-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.PackageItem,
+                kerml.Package,
+                config_func=_declared_name_config("Package"),
+            ),
+            handle_index=SE,
+        ),
+    ),
+)
 
 
 parts = ToolSection(
@@ -60,10 +80,10 @@ parts = ToolSection(
     ),
 )
 
-sysml2_toolbox_actions: ToolboxDefinition = (parts,)
+sysml2_toolbox_actions: ToolboxDefinition = (packages, parts)
 
 sysml2_diagram_types: DiagramTypes = (
-    SysML2DiagramType(SysML2Diagram, i18nize("SysML v2 Diagram"), (parts,)),
+    SysML2DiagramType(SysML2Diagram, i18nize("SysML v2 Diagram"), (packages, parts)),
 )
 
 sysml2_element_types = ()

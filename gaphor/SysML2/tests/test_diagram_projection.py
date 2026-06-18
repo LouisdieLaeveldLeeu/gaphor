@@ -12,6 +12,7 @@ from gaphor.diagram.presentation import connect
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2.diagramitems import (
     FeatureTypingItem,
+    PackageItem,
     PartDefinitionItem,
     PartUsageItem,
 )
@@ -33,7 +34,48 @@ def _allows(line, handle, target_item) -> bool:
 def test_item_registered_for_part_definition():
     from gaphor.diagram.support import get_diagram_item
 
+    assert get_diagram_item(kerml.Package) is PackageItem
     assert get_diagram_item(sysml2.PartDefinition) is PartDefinitionItem
+
+
+def test_package_drop_projects_an_existing_package(element_factory):
+    package = element_factory.create(kerml.Package)
+    package.declaredName = "Vehicles"
+    diagram = element_factory.create(Diagram)
+
+    item = drop(package, diagram, 0, 0)
+
+    assert isinstance(item, PackageItem)
+    assert item.subject is package
+    assert item in diagram.ownedPresentation
+
+
+def test_package_projection_subject_persists_and_reloads(
+    element_factory, saver, loader
+):
+    result = map_package(parse("package Vehicles;"), element_factory)
+    package = result.elements_by_name["Vehicles"]
+    diagram = element_factory.create(Diagram)
+    item = drop(package, diagram, 0, 0)
+    item_id, package_id = item.id, package.id
+
+    loader(saver())
+
+    reloaded_item = element_factory.lookup(item_id)
+    reloaded_package = element_factory.lookup(package_id)
+    assert isinstance(reloaded_item, PackageItem)
+    assert reloaded_item.subject is reloaded_package
+
+
+def test_deleting_package_removes_its_projection(element_factory):
+    package = element_factory.create(kerml.Package)
+    diagram = element_factory.create(Diagram)
+    item = drop(package, diagram, 0, 0)
+    item_id = item.id
+
+    package.unlink()
+
+    assert element_factory.lookup(item_id) is None
 
 
 def test_drop_projects_an_existing_element(element_factory):

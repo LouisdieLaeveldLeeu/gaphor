@@ -36,6 +36,13 @@ def _project_element(element, diagram: Diagram, x: float, y: float):
     return item
 
 
+@drop.register(kerml.Package, Diagram)
+def drop_package(
+    element: kerml.Package, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
 @drop.register(sysml2.PartDefinition, Diagram)
 def drop_part_definition(
     element: sysml2.PartDefinition, diagram: Diagram, x: float, y: float

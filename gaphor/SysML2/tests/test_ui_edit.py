@@ -6,7 +6,7 @@ from gaphor.diagram.diagramtoolbox import get_tool_def
 from gaphor.diagram.propertypages import PropertyPages
 from gaphor.diagram.tests.fixtures import find
 from gaphor.SysML2 import kerml, kerml_kernel as kk, sysml2
-from gaphor.SysML2.diagramitems import PartDefinitionItem, PartUsageItem
+from gaphor.SysML2.diagramitems import PackageItem, PartDefinitionItem, PartUsageItem
 from gaphor.SysML2.diagramtype import SysML2Diagram
 from gaphor.SysML2.modelinglanguage import SysML2ModelingLanguage
 from gaphor.SysML2.propertypages import (
@@ -38,6 +38,20 @@ def test_part_definition_toolbox_entry_creates_semantic_element_and_projection(
     assert item in item.subject.presentation
 
 
+def test_package_toolbox_entry_creates_semantic_element_and_projection(
+    element_factory,
+):
+    diagram = element_factory.create(SysML2Diagram)
+
+    item = _toolbox_item("toolbox-package", diagram)
+
+    assert isinstance(item, PackageItem)
+    assert isinstance(item.subject, kerml.Package)
+    assert item.subject.declaredName == "Package"
+    assert item in diagram.ownedPresentation
+    assert item in item.subject.presentation
+
+
 def test_part_usage_toolbox_entry_creates_semantic_element_and_projection(
     element_factory,
 ):
@@ -53,12 +67,15 @@ def test_part_usage_toolbox_entry_creates_semantic_element_and_projection(
 
 
 def test_property_pages_are_registered_for_part_constructs(element_factory):
+    package = element_factory.create(kerml.Package)
     part_definition = element_factory.create(sysml2.PartDefinition)
     part_usage = element_factory.create(sysml2.PartUsage)
 
+    package_pages = set(PropertyPages.find(package))
     definition_pages = set(PropertyPages.find(part_definition))
     usage_pages = set(PropertyPages.find(part_usage))
 
+    assert DeclaredNamePropertyPage in package_pages
     assert DeclaredNamePropertyPage in definition_pages
     assert DeclaredNamePropertyPage in usage_pages
     assert PartUsageTypePropertyPage in usage_pages
@@ -77,6 +94,20 @@ def test_declared_name_property_page_renames_part_definition(
     entry.set_text("Engine")
 
     assert part_definition.declaredName == "Engine"
+
+
+def test_declared_name_property_page_renames_package(
+    element_factory,
+    event_manager,
+):
+    package = element_factory.create(kerml.Package)
+    property_page = DeclaredNamePropertyPage(package, event_manager)
+
+    widget = property_page.construct()
+    entry = find(widget, "declared-name")
+    entry.set_text("Vehicles")
+
+    assert package.declaredName == "Vehicles"
 
 
 def test_part_usage_type_property_page_sets_and_replaces_type(
