@@ -11,6 +11,8 @@ from gaphor.diagram.drop import drop
 from gaphor.diagram.presentation import connect
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2.diagramitems import (
+    AttributeDefinitionItem,
+    AttributeUsageItem,
     FeatureTypingItem,
     PackageItem,
     PartDefinitionItem,
@@ -35,6 +37,8 @@ def test_item_registered_for_part_definition():
     from gaphor.diagram.support import get_diagram_item
 
     assert get_diagram_item(kerml.Package) is PackageItem
+    assert get_diagram_item(sysml2.AttributeDefinition) is AttributeDefinitionItem
+    assert get_diagram_item(sysml2.AttributeUsage) is AttributeUsageItem
     assert get_diagram_item(sysml2.PartDefinition) is PartDefinitionItem
 
 
@@ -136,6 +140,88 @@ def test_part_usage_is_projectable(element_factory):
     assert item.subject is usage
 
 
+def test_attribute_definition_drop_projects_an_existing_element(element_factory):
+    mass = element_factory.create(sysml2.AttributeDefinition)
+    mass.declaredName = "Mass"
+    diagram = element_factory.create(Diagram)
+
+    item = drop(mass, diagram, 0, 0)
+
+    assert isinstance(item, AttributeDefinitionItem)
+    assert item.subject is mass
+    assert item in diagram.ownedPresentation
+
+
+def test_attribute_usage_drop_projects_an_existing_element(element_factory):
+    usage = element_factory.create(sysml2.AttributeUsage)
+    usage.declaredName = "m"
+    diagram = element_factory.create(Diagram)
+
+    item = drop(usage, diagram, 0, 0)
+
+    assert isinstance(item, AttributeUsageItem)
+    assert item.subject is usage
+    assert item in diagram.ownedPresentation
+
+
+def test_attribute_definition_projection_subject_persists_and_reloads(
+    element_factory, saver, loader
+):
+    result = map_package(parse("attribute def Mass;"), element_factory)
+    mass = result.elements_by_name["Mass"]
+    diagram = element_factory.create(Diagram)
+    item = drop(mass, diagram, 0, 0)
+    item_id, mass_id = item.id, mass.id
+
+    loader(saver())
+
+    reloaded_item = element_factory.lookup(item_id)
+    reloaded_mass = element_factory.lookup(mass_id)
+    assert isinstance(reloaded_item, AttributeDefinitionItem)
+    assert reloaded_item.subject is reloaded_mass
+
+
+def test_attribute_usage_projection_subject_persists_and_reloads(
+    element_factory, saver, loader
+):
+    result = map_package(
+        parse("attribute def Mass;\nattribute m : Mass;"), element_factory
+    )
+    usage = result.elements_by_name["m"]
+    diagram = element_factory.create(Diagram)
+    item = drop(usage, diagram, 0, 0)
+    item_id, usage_id = item.id, usage.id
+
+    loader(saver())
+
+    reloaded_item = element_factory.lookup(item_id)
+    reloaded_usage = element_factory.lookup(usage_id)
+    assert isinstance(reloaded_item, AttributeUsageItem)
+    assert reloaded_item.subject is reloaded_usage
+
+
+def test_deleting_attribute_definition_removes_its_projection(element_factory):
+    mass = element_factory.create(sysml2.AttributeDefinition)
+    diagram = element_factory.create(Diagram)
+    item = drop(mass, diagram, 0, 0)
+    item_id = item.id
+
+    mass.unlink()
+
+    assert element_factory.lookup(item_id) is None
+
+
+def test_deleting_attribute_usage_removes_its_projection(element_factory):
+    usage = element_factory.create(sysml2.AttributeUsage)
+    diagram = element_factory.create(Diagram)
+    item = drop(usage, diagram, 0, 0)
+    item_id = item.id
+
+    usage.unlink()
+
+    assert element_factory.lookup(item_id) is None
+
+
 def _project_tracer(element_factory):
     """Map the tracer pair and project both items, returning (diagram, usage,
     definition, typing)."""
@@ -151,6 +237,19 @@ def _project_tracer(element_factory):
     return diagram, usage, engine, typing
 
 
+def _project_attribute_tracer(element_factory):
+    result = map_package(
+        parse("attribute def Mass;\nattribute m : Mass;"), element_factory
+    )
+    mass = result.elements_by_name["Mass"]
+    usage = result.elements_by_name["m"]
+    typing = element_factory.lselect(kerml.FeatureTyping)[0]
+    diagram = element_factory.create(Diagram)
+    drop(mass, diagram, 0, 0)
+    drop(usage, diagram, 100, 0)
+    return diagram, usage, mass, typing
+
+
 def test_feature_typing_projects_as_a_view_on_the_existing_typing(element_factory):
     diagram, usage, engine, typing = _project_tracer(element_factory)
     typings_before = len(element_factory.lselect(kerml.FeatureTyping))
@@ -161,6 +260,26 @@ def test_feature_typing_projects_as_a_view_on_the_existing_typing(element_factor
     # The line is a VIEW onto the existing typing -- it binds the same element,
     # and does NOT create a new FeatureTyping.
     assert line.subject is typing
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == typings_before
+
+
+def test_attribute_feature_typing_projects_as_a_view_on_the_existing_typing(
+    element_factory,
+):
+    diagram, usage, mass, typing = _project_attribute_tracer(element_factory)
+    typings_before = len(element_factory.lselect(kerml.FeatureTyping))
+
+    line = drop(typing, diagram, 50, 0)
+
+    assert isinstance(line, FeatureTypingItem)
+    assert line.subject is typing
+    connected_subjects = {
+        diagram.connections.get_connection(h).connected.subject
+        for h in line.handles()
+        if diagram.connections.get_connection(h)
+    }
+    assert usage in connected_subjects
+    assert mass in connected_subjects
     assert len(element_factory.lselect(kerml.FeatureTyping)) == typings_before
 
 

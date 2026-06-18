@@ -30,8 +30,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | KerML Package | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
-| SysML AttributeDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
-| SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
+| SysML AttributeDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
+| SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML ActionUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML RequirementUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML PortUsage | no | no | no | no | no | no | no | no | no | not-started |
@@ -53,28 +53,37 @@ references, never ids or raw text). M2 establishes the harness
 | SysML AttributeDefinition | yes | `test_roundtrip.py::test_attribute_definition_and_usage_round_trip` |
 | SysML AttributeUsage (typed) | yes | `test_roundtrip.py` |
 
-Coverage: 5 constructs round-trip-covered. Package, PartDefinition, and
-PartUsage are `supported`: every matrix cell is implemented and focused-tested.
-AttributeDefinition and AttributeUsage remain `alpha`; their missing diagram and
-UI-edit cells are tracked in the roadmap. Resolution remains same-namespace +
-simple/qualified name (incl. nested + cross-package). Note: AttributeUsage typing
-is by an AttributeDefinition; the distinct primitive/value-type axis (e.g.
-`attribute x : Real`) is later work -- this construct establishes the attribute
-definition/usage pattern on a DataType base, not full value-type semantics.
+Coverage: 5 constructs round-trip-covered. Package, PartDefinition, PartUsage,
+and AttributeDefinition are `supported`: every matrix cell is implemented and
+focused-tested for the claimed surface. Resolution remains same-namespace +
+simple/qualified name (incl. nested + cross-package).
 
-Diagram cell scope. `Diagram=yes` for Package, PartDefinition, and PartUsage
-means a diagram item (an `ElementPresentation`) projects an EXISTING semantic
-element via Gaphor's `subject` mechanism (never symbol-only), the view->element
-link persists and reloads through `.gaphor`, and deleting the element removes
-its projection. Package projection is a package frame/box view of the namespace;
-semantic namespace ownership remains in the KerML ownership spine.
+AttributeUsage stays `alpha` on a named dependency. Every one of its cells is
+implemented and focused-tested -- including the Diagram and UI-edit cells added
+in Phase C2 -- for untyped usages and usages typed by an AttributeDefinition
+through KerML FeatureTyping. It is held at `alpha` (not `supported`) because the
+construct is not complete end to end: primitive / value-library typing (e.g.
+`attribute x : Real`) requires the read-only standard-library loader, scheduled
+as roadmap phase Z2. AttributeUsage is promoted to `supported` only once Z2
+lands and `attribute x : Real` round-trips. This is the C2 standard-library gate
+decision, taken explicitly per the roadmap.
 
-UI-edit scope for Package, PartDefinition, and PartUsage. `UI-edit=yes` means
-the SysML2 toolbox has Package, Part Definition, and Part Usage tools that create
-the semantic element and its projection together (never symbol-only), and
-property pages can rename all three constructs and set/clear/replace a
-PartUsage's PartDefinition type. Re-typing replaces the stored FeatureTyping
-instead of accumulating duplicates.
+Diagram cell scope. `Diagram=yes` for Package, PartDefinition, PartUsage,
+AttributeDefinition, and AttributeUsage means a diagram item (an
+`ElementPresentation`) projects an EXISTING semantic element via Gaphor's
+`subject` mechanism (never symbol-only), the view->element link persists and
+reloads through `.gaphor`, and deleting the element removes its projection.
+Package projection is a package frame/box view of the namespace; semantic
+namespace ownership remains in the KerML ownership spine.
+
+UI-edit scope for Package, PartDefinition, PartUsage, AttributeDefinition, and
+AttributeUsage. `UI-edit=yes` means the SysML2 toolbox has Package, Part
+Definition, Part Usage, Attribute Definition, and Attribute Usage tools that
+create the semantic element and its projection together (never symbol-only), and
+property pages can rename all five constructs. PartUsage can set/clear/replace a
+PartDefinition type; AttributeUsage can set/clear/replace an AttributeDefinition
+type. Re-typing replaces the stored FeatureTyping instead of accumulating
+duplicates.
 
 The FeatureTyping relation projects as a line (`FeatureTypingItem`) whose
 `subject` is the EXISTING typing -- it appears only when both ends are already

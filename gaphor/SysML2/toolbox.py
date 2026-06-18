@@ -80,10 +80,45 @@ parts = ToolSection(
     ),
 )
 
-sysml2_toolbox_actions: ToolboxDefinition = (packages, parts)
+attributes = ToolSection(
+    gettext("Attributes"),
+    (
+        ToolDef(
+            "toolbox-attribute-definition",
+            gettext("Attribute Definition"),
+            "gaphor-data-type-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.AttributeDefinitionItem,
+                sysml2_model.AttributeDefinition,
+                config_func=_declared_name_config("AttributeDefinition"),
+            ),
+            handle_index=SE,
+        ),
+        ToolDef(
+            "toolbox-attribute-usage",
+            gettext("Attribute Usage"),
+            "gaphor-property-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.AttributeUsageItem,
+                sysml2_model.AttributeUsage,
+                config_func=_declared_name_config("attributeUsage"),
+            ),
+            handle_index=SE,
+        ),
+    ),
+)
+
+
+sysml2_toolbox_actions: ToolboxDefinition = (packages, parts, attributes)
 
 sysml2_diagram_types: DiagramTypes = (
-    SysML2DiagramType(SysML2Diagram, i18nize("SysML v2 Diagram"), (packages, parts)),
+    SysML2DiagramType(
+        SysML2Diagram,
+        i18nize("SysML v2 Diagram"),
+        (packages, parts, attributes),
+    ),
 )
 
 sysml2_element_types = ()

@@ -21,6 +21,8 @@ new_builder = new_resource_builder("gaphor.SysML2")
 
 
 @PropertyPages.register(kerml.Package)
+@PropertyPages.register(sysml2.AttributeDefinition)
+@PropertyPages.register(sysml2.AttributeUsage)
 @PropertyPages.register(sysml2.PartDefinition)
 @PropertyPages.register(sysml2.PartUsage)
 class DeclaredNamePropertyPage(PropertyPageBase):
@@ -30,7 +32,13 @@ class DeclaredNamePropertyPage(PropertyPageBase):
 
     def __init__(
         self,
-        subject: kerml.Package | sysml2.PartDefinition | sysml2.PartUsage,
+        subject: (
+            kerml.Package
+            | sysml2.AttributeDefinition
+            | sysml2.AttributeUsage
+            | sysml2.PartDefinition
+            | sysml2.PartUsage
+        ),
         event_manager,
     ):
         super().__init__()
@@ -78,7 +86,7 @@ class PartUsageTypePropertyPage(PropertyPageBase):
         builder = new_builder("part-usage-type-editor")
 
         dropdown = builder.get_object("part-usage-type")
-        model = list_of_part_definitions(self.subject.model)
+        model = list_of_definitions(self.subject.model, sysml2.PartDefinition)
         dropdown.set_model(model)
 
         if isinstance(type_ := kk.feature_type(self.subject), sysml2.PartDefinition):
@@ -104,20 +112,66 @@ class PartUsageTypePropertyPage(PropertyPageBase):
                 kk.set_feature_type(self.subject, None)
 
 
-def list_of_part_definitions(element_factory) -> Gio.ListStore:
+@PropertyPages.register(sysml2.AttributeUsage)
+class AttributeUsageTypePropertyPage(PropertyPageBase):
+    """Set the AttributeDefinition type for an AttributeUsage."""
+
+    order = 20
+
+    def __init__(self, subject: sysml2.AttributeUsage, event_manager):
+        super().__init__()
+        self.subject = subject
+        self.event_manager = event_manager
+
+    def construct(self):
+        builder = new_builder("attribute-usage-type-editor")
+
+        dropdown = builder.get_object("attribute-usage-type")
+        model = list_of_definitions(self.subject.model, sysml2.AttributeDefinition)
+        dropdown.set_model(model)
+
+        if isinstance(
+            type_ := kk.feature_type(self.subject), sysml2.AttributeDefinition
+        ):
+            selected = next(
+                (n for n, lv in enumerate(model) if lv.value == type_.id),
+                None,
+            )
+            if selected is not None:
+                dropdown.set_selected(selected)
+
+        dropdown.connect("notify::selected", self._on_type_changed)
+
+        return builder.get_object("attribute-usage-type-editor")
+
+    def _on_type_changed(self, dropdown, _pspec):
+        selected = dropdown.get_selected_item()
+        with Transaction(self.event_manager, context="editing"):
+            if selected and selected.value:
+                type_ = self.subject.model.lookup(selected.value)
+                assert isinstance(type_, sysml2.AttributeDefinition)
+                kk.set_feature_type(self.subject, type_)
+            else:
+                kk.set_feature_type(self.subject, None)
+
+
+def list_of_definitions(
+    element_factory,
+    definition_type: type[sysml2.PartDefinition | sysml2.AttributeDefinition],
+) -> Gio.ListStore:
     model = Gio.ListStore.new(LabelValue)
     model.append(LabelValue("", None))
-    for part_definition in sorted(
-        element_factory.select(sysml2.PartDefinition),
-        key=_part_definition_label,
+    for definition in sorted(
+        element_factory.select(definition_type),
+        key=_definition_label,
     ):
-        label = _part_definition_label(part_definition)
-        model.append(LabelValue(label, part_definition.id))
+        label = _definition_label(definition)
+        model.append(LabelValue(label, definition.id))
     return model
 
 
-def _part_definition_label(part_definition: sysml2.PartDefinition) -> str:
-    qualified_name = kk.qualified_name(part_definition).lstrip(
-        kk.QUALIFIED_NAME_SEPARATOR
-    )
-    return qualified_name or part_definition.declaredName or type(part_definition).__name__
+def _definition_label(
+    definition: sysml2.PartDefinition | sysml2.AttributeDefinition,
+) -> str:
+    qualified_name = kk.qualified_name(definition).lstrip(kk.QUALIFIED_NAME_SEPARATOR)
+    return qualified_name or definition.declaredName or type(definition).__name__
