@@ -91,6 +91,52 @@ def test_missing_seed_class_fails_fast():
         xmi_adapter.extract_kernel(KERML_XMI, seed=("Element", "NoSuchClass"))
 
 
+# --- expression roots: the supermodel for the SysML constraint layer ----------
+
+
+def test_kernel_includes_expression_roots_for_constraints():
+    # BooleanExpression/Predicate (and their self-contained closure) are in the
+    # kernel so the SysML constraint/requirement layer generalizes a real KerML
+    # super instead of dropping it.
+    class_names = {c.name for c in _kernel().classes}
+    assert {
+        "BooleanExpression",
+        "Predicate",
+        "Expression",
+        "Function",
+        "Step",
+        "Behavior",
+    } <= class_names
+
+
+def test_expression_roots_have_faithful_generalization_chains():
+    classes = {c.name: c for c in _kernel().classes}
+    # BooleanExpression -> Expression -> Step -> Feature; Predicate -> Function
+    # -> Behavior -> Class. Each super resolves within the kernel (nothing lost).
+    assert "Expression" in classes["BooleanExpression"].supers
+    assert "Step" in classes["Expression"].supers
+    assert "Feature" in classes["Step"].supers
+    assert "Function" in classes["Predicate"].supers
+    assert "Behavior" in classes["Function"].supers
+    assert "Class" in classes["Behavior"].supers
+
+
+def test_emitter_fails_fast_on_a_dropped_generalization():
+    """A class that declares a super resolving to neither a generated class nor a
+    supermodel super must raise, not silently drop the generalization."""
+    from gaphor.SysML2.codegen.xmi_adapter import (
+        Kernel,
+        KernelClass,
+        emit_gaphor_kernel_model,
+    )
+
+    kernel = Kernel(
+        classes=[KernelClass(name="Derived", supers=["MissingSuper"])]
+    )
+    with pytest.raises(ValueError, match="resolve to neither"):
+        emit_gaphor_kernel_model(kernel, package_name="X")
+
+
 # --- enums are value-domain types, not classes -------------------------------
 
 

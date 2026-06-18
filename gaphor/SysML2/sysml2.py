@@ -19,10 +19,12 @@ from gaphor.core.modeling.properties import (
 
 
 from gaphor.core.modeling.base import Base as _Base
+from gaphor.SysML2.kerml import Behavior as _Behavior
 from gaphor.SysML2.kerml import Class as _Class
 from gaphor.SysML2.kerml import Classifier as _Classifier
 from gaphor.SysML2.kerml import DataType as _DataType
 from gaphor.SysML2.kerml import Feature as _Feature
+from gaphor.SysML2.kerml import Step as _Step
 from gaphor.SysML2.kerml import Structure as _Structure
 
 
@@ -39,7 +41,7 @@ class OccurrenceDefinition(Definition, _Class):
     isIndividual: _attribute[bool] = _attribute("isIndividual", bool)
 
 
-class ActionDefinition(OccurrenceDefinition):
+class ActionDefinition(OccurrenceDefinition, _Behavior):
     pass
 
 
@@ -52,7 +54,7 @@ class OccurrenceUsage(Usage):
     portionKind = _enumeration("portionKind", PortionKind, PortionKind.timeslice)
 
 
-class ActionUsage(OccurrenceUsage):
+class ActionUsage(OccurrenceUsage, _Step):
     pass
 
 

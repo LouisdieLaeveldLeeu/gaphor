@@ -67,6 +67,28 @@
 <owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
 <package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
 </UML:Class>
+<UML:Class id="ac862b51-9741-5abd-8e8c-0ea1c198ae90">
+<name><val>Behavior</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="64772f91-0112-59c6-9858-d8e1dca08444"/>
+</reflist></generalization>
+<owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
+<package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
+</UML:Class>
+<UML:Class id="e4503a4e-da28-5bcf-a9e9-99b84ddb8854">
+<name><val>BooleanExpression</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="e811dd08-e976-5140-a8ca-9d3d611d2fda"/>
+</reflist></generalization>
+<owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
+<package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
+</UML:Class>
 <UML:Class id="d2341cf2-33ce-5826-9fa3-8e9eb55523b3">
 <name><val>Class</val></name>
 <ownedAttribute><reflist>
@@ -140,6 +162,17 @@
 <owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
 <package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
 </UML:Class>
+<UML:Class id="64a894de-7f46-5aef-8e42-57c5f8940be5">
+<name><val>Expression</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="943fbe86-a5e7-5768-a129-1890d4128b40"/>
+</reflist></generalization>
+<owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
+<package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
+</UML:Class>
 <UML:Class id="36130c41-b738-56bc-bca7-fb3bd3191b46">
 <name><val>Feature</val></name>
 <ownedAttribute><reflist>
@@ -167,6 +200,17 @@
 </reflist></ownedAttribute>
 <generalization><reflist>
 <ref refid="ce5f56e0-b0ec-5e22-9591-01b80760fc11"/>
+</reflist></generalization>
+<owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
+<package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
+</UML:Class>
+<UML:Class id="d8d0c5f1-3d6e-58f0-b6f5-08eb70df0a52">
+<name><val>Function</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="ee04688d-9aa9-5725-b19f-86d71d428d86"/>
 </reflist></generalization>
 <owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
 <package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
@@ -231,6 +275,17 @@
 <owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
 <package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
 </UML:Class>
+<UML:Class id="aff73f98-90e0-55bf-829c-6c135b846635">
+<name><val>Predicate</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="4c5d22fd-b60d-569a-bd7d-1a1453bf3939"/>
+</reflist></generalization>
+<owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
+<package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
+</UML:Class>
 <UML:Class id="5c95ffa6-87d9-50b9-a00c-ad8747e39649">
 <name><val>Relationship</val></name>
 <ownedAttribute><reflist>
@@ -254,6 +309,17 @@
 </reflist></ownedAttribute>
 <generalization><reflist>
 <ref refid="dd94bcca-4912-584f-b72f-daf91ae6e0cb"/>
+</reflist></generalization>
+<owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
+<package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
+</UML:Class>
+<UML:Class id="87379ef5-024c-55e7-8040-2943b5e691ee">
+<name><val>Step</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="dcc48c6b-cb7c-509d-b89f-fd5f7d12ff87"/>
 </reflist></generalization>
 <owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
 <package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
@@ -285,6 +351,14 @@
 <general><ref refid="af9795d4-f050-5540-8e93-92482b3aa04b"/></general>
 <specific><ref refid="c32116c0-0313-51fe-b090-027af61a42df"/></specific>
 </UML:Generalization>
+<UML:Generalization id="64772f91-0112-59c6-9858-d8e1dca08444">
+<general><ref refid="d2341cf2-33ce-5826-9fa3-8e9eb55523b3"/></general>
+<specific><ref refid="ac862b51-9741-5abd-8e8c-0ea1c198ae90"/></specific>
+</UML:Generalization>
+<UML:Generalization id="e811dd08-e976-5140-a8ca-9d3d611d2fda">
+<general><ref refid="64a894de-7f46-5aef-8e42-57c5f8940be5"/></general>
+<specific><ref refid="e4503a4e-da28-5bcf-a9e9-99b84ddb8854"/></specific>
+</UML:Generalization>
 <UML:Generalization id="ab0ce6eb-9bf4-57c5-8158-b32aa96499bf">
 <general><ref refid="7e9e3dc9-6fab-57b8-beaf-cb439c917ac6"/></general>
 <specific><ref refid="d2341cf2-33ce-5826-9fa3-8e9eb55523b3"/></specific>
@@ -309,6 +383,10 @@
 <general><ref refid="cc24663f-c68f-5cb3-b718-bb20a200c32f"/></general>
 <specific><ref refid="af9795d4-f050-5540-8e93-92482b3aa04b"/></specific>
 </UML:Generalization>
+<UML:Generalization id="943fbe86-a5e7-5768-a129-1890d4128b40">
+<general><ref refid="87379ef5-024c-55e7-8040-2943b5e691ee"/></general>
+<specific><ref refid="64a894de-7f46-5aef-8e42-57c5f8940be5"/></specific>
+</UML:Generalization>
 <UML:Generalization id="0c9058d0-57e3-5f8a-9b24-4476788e79ac">
 <general><ref refid="8d9234aa-97e6-529b-8f71-14939a9c6434"/></general>
 <specific><ref refid="36130c41-b738-56bc-bca7-fb3bd3191b46"/></specific>
@@ -316,6 +394,10 @@
 <UML:Generalization id="ce5f56e0-b0ec-5e22-9591-01b80760fc11">
 <general><ref refid="e17b980c-d944-5dba-a06f-9e9854df380d"/></general>
 <specific><ref refid="b019b4a5-7ecb-59de-836f-3aa30034f343"/></specific>
+</UML:Generalization>
+<UML:Generalization id="ee04688d-9aa9-5725-b19f-86d71d428d86">
+<general><ref refid="ac862b51-9741-5abd-8e8c-0ea1c198ae90"/></general>
+<specific><ref refid="d8d0c5f1-3d6e-58f0-b6f5-08eb70df0a52"/></specific>
 </UML:Generalization>
 <UML:Generalization id="128f40c0-fc5a-5b65-8fc4-8602f5435485">
 <general><ref refid="5c95ffa6-87d9-50b9-a00c-ad8747e39649"/></general>
@@ -337,6 +419,10 @@
 <general><ref refid="b7e4ddbd-8de5-56ee-92cb-933a9c2749a2"/></general>
 <specific><ref refid="b99e5efd-b9d6-5102-9d84-0dc93791b148"/></specific>
 </UML:Generalization>
+<UML:Generalization id="4c5d22fd-b60d-569a-bd7d-1a1453bf3939">
+<general><ref refid="d8d0c5f1-3d6e-58f0-b6f5-08eb70df0a52"/></general>
+<specific><ref refid="aff73f98-90e0-55bf-829c-6c135b846635"/></specific>
+</UML:Generalization>
 <UML:Generalization id="b84a2dba-5115-52f4-9a8e-680fd321bf96">
 <general><ref refid="af9795d4-f050-5540-8e93-92482b3aa04b"/></general>
 <specific><ref refid="5c95ffa6-87d9-50b9-a00c-ad8747e39649"/></specific>
@@ -344,6 +430,10 @@
 <UML:Generalization id="dd94bcca-4912-584f-b72f-daf91ae6e0cb">
 <general><ref refid="5c95ffa6-87d9-50b9-a00c-ad8747e39649"/></general>
 <specific><ref refid="e17b980c-d944-5dba-a06f-9e9854df380d"/></specific>
+</UML:Generalization>
+<UML:Generalization id="dcc48c6b-cb7c-509d-b89f-fd5f7d12ff87">
+<general><ref refid="36130c41-b738-56bc-bca7-fb3bd3191b46"/></general>
+<specific><ref refid="87379ef5-024c-55e7-8040-2943b5e691ee"/></specific>
 </UML:Generalization>
 <UML:Generalization id="426c1518-d246-5fd8-8fca-98a90f3218cb">
 <general><ref refid="d2341cf2-33ce-5826-9fa3-8e9eb55523b3"/></general>

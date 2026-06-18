@@ -64,16 +64,7 @@ class Class(Classifier):
     pass
 
 
-class Comment(AnnotatingElement):
-    body: _attribute[str] = _attribute("body", str)
-    locale: _attribute[str] = _attribute("locale", str)
-
-
-class DataType(Classifier):
-    pass
-
-
-class Documentation(Comment):
+class Behavior(Class):
     pass
 
 
@@ -87,6 +78,31 @@ class Feature(Type):
     isPortion: _attribute[bool] = _attribute("isPortion", bool)
     isUnique: _attribute[bool] = _attribute("isUnique", bool)
     isVariable: _attribute[bool] = _attribute("isVariable", bool)
+
+
+class Step(Feature):
+    pass
+
+
+class Expression(Step):
+    pass
+
+
+class BooleanExpression(Expression):
+    pass
+
+
+class Comment(AnnotatingElement):
+    body: _attribute[str] = _attribute("body", str)
+    locale: _attribute[str] = _attribute("locale", str)
+
+
+class DataType(Classifier):
+    pass
+
+
+class Documentation(Comment):
+    pass
 
 
 class Relationship(Element):
@@ -107,6 +123,10 @@ class FeatureTyping(Specialization):
     typedFeature: relation_many[Feature]
 
 
+class Function(Behavior):
+    pass
+
+
 class Import(Relationship):
     isImportAll: _attribute[bool] = _attribute("isImportAll", bool)
     isRecursive: _attribute[bool] = _attribute("isRecursive", bool)
@@ -125,6 +145,10 @@ class OwningMembership(Membership):
 
 
 class Package(Namespace):
+    pass
+
+
+class Predicate(Function):
     pass
 
 

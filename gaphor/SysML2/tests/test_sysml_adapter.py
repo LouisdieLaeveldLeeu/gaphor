@@ -43,6 +43,17 @@ def test_action_classes_generalize_the_kerml_supermodel():
     assert "OccurrenceDefinition" in def_mro and "Element" in def_mro
 
 
+def test_action_classes_keep_their_behavior_step_supers():
+    # Regression: ActionDefinition -> Behavior and ActionUsage -> Step are real
+    # KerML generalizations that were silently dropped before the kernel carried
+    # Behavior/Step. With the kernel expanded (and the emitter fail-fast guard),
+    # the faithful chain is preserved.
+    from gaphor.SysML2 import kerml
+
+    assert issubclass(sysml2.ActionDefinition, kerml.Behavior)
+    assert issubclass(sysml2.ActionUsage, kerml.Step)
+
+
 def test_part_classes_generalize_the_kerml_supermodel():
     # The faithful SysML -> KerML chain is preserved in the generated module.
     from gaphor.SysML2 import kerml

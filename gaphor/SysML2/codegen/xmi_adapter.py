@@ -438,6 +438,14 @@ KERNEL_SEED = (
     # DataType is the KerML Classifier that AttributeDefinition generalizes;
     # needed as a supermodel root for the SysML attribute layer.
     "DataType",
+    # BooleanExpression and Predicate are the KerML expression roots that the
+    # SysML constraint layer generalizes (ConstraintUsage -> BooleanExpression,
+    # ConstraintDefinition -> Predicate), which RequirementUsage/Definition build
+    # on. Seeding them pulls their self-contained closure (Expression, Step,
+    # Function, Behavior) into the supermodel so the SysML constraint/requirement
+    # chain generalizes a real KerML super instead of silently dropping it.
+    "BooleanExpression",
+    "Predicate",
 )
 
 
@@ -775,6 +783,19 @@ def emit_gaphor_kernel_model(
         resolved_supers = [
             s for s in c.supers if s in class_names or s in supermodel_supers
         ]
+        # Fail fast (invariant 8: never silently drop syntax/structure): if a
+        # class declares supers but some do not resolve to a generated class or a
+        # supermodel stub, the generated class would lose a real generalization.
+        # A genuine root (no declared supers at all) legitimately becomes Base.
+        if c.supers and len(resolved_supers) != len(c.supers):
+            dropped = [
+                s for s in c.supers if s not in class_names and s not in supermodel_supers
+            ]
+            raise ValueError(
+                f"{c.name}: generalization(s) {dropped} resolve to neither a "
+                f"generated class nor a supermodel super; seed the missing "
+                f"supermodel class(es) instead of dropping the generalization"
+            )
         if not resolved_supers:
             resolved_supers = ["Base"]
         for super_name in resolved_supers:
