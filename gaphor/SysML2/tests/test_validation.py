@@ -224,3 +224,60 @@ def test_cross_kind_typing_creates_no_typing_in_mapper(element_factory):
     p = result.elements_by_name["p"]
     assert p.id in result.mistyped
     assert result.mistyped[p.id][1] == "AttributeDefinition"
+
+
+# --- model-derived: a wrong-kind FeatureTyping already present in the model ---
+
+
+def test_model_derived_check_catches_wrong_kind_typing_via_api(element_factory):
+    # A wrong-kind typing injected through the kernel API (or a hand-edited /
+    # persisted .gaphor) must be caught by validate(factory) WITHOUT any mapping
+    # context -- the mapping-context rule alone would miss it.
+    attribute_definition = element_factory.create(sysml2.AttributeDefinition)
+    part_usage = element_factory.create(sysml2.PartUsage)
+    part_usage.declaredName = "p"
+    kk.set_feature_type(part_usage, attribute_definition)
+
+    diagnostics = validate(element_factory)  # no mapping context
+
+    assert "type-kind-mismatch" in _rules(diagnostics)
+    assert has_errors(diagnostics)
+
+
+def test_model_derived_check_accepts_right_kind_typing_via_api(element_factory):
+    part_definition = element_factory.create(sysml2.PartDefinition)
+    part_usage = element_factory.create(sysml2.PartUsage)
+    kk.set_feature_type(part_usage, part_definition)
+
+    diagnostics = validate(element_factory)
+
+    assert not has_errors(diagnostics)
+
+
+def test_model_derived_check_ignores_bare_kernel_feature_typing(element_factory):
+    # A bare kernel Feature typed by a Type is outside the SysML usage-kind
+    # contract, so it must NOT be flagged (no false positive).
+    type_ = element_factory.create(kerml.Type)
+    feature = element_factory.create(kerml.Feature)
+    kk.set_feature_type(feature, type_)
+
+    diagnostics = validate(element_factory)
+
+    assert "type-kind-mismatch" not in _rules(diagnostics)
+
+
+def test_wrong_kind_typing_survives_reload_and_is_still_caught(
+    element_factory, saver, loader
+):
+    # The model-derived verdict must persist: a wrong-kind typing saved to
+    # .gaphor is still an error after reload (no mapping context either way).
+    attribute_definition = element_factory.create(sysml2.AttributeDefinition)
+    part_usage = element_factory.create(sysml2.PartUsage)
+    part_usage.declaredName = "p"
+    kk.set_feature_type(part_usage, attribute_definition)
+
+    loader(saver())
+
+    diagnostics = validate(element_factory)
+    assert "type-kind-mismatch" in _rules(diagnostics)
+    assert has_errors(diagnostics)

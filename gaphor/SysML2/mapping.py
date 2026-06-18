@@ -42,6 +42,13 @@ USAGE_DEFINITION_KIND: dict[type, type] = {
 }
 
 
+def is_managed_usage_kind(usage: kerml.Feature) -> bool:
+    """Whether `usage` is one of the SysML usage kinds whose typing kind is
+    governed by `USAGE_DEFINITION_KIND` (exact-type membership, so a future
+    usage subclass is not silently assumed to share a parent's contract)."""
+    return type(usage) in USAGE_DEFINITION_KIND
+
+
 def type_matches_usage_kind(usage: kerml.Feature, target: kerml.Type) -> bool:
     """Whether `target` is the exact definition kind that `usage` must be typed by.
 

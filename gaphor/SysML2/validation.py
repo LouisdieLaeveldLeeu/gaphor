@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from gaphor.core.modeling import ElementFactory
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
+from gaphor.SysML2.mapping import is_managed_usage_kind, type_matches_usage_kind
 
 
 class Severity(enum.StrEnum):
@@ -147,6 +148,24 @@ def _check_broken_typing(factory: ElementFactory) -> Iterator[Diagnostic]:
                 "broken-typing",
                 "feature typing has a type but no typed feature",
                 typing.id,
+            )
+        elif is_managed_usage_kind(feature) and not type_matches_usage_kind(
+            feature, type_
+        ):
+            # Both ends present but kind-mismatched (e.g. a PartUsage typed by an
+            # AttributeDefinition). Model-derived, so this catches a wrong-kind
+            # relation that reached the model outside the textual path -- via the
+            # Python/kernel API or a hand-edited/persisted .gaphor -- which the
+            # mapping-context `type-kind-mismatch` rule alone would miss. Only the
+            # managed SysML usage kinds are checked; a bare kernel Feature typing
+            # is out of this contract's scope.
+            name = feature.declaredName
+            yield Diagnostic(
+                Severity.ERROR,
+                "type-kind-mismatch",
+                f"{type(feature).__name__} {name!r} is typed by a "
+                f"{type(type_).__name__}, not its required definition kind",
+                feature.id,
             )
 
 
