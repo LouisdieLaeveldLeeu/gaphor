@@ -1,16 +1,26 @@
-"""Scoped structural + typing validation for the M2 tracer.
+"""Scoped structural + typing validation for the SysML2 model.
 
-Implements exactly the four M2 rules over a mapped model, with the
-error/warning/info severities from the conformance policy (decision sec 4):
+Validation grows construct by construct (each rule tested); it started as the
+four M2 rules and now also enforces kind-specific typing. All rules are ERROR
+severity per the conformance policy (decision sec 4):
 
-- missing owner            -> ERROR (structural integrity broken)
-- duplicate member name    -> ERROR (name resolution would be ambiguous)
-- unresolved import        -> ERROR (an outbound reference cannot be tracked)
-- usage without valid type -> ERROR (the typing reference is broken)
+- missing owner            -> structural integrity broken
+- duplicate member name    -> name resolution would be ambiguous
+- unresolved import        -> an outbound reference cannot be tracked
+- usage without valid type -> a declared type name does not resolve to a Type
+- broken typing            -> a FeatureTyping is missing an end (no type / no
+                              typed feature), caught model-derived
+- type-kind mismatch       -> a usage is typed by the wrong definition kind
+                              (e.g. `part p : AttributeDefinition`); reported
+                              both from mapping context and model-derived, so a
+                              wrong-kind relation is caught whether it came from
+                              text or was injected via the API / a reloaded model
 
-Name resolution stays M2-scoped: same-namespace and simple qualified-name only,
-with an unresolved-symbol diagnostic (no inheritance, visibility, aliases, or
-feature chains). Richer rules are added construct by construct, each tested.
+Rules that need mapping context (unresolved-symbol, mapping-context kind
+mismatch) take it as an argument; the rest are recomputed from the stored model
+alone, so a reloaded `.gaphor` is validated without it. Name resolution stays
+scoped: same-namespace and simple qualified-name only (no inheritance,
+visibility, aliases, or feature chains).
 """
 
 from __future__ import annotations
