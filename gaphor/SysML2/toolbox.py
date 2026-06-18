@@ -7,16 +7,63 @@ phases that also add property pages and conformance tests.
 
 from __future__ import annotations
 
-from gaphor.diagram.diagramtoolbox import DiagramTypes, ToolboxDefinition, ToolSection
+from gaphas.item import SE
+
+from gaphor.diagram.diagramtoolbox import (
+    DiagramTypes,
+    ToolboxDefinition,
+    ToolDef,
+    ToolSection,
+    new_item_factory,
+)
 from gaphor.i18n import gettext, i18nize
+from gaphor.SysML2 import sysml2 as sysml2_model
+from gaphor.SysML2 import diagramitems as sysml2_items
 from gaphor.SysML2.diagramtype import SysML2Diagram, SysML2DiagramType
 
-sysml2 = ToolSection(gettext("SysML v2"), ())
 
-sysml2_toolbox_actions: ToolboxDefinition = (sysml2,)
+def _declared_name_config(default_name: str):
+    def config(item) -> None:
+        if item.subject:
+            item.subject.declaredName = default_name
+
+    return config
+
+
+parts = ToolSection(
+    gettext("Parts"),
+    (
+        ToolDef(
+            "toolbox-part-definition",
+            gettext("Part Definition"),
+            "gaphor-block-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.PartDefinitionItem,
+                sysml2_model.PartDefinition,
+                config_func=_declared_name_config("PartDefinition"),
+            ),
+            handle_index=SE,
+        ),
+        ToolDef(
+            "toolbox-part-usage",
+            gettext("Part Usage"),
+            "gaphor-usage-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.PartUsageItem,
+                sysml2_model.PartUsage,
+                config_func=_declared_name_config("partUsage"),
+            ),
+            handle_index=SE,
+        ),
+    ),
+)
+
+sysml2_toolbox_actions: ToolboxDefinition = (parts,)
 
 sysml2_diagram_types: DiagramTypes = (
-    SysML2DiagramType(SysML2Diagram, i18nize("SysML v2 Diagram"), (sysml2,)),
+    SysML2DiagramType(SysML2Diagram, i18nize("SysML v2 Diagram"), (parts,)),
 )
 
 sysml2_element_types = ()

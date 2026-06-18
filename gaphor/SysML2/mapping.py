@@ -55,7 +55,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     for usage, namespace, type_name in typed_usages:
         target = _resolve_type(root, namespace, type_name)
         if isinstance(target, kerml.Type):
-            _set_type(factory, usage, target)
+            _set_type(usage, target)
         else:
             unresolved_types[usage.id] = "::".join(type_name)
 
@@ -117,9 +117,7 @@ def _resolve_type(
     return kk.resolve_in_namespace(root, "::".join(type_name))
 
 
-def _set_type(
-    factory: ElementFactory, usage: kerml.Feature, definition: kerml.Type
-) -> None:
+def _set_type(usage: kerml.Feature, definition: kerml.Type) -> None:
     """Record that `usage` is typed by `definition` via a KerML FeatureTyping.
 
     Ownership follows KerML: the FeatureTyping is owned by the typed feature
@@ -128,9 +126,4 @@ def _set_type(
     spine -- deleting the usage cascades to the typing -- while the definition is
     only the non-owning `type` target and is never cascade-deleted.
     """
-    typing = factory.create(kerml.FeatureTyping)
-    typing.typedFeature = usage
-    typing.type = definition
-    # The usage owns the typing relationship (composite containment spine).
-    usage.ownedRelationship = typing
-    typing.owningRelatedElement = usage
+    kk.set_feature_type(usage, definition)

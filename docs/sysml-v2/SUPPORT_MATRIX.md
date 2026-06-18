@@ -28,8 +28,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | KerML Import | no | no | yes | yes | no | no | no | no | no | internal-only |
 | KerML Documentation | no | no | yes | yes | no | no | no | no | no | internal-only |
 | KerML Package | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
-| SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
-| SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
+| SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
+| SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML AttributeDefinition | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | no | no | alpha |
 | SysML ActionUsage | no | no | no | no | no | no | no | no | no | not-started |
@@ -53,19 +53,26 @@ references, never ids or raw text). M2 establishes the harness
 | SysML AttributeDefinition | yes | `test_roundtrip.py::test_attribute_definition_and_usage_round_trip` |
 | SysML AttributeUsage (typed) | yes | `test_roundtrip.py` |
 
-Coverage: 5 constructs round-trip-covered. `alpha`, not `supported`: resolution
-is same-namespace + simple/qualified name (incl. nested + cross-package). Note:
-AttributeUsage typing is by an AttributeDefinition; the distinct primitive/value-
-type axis (e.g. `attribute x : Real`) is later work -- this construct establishes
-the attribute definition/usage pattern on a DataType base, not full value-type
-semantics.
+Coverage: 5 constructs round-trip-covered. PartDefinition and PartUsage are
+`supported`: every matrix cell is implemented and focused-tested. Package,
+AttributeDefinition, and AttributeUsage remain `alpha`; their missing diagram and
+UI-edit cells are tracked in the roadmap. Resolution remains same-namespace +
+simple/qualified name (incl. nested + cross-package). Note: AttributeUsage typing
+is by an AttributeDefinition; the distinct primitive/value-type axis (e.g.
+`attribute x : Real`) is later work -- this construct establishes the attribute
+definition/usage pattern on a DataType base, not full value-type semantics.
 
 Diagram cell scope. `Diagram=yes` for PartDefinition means the projection core:
 a box item (an `ElementPresentation`) projects an EXISTING PartDefinition or
 PartUsage via Gaphor's `subject` mechanism (never symbol-only), the
 view->element link persists and reloads through `.gaphor`, and deleting the
-element removes its projection. It does NOT yet mean toolbox creation or
-in-diagram editing -- `UI-edit` stays `no` (no toolbox/property pages).
+element removes its projection.
+
+UI-edit scope for PartDefinition/PartUsage. `UI-edit=yes` means the SysML2
+toolbox has Part Definition and Part Usage tools that create the semantic
+element and its projection together (never symbol-only), and property pages can
+rename both constructs and set/clear/replace a PartUsage's PartDefinition type.
+Re-typing replaces the stored FeatureTyping instead of accumulating duplicates.
 
 The FeatureTyping relation projects as a line (`FeatureTypingItem`) whose
 `subject` is the EXISTING typing -- it appears only when both ends are already

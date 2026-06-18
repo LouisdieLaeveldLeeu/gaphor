@@ -24,11 +24,13 @@ from collections.abc import Iterator
 from gaphor.SysML2.kerml import (
     Element,
     Feature,
+    FeatureTyping,
     Import,
     Membership,
     Namespace,
     OwningMembership,
     Relationship,
+    Type,
 )
 
 QUALIFIED_NAME_SEPARATOR = "::"
@@ -66,6 +68,50 @@ def add_import(namespace: Namespace, imported: Element, imp: Import) -> Import:
     # The imported element is a non-owning target (must NOT cascade on delete).
     imp.target = imported
     return imp
+
+
+def feature_typings(feature: Feature) -> Iterator[FeatureTyping]:
+    """FeatureTyping relationships owned by `feature` and targeting it."""
+    for relationship in feature.ownedRelationship:
+        if (
+            isinstance(relationship, FeatureTyping)
+            and feature in relationship.typedFeature
+        ):
+            yield relationship
+
+
+def feature_type(feature: Feature) -> Type | None:
+    """The first stored type of `feature`, if it has a FeatureTyping."""
+    for typing in feature_typings(feature):
+        type_ = _single(typing.type)
+        if isinstance(type_, Type):
+            return type_
+    return None
+
+
+def clear_feature_type(feature: Feature) -> None:
+    """Remove stored FeatureTyping relationships owned by `feature`."""
+    for typing in list(feature_typings(feature)):
+        typing.unlink()
+
+
+def set_feature_type(feature: Feature, type_: Type | None) -> FeatureTyping | None:
+    """Set the stored FeatureTyping for a feature.
+
+    The FeatureTyping is owned by the typed feature, while `type_` is a
+    non-owning reference. Re-setting the type first removes the existing owned
+    FeatureTyping so UI edits cannot accumulate duplicate typing relationships.
+    """
+    clear_feature_type(feature)
+    if type_ is None:
+        return None
+
+    typing = feature.model.create(FeatureTyping)
+    typing.typedFeature = feature
+    typing.type = type_
+    feature.ownedRelationship = typing
+    typing.owningRelatedElement = feature
+    return typing
 
 
 # --- derived surface (computed from stored structure) ------------------------
