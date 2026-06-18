@@ -446,6 +446,17 @@ KERNEL_SEED = (
     # chain generalizes a real KerML super instead of silently dropping it.
     "BooleanExpression",
     "Predicate",
+    # AssociationStructure and Connector are the KerML relationship roots the
+    # SysML connection layer generalizes (ConnectionDefinition ->
+    # AssociationStructure, ConnectorAsUsage -> Connector), which
+    # ConnectionUsage/Definition build on. Seeding them pulls their self-contained
+    # closure (Association) into the supermodel so the SysML connection chain
+    # generalizes a real KerML super instead of silently dropping it. Connector's
+    # own end properties (relatedFeature, connectorEnd, association) are derived,
+    # so they are classified as metadata and NOT persisted -- no endpoint state is
+    # stored; the connector-end semantics remain a later behavior-layer dependency.
+    "AssociationStructure",
+    "Connector",
 )
 
 

@@ -121,6 +121,41 @@ def test_expression_roots_have_faithful_generalization_chains():
     assert "Class" in classes["Behavior"].supers
 
 
+# --- relationship roots: the supermodel for the SysML connection layer --------
+
+
+def test_kernel_includes_relationship_roots_for_connections():
+    # AssociationStructure/Connector (and their closure Association) are in the
+    # kernel so the SysML connection layer generalizes a real KerML super.
+    class_names = {c.name for c in _kernel().classes}
+    assert {"Association", "AssociationStructure", "Connector"} <= class_names
+
+
+def test_relationship_roots_have_faithful_generalization_chains():
+    classes = {c.name: c for c in _kernel().classes}
+    # AssociationStructure -> {Association, Structure}; Association ->
+    # {Classifier, Relationship}; Connector -> {Feature, Relationship}.
+    assert "Association" in classes["AssociationStructure"].supers
+    assert "Structure" in classes["AssociationStructure"].supers
+    assert "Classifier" in classes["Association"].supers
+    assert "Relationship" in classes["Association"].supers
+    assert "Feature" in classes["Connector"].supers
+    assert "Relationship" in classes["Connector"].supers
+
+
+def test_connector_end_properties_are_not_persisted():
+    # Connector's relatedFeature/connectorEnd/association are isDerived in the
+    # XMI: classified as derived metadata, never stored structure (no stale
+    # endpoint state). The connector-end semantics are a later behavior-layer
+    # dependency, not faked here.
+    connector = next(c for c in _kernel().classes if c.name == "Connector")
+    stored = {r.name for r in connector.references}
+    derived = {r.name for r in connector.derived_references}
+    assert "connectorEnd" not in stored
+    assert "relatedFeature" not in stored
+    assert {"connectorEnd", "relatedFeature"} <= derived
+
+
 def test_emitter_fails_fast_on_a_dropped_generalization():
     """A class that declares a super resolving to neither a generated class nor a
     supermodel super must raise, not silently drop the generalization."""

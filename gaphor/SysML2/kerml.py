@@ -60,7 +60,27 @@ class Classifier(Type):
     pass
 
 
+class Relationship(Element):
+    isImplied: _attribute[bool] = _attribute("isImplied", bool)
+    ownedRelatedElement: relation_many[Element]
+    owningRelatedElement: relation_many[Element]
+    source: relation_many[Element]
+    target: relation_many[Element]
+
+
+class Association(Classifier, Relationship):
+    pass
+
+
 class Class(Classifier):
+    pass
+
+
+class Structure(Class):
+    pass
+
+
+class AssociationStructure(Association, Structure):
     pass
 
 
@@ -97,20 +117,16 @@ class Comment(AnnotatingElement):
     locale: _attribute[str] = _attribute("locale", str)
 
 
+class Connector(Feature, Relationship):
+    pass
+
+
 class DataType(Classifier):
     pass
 
 
 class Documentation(Comment):
     pass
-
-
-class Relationship(Element):
-    isImplied: _attribute[bool] = _attribute("isImplied", bool)
-    ownedRelatedElement: relation_many[Element]
-    owningRelatedElement: relation_many[Element]
-    source: relation_many[Element]
-    target: relation_many[Element]
 
 
 class Specialization(Relationship):
@@ -149,10 +165,6 @@ class Package(Namespace):
 
 
 class Predicate(Function):
-    pass
-
-
-class Structure(Class):
     pass
 
 
