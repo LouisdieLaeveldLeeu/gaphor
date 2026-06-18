@@ -172,14 +172,19 @@ Exit (reached): ConnectionDefinition/ConnectionUsage rows = `alpha`, all nine
 cells implemented and tested for the declaration-and-typing surface, held on the
 named connector-end dependency.
 
-### Phase H -- KerML kernel rows: resolve `internal-only`
-Decide and execute the honest end-state for the kernel rows (Element, Namespace,
-Type, Feature, ...). They are structural bases, not user-facing textual
-constructs, so "Parse/UI-edit" may never apply. Likely outcome: either define a
-narrower `supported` surface for what they genuinely offer, or keep them
-`internal-only` with a documented rationale (the matrix is "complete" when every
-row's status is the honest maximum, not when every cell is forced to `yes`).
-Exit: every kernel row has a final, justified status.
+### Phase H -- KerML kernel rows: resolve `internal-only` -- DONE
+Decided: the KerML structural bases (Element, Namespace, Type, Feature, ...) stay
+`internal-only` as their FINAL, honest maximum. They are generated infrastructure
+the SysML2 layer builds on, with no textual concrete syntax, so Parse / text
+Import / Export / Diagram / UI-edit are marked `n/a` (not applicable by design,
+not missing work); Create-API and Persist are `yes` and tested, and the five
+kernel behaviours are tested. No `kernel-supported` status was invented --
+`supported` is reserved for user-facing constructs with the full nine cells, and
+conflating the two would weaken the vocabulary. The stale M1a `_GeneratorSpike
+Element` feasibility-artifact row was removed. Cell value `n/a` was added to the
+matrix vocabulary.
+Exit (reached): every kernel row has a final, justified status (`internal-only`,
+documented as the honest maximum).
 
 ### Phase Z -- Dependency phases (scheduled to clear named caps)
 If Phases C2 through G leave rows capped at `alpha` on a dependency gate,

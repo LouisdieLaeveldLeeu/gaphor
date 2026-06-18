@@ -5,28 +5,47 @@ Spec pin: OMG SysML 2.0 formal and OMG KerML 1.0 formal, published September 202
 Status vocabulary:
 
 - `not-started`: no tested capability is present.
-- `internal-only`: scaffolding or internal API exists, but not enough for user-facing claims.
+- `internal-only`: a generated structural kernel base used by the SysML2 layer,
+  with tested Create-API + Persist + behaviour, but no user-facing textual
+  surface. For these rows `internal-only` is the **final, honest maximum**, not a
+  way-station to `supported` (see "KerML kernel rows" below).
 - `alpha`: the listed cells are implemented and tested, but the construct remains early and constrained.
-- `supported`: the listed construct is complete for the claimed surface and has conformance tests.
+- `supported`: the listed user-facing construct is complete for the claimed surface (the full nine cells) and has conformance tests.
+
+Cell values: `yes` (implemented and focused-tested), `no` (not yet implemented),
+and `n/a` (not applicable by design — the cell's capability does not exist for
+this kind of row, e.g. there is no textual syntax for a structural kernel base,
+so Parse/Import/Export/Diagram/UI-edit cannot apply). `n/a` is NOT a missing-work
+marker; it is a deliberate, justified "this never applies here".
 
 Do not advance any cell from `no` without a passing focused test. Do not use `supported` until the construct is complete end to end for the claimed surface.
 
-The `_GeneratorSpike Element` row is **not** a SysML2/KerML semantic construct. It is the M1a feasibility-spike artifact (a single semantics-free class) and must not be read as KerML `Element` support.
+KerML kernel rows (Phase H decision). The KerML structural bases (Element,
+Namespace, Membership, Type, Feature, Specialization, Import, Documentation, ...)
+are generated infrastructure that the SysML2 user constructs build on; they have
+no textual concrete syntax (you never write `Feature x;`). Their honest maximum
+is `internal-only`: Create-API and Persist are real and tested, the five kernel
+behaviours are tested, but Parse, text Import, Export, Diagram, and UI-edit are
+`n/a` -- not missing work. They are deliberately NOT promoted to `supported` and
+no `kernel-supported` status is invented, because `supported` means a user-facing
+construct with the full nine-cell surface; conflating the two would weaken the
+vocabulary. Evidence for these rows: generated from the pinned OMG XMI, created
+via `ElementFactory`, persist/reload, and behaviour tests for ownership,
+membership, typing, imports, delete cascade, and qualified names.
 
-M1b status (internal-only): the listed KerML kernel classes are generated from the normative MOF XMI through Gaphor's coder, and every generated kernel class has a tested create-via-`ElementFactory` and `.gaphor` save/reload (parametrized over the whole stored-reference closure — 27 classes: the original 12-class minimal kernel plus Classifier/Class/Structure and FeatureTyping (added in M2 so the kernel can serve as the supermodel the SysML layer generalizes and carry the stored typing relation), Package and DataType (the nesting namespace and the AttributeDefinition supermodel root), and the expression roots BooleanExpression/Predicate with their self-contained closure Expression/Step/Function/Behavior (added for Phase E so the SysML constraint/requirement layer generalizes a real KerML super instead of dropping it), and the relationship roots AssociationStructure/Connector with their closure Association (added for Phase G so the SysML connection layer generalizes a real KerML super; Connector's end properties are derived and never persisted)). The five required kernel behaviours — namespace membership, type/feature relation, import resolution, delete-owner cascade, rename-updates-qualifiedName — are tested through a behaviour layer (`kerml_kernel.py`), along with delete-direction tests proving non-owning references do not cascade. These are `Create-API`+`Persist` only: there is no grammar (`Parse`), text `Import`, scoped `Validate`, `Export`, or `Round-trip` yet — those begin with M2. Derived KerML features (owner, ownedElement, owningNamespace, member, qualifiedName, ...) are not persisted; they are computed in the behaviour layer. The closure also includes `Relationship`, `AnnotatingElement`, and `Comment` plus the `FeatureDirectionKind`/`VisibilityKind` enumerations; these are generated and persistence-tested but not called out as individual rows until a milestone gives them behaviour.
+M1b status (internal-only): the listed KerML kernel classes are generated from the normative MOF XMI through Gaphor's coder, and every generated kernel class has a tested create-via-`ElementFactory` and `.gaphor` save/reload (parametrized over the whole stored-reference closure — 27 classes: the original 12-class minimal kernel plus Classifier/Class/Structure and FeatureTyping (added in M2 so the kernel can serve as the supermodel the SysML layer generalizes and carry the stored typing relation), Package and DataType (the nesting namespace and the AttributeDefinition supermodel root), and the expression roots BooleanExpression/Predicate with their self-contained closure Expression/Step/Function/Behavior (added for Phase E so the SysML constraint/requirement layer generalizes a real KerML super instead of dropping it), and the relationship roots AssociationStructure/Connector with their closure Association (added for Phase G so the SysML connection layer generalizes a real KerML super; Connector's end properties are derived and never persisted)). The five required kernel behaviours — namespace membership, type/feature relation, import resolution, delete-owner cascade, rename-updates-qualifiedName — are tested through a behaviour layer (`kerml_kernel.py`), along with delete-direction tests proving non-owning references do not cascade. These rows are `Create-API`+`Persist`; their Parse, text Import, scoped Validate, Export, Round-trip, Diagram, and UI-edit cells are `n/a` (not applicable by design — a structural kernel base has no textual concrete syntax), the final state decided in Phase H, not work pending a later milestone. Derived KerML features (owner, ownedElement, owningNamespace, member, qualifiedName, ...) are not persisted; they are computed in the behaviour layer. The closure also includes `Relationship`, `AnnotatingElement`, and `Comment` plus the `FeatureDirectionKind`/`VisibilityKind` enumerations; these are generated and persistence-tested but not called out as individual rows until a milestone gives them behaviour.
 
 | Construct | Parse | Import | Create-API | Persist | Validate | Export | Round-trip | Diagram | UI-edit | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| _GeneratorSpike Element (M1a) | no | no | yes | yes | no | no | no | no | no | internal-only |
-| KerML Element | no | no | yes | yes | no | no | no | no | no | internal-only |
-| KerML Namespace | no | no | yes | yes | no | no | no | no | no | internal-only |
-| KerML Membership | no | no | yes | yes | no | no | no | no | no | internal-only |
-| KerML OwningMembership | no | no | yes | yes | no | no | no | no | no | internal-only |
-| KerML Type | no | no | yes | yes | no | no | no | no | no | internal-only |
-| KerML Feature | no | no | yes | yes | no | no | no | no | no | internal-only |
-| KerML Specialization | no | no | yes | yes | no | no | no | no | no | internal-only |
-| KerML Import | no | no | yes | yes | no | no | no | no | no | internal-only |
-| KerML Documentation | no | no | yes | yes | no | no | no | no | no | internal-only |
+| KerML Element | n/a | n/a | yes | yes | n/a | n/a | n/a | n/a | n/a | internal-only |
+| KerML Namespace | n/a | n/a | yes | yes | n/a | n/a | n/a | n/a | n/a | internal-only |
+| KerML Membership | n/a | n/a | yes | yes | n/a | n/a | n/a | n/a | n/a | internal-only |
+| KerML OwningMembership | n/a | n/a | yes | yes | n/a | n/a | n/a | n/a | n/a | internal-only |
+| KerML Type | n/a | n/a | yes | yes | n/a | n/a | n/a | n/a | n/a | internal-only |
+| KerML Feature | n/a | n/a | yes | yes | n/a | n/a | n/a | n/a | n/a | internal-only |
+| KerML Specialization | n/a | n/a | yes | yes | n/a | n/a | n/a | n/a | n/a | internal-only |
+| KerML Import | n/a | n/a | yes | yes | n/a | n/a | n/a | n/a | n/a | internal-only |
+| KerML Documentation | n/a | n/a | yes | yes | n/a | n/a | n/a | n/a | n/a | internal-only |
 | KerML Package | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
