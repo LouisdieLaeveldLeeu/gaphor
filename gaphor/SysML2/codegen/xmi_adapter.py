@@ -937,6 +937,14 @@ SYSML_SEED = (
     # in -- that is a named later dependency, not unused structure added now.
     "PortDefinition",
     "PortUsage",
+    # ConnectionDefinition/Usage for the declaration-and-typing surface, plus
+    # ConnectorAsUsage (their connector super, pulled into the closure). Their
+    # KerML supers AssociationStructure/Connector are now in the kernel. The
+    # connector-end properties (relatedFeature/connectorEnd/association) are
+    # derived and never persisted: connecting two ends is a named later
+    # behavior-layer dependency, not a faked stored endpoint here.
+    "ConnectionDefinition",
+    "ConnectionUsage",
 )
 
 # KerML classes that the generated SysML kernel must already provide as a

@@ -40,7 +40,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML RequirementUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML PortDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML PortUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML ConnectionUsage | no | no | no | no | no | no | no | no | no | not-started |
+| SysML ConnectionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML ConnectionUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 
 ## Round-Trip Coverage Metric
 
@@ -65,8 +66,10 @@ references, never ids or raw text). M2 establishes the harness
 | SysML RequirementUsage (typed) | yes | `test_roundtrip.py` |
 | SysML PortDefinition | yes | `test_roundtrip.py::test_port_definition_and_usage_round_trip` |
 | SysML PortUsage (typed) | yes | `test_roundtrip.py` |
+| SysML ConnectionDefinition | yes | `test_roundtrip.py::test_connection_definition_and_usage_round_trip` |
+| SysML ConnectionUsage (typed) | yes | `test_roundtrip.py` |
 
-Coverage: 13 constructs round-trip-covered. Package, PartDefinition, PartUsage,
+Coverage: 15 constructs round-trip-covered. Package, PartDefinition, PartUsage,
 and AttributeDefinition are `supported`: every matrix cell is implemented and
 focused-tested for the claimed surface. Resolution remains same-namespace +
 simple/qualified name (incl. nested + cross-package). Typing is kind-specific: a
@@ -124,6 +127,26 @@ promotion waits until the conjugation/interface surface is scheduled and built.
 This is the Phase-F port-conjugation gate decision, taken explicitly per the
 roadmap.
 
+ConnectionDefinition and ConnectionUsage (Phase G) have all nine cells
+implemented and focused-tested for the declaration-and-typing surface
+(`connection def C; connection c : C;`). ConnectionDefinition generalizes
+{AssociationStructure, PartDefinition} and ConnectionUsage generalizes
+{ConnectorAsUsage -> Connector, PartUsage}; the KerML relationship roots
+AssociationStructure/Connector were added to the kernel as the Phase G
+prerequisite, so the chain is faithful. Because ConnectionUsage IS a PartUsage
+(and ConnectionDefinition IS a PartDefinition), the export/round-trip/diagram/UI
+paths all treat the more-derived connection kind first: a connection renders as
+`connection`, projects as a ConnectionUsageItem (not the inherited part item),
+and its type page lists ConnectionDefinitions only -- the PartUsage type page
+defers for a connection so it never gets a second, wrong-kind dropdown. Both rows
+are deliberately held at `alpha`, NOT `supported`, on a named dependency: the
+connector ENDS that make a connection actually connect two things
+(relatedFeature/connectorEnd/association) are derived in the normative model and
+are NOT persisted or faked here -- modeling them needs a behavior-layer
+derivation phase. Only the declaration-and-typing surface is proven; promotion
+waits until the connector-end surface is scheduled and built. This is the Phase-G
+connector-end gate decision, taken explicitly per the roadmap.
+
 AttributeUsage stays `alpha` on a named dependency. Every one of its cells is
 implemented and focused-tested -- including the Diagram and UI-edit cells added
 in Phase C2 -- for untyped usages and usages typed by an AttributeDefinition
@@ -137,25 +160,28 @@ decision, taken explicitly per the roadmap.
 Diagram cell scope. `Diagram=yes` for Package, PartDefinition, PartUsage,
 AttributeDefinition, AttributeUsage, ActionDefinition, ActionUsage,
 ConstraintDefinition, ConstraintUsage, RequirementDefinition, RequirementUsage,
-PortDefinition, and PortUsage means a diagram item (an `ElementPresentation`)
-projects an EXISTING semantic element via Gaphor's `subject` mechanism (never
-symbol-only), the view->element link persists and reloads through `.gaphor`, and
-deleting the element removes its projection. Package projection is a package
-frame/box view of the namespace; semantic namespace ownership remains in the
-KerML ownership spine.
+PortDefinition, PortUsage, ConnectionDefinition, and ConnectionUsage means a
+diagram item (an `ElementPresentation`) projects an EXISTING semantic element via
+Gaphor's `subject` mechanism (never symbol-only), the view->element link persists
+and reloads through `.gaphor`, and deleting the element removes its projection.
+Package projection is a package frame/box view of the namespace; semantic
+namespace ownership remains in the KerML ownership spine.
 
 UI-edit scope for Package, PartDefinition, PartUsage, AttributeDefinition,
 AttributeUsage, ActionDefinition, ActionUsage, ConstraintDefinition,
-ConstraintUsage, RequirementDefinition, RequirementUsage, PortDefinition, and
-PortUsage. `UI-edit=yes` means the SysML2 toolbox has a create-and-project tool
-for each (never symbol-only), and property pages can rename every one of them.
-PartUsage can set/clear/replace a PartDefinition type; AttributeUsage an
-AttributeDefinition; ActionUsage an ActionDefinition; ConstraintUsage a
-ConstraintDefinition; RequirementUsage a RequirementDefinition (a single type
-page serves both constraint and requirement usages, choosing the definition kind
-from the subject's own type, so a RequirementUsage never gets two dropdowns); and
-PortUsage a PortDefinition. Re-typing replaces the stored FeatureTyping instead
-of accumulating duplicates.
+ConstraintUsage, RequirementDefinition, RequirementUsage, PortDefinition,
+PortUsage, ConnectionDefinition, and ConnectionUsage. `UI-edit=yes` means the
+SysML2 toolbox has a create-and-project tool for each (never symbol-only), and
+property pages can rename every one of them. PartUsage can set/clear/replace a
+PartDefinition type; AttributeUsage an AttributeDefinition; ActionUsage an
+ActionDefinition; ConstraintUsage a ConstraintDefinition; RequirementUsage a
+RequirementDefinition (a single type page serves both constraint and requirement
+usages, choosing the definition kind from the subject's own type, so a
+RequirementUsage never gets two dropdowns); PortUsage a PortDefinition; and
+ConnectionUsage a ConnectionDefinition (the PartUsage type page defers for a
+ConnectionUsage, so the connection -- a PartUsage subclass -- never gets a second,
+wrong-kind dropdown). Re-typing replaces the stored FeatureTyping instead of
+accumulating duplicates.
 
 The FeatureTyping relation projects as a line (`FeatureTypingItem`) whose
 `subject` is the EXISTING typing -- it appears only when both ends are already

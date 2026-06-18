@@ -218,6 +218,28 @@ def test_port_in_package_cross_references_round_trip():
     ) in result.source_form
 
 
+def test_connection_definition_and_usage_round_trip():
+    src = "connection def C;\nconnection c : C;"
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert ("ConnectionDefinition", "Root::C") in result.source_form
+    assert ("ConnectionUsage", "Root::c", "Root::C") in result.source_form
+
+
+def test_connection_alongside_part_round_trips_without_mislabel():
+    # ConnectionDefinition/Usage subclass PartDefinition/Usage; the canonical form
+    # must label them distinctly, not collapse them into the part rows.
+    src = "connection def C;\nconnection c : C;\npart def PD;\npart p : PD;"
+    result = round_trip(src)
+    assert result.preserved
+    assert result.valid
+    assert ("ConnectionDefinition", "Root::C") in result.source_form
+    assert ("ConnectionUsage", "Root::c", "Root::C") in result.source_form
+    assert ("PartDefinition", "Root::PD") in result.source_form
+    assert ("PartUsage", "Root::p", "Root::PD") in result.source_form
+
+
 def test_empty_semicolon_package_round_trips():
     result = round_trip("package P;")
     assert result.preserved

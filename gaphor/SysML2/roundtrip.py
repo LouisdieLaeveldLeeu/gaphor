@@ -44,10 +44,22 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
 
     def visit(namespace: kerml.Namespace) -> None:
         for member in kk.members(namespace):
-            # Package check first (Part* are also Namespaces).
+            # Package check first (Part* are also Namespaces). ConnectionDefinition
+            # / ConnectionUsage subclass PartDefinition / PartUsage, so the more
+            # specific connection classes are matched before the part classes.
             if isinstance(member, kerml.Package):
                 entries.add(("Package", kk.qualified_name(member)))
                 visit(member)
+            elif isinstance(member, sysml2.ConnectionDefinition):
+                entries.add(("ConnectionDefinition", kk.qualified_name(member)))
+            elif isinstance(member, sysml2.ConnectionUsage):
+                entries.add(
+                    (
+                        "ConnectionUsage",
+                        kk.qualified_name(member),
+                        _usage_type_qualified_name(member) or "",
+                    )
+                )
             elif isinstance(member, sysml2.PartDefinition):
                 entries.add(("PartDefinition", kk.qualified_name(member)))
             elif isinstance(member, sysml2.AttributeDefinition):

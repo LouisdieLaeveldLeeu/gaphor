@@ -19,10 +19,12 @@ from gaphor.core.modeling.properties import (
 
 
 from gaphor.core.modeling.base import Base as _Base
+from gaphor.SysML2.kerml import AssociationStructure as _AssociationStructure
 from gaphor.SysML2.kerml import Behavior as _Behavior
 from gaphor.SysML2.kerml import BooleanExpression as _BooleanExpression
 from gaphor.SysML2.kerml import Class as _Class
 from gaphor.SysML2.kerml import Classifier as _Classifier
+from gaphor.SysML2.kerml import Connector as _Connector
 from gaphor.SysML2.kerml import DataType as _DataType
 from gaphor.SysML2.kerml import Feature as _Feature
 from gaphor.SysML2.kerml import Predicate as _Predicate
@@ -68,19 +70,7 @@ class AttributeUsage(Usage):
     pass
 
 
-class ConstraintDefinition(OccurrenceDefinition, _Predicate):
-    pass
-
-
-class ConstraintUsage(OccurrenceUsage, _BooleanExpression):
-    pass
-
-
 class ItemDefinition(OccurrenceDefinition, _Structure):
-    pass
-
-
-class ItemUsage(OccurrenceUsage):
     pass
 
 
@@ -88,7 +78,31 @@ class PartDefinition(ItemDefinition):
     pass
 
 
+class ConnectionDefinition(PartDefinition, _AssociationStructure):
+    isSufficient: _attribute[bool] = _attribute("isSufficient", bool)
+
+
+class ItemUsage(OccurrenceUsage):
+    pass
+
+
 class PartUsage(ItemUsage):
+    pass
+
+
+class ConnectorAsUsage(Usage, _Connector):
+    pass
+
+
+class ConnectionUsage(ConnectorAsUsage, PartUsage):
+    pass
+
+
+class ConstraintDefinition(OccurrenceDefinition, _Predicate):
+    pass
+
+
+class ConstraintUsage(OccurrenceUsage, _BooleanExpression):
     pass
 
 

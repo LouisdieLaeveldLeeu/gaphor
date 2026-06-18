@@ -17,6 +17,8 @@ from gaphor.SysML2.diagramitems import (
     ActionUsageItem,
     AttributeDefinitionItem,
     AttributeUsageItem,
+    ConnectionDefinitionItem,
+    ConnectionUsageItem,
     ConstraintDefinitionItem,
     ConstraintUsageItem,
     FeatureTypingItem,
@@ -62,6 +64,13 @@ def test_item_registered_for_part_definition():
     assert get_diagram_item(sysml2.RequirementUsage) is RequirementUsageItem
     assert get_diagram_item(sysml2.PortDefinition) is PortDefinitionItem
     assert get_diagram_item(sysml2.PortUsage) is PortUsageItem
+    # ConnectionUsage subclasses PartUsage, but its OWN item is registered, and
+    # get_diagram_item is an exact-type lookup -> it resolves to the connection
+    # item, not the part item.
+    assert (
+        get_diagram_item(sysml2.ConnectionDefinition) is ConnectionDefinitionItem
+    )
+    assert get_diagram_item(sysml2.ConnectionUsage) is ConnectionUsageItem
     assert get_diagram_item(sysml2.PartDefinition) is PartDefinitionItem
 
 
@@ -449,6 +458,94 @@ def test_deleting_port_removes_its_projection(element_factory, element_cls):
     element.unlink()
 
     assert element_factory.lookup(item_id) is None
+
+
+@pytest.mark.parametrize(
+    ("element_cls", "item_cls"),
+    [
+        (sysml2.ConnectionDefinition, ConnectionDefinitionItem),
+        (sysml2.ConnectionUsage, ConnectionUsageItem),
+    ],
+)
+def test_connection_drop_projects_existing_element(
+    element_factory, element_cls, item_cls
+):
+    element = element_factory.create(element_cls)
+    element.declaredName = "X"
+    diagram = element_factory.create(Diagram)
+
+    item = drop(element, diagram, 0, 0)
+
+    # A ConnectionUsage must project as a ConnectionUsageItem, NOT the PartUsageItem
+    # it would inherit by subclassing -- the connection item wins.
+    assert isinstance(item, item_cls)
+    assert type(item) is item_cls
+    assert item.subject is element
+    assert item in diagram.ownedPresentation
+
+
+@pytest.mark.parametrize(
+    ("element_cls", "item_cls"),
+    [
+        (sysml2.ConnectionDefinition, ConnectionDefinitionItem),
+        (sysml2.ConnectionUsage, ConnectionUsageItem),
+    ],
+)
+def test_connection_projection_persists_and_reloads(
+    element_factory, saver, loader, element_cls, item_cls
+):
+    element = element_factory.create(element_cls)
+    diagram = element_factory.create(Diagram)
+    item = drop(element, diagram, 0, 0)
+    item_id, element_id = item.id, element.id
+
+    loader(saver())
+
+    reloaded_item = element_factory.lookup(item_id)
+    assert type(reloaded_item) is item_cls
+    assert reloaded_item.subject is element_factory.lookup(element_id)
+
+
+@pytest.mark.parametrize(
+    "element_cls", [sysml2.ConnectionDefinition, sysml2.ConnectionUsage]
+)
+def test_deleting_connection_removes_its_projection(element_factory, element_cls):
+    element = element_factory.create(element_cls)
+    diagram = element_factory.create(Diagram)
+    item = drop(element, diagram, 0, 0)
+    item_id = item.id
+
+    element.unlink()
+
+    assert element_factory.lookup(item_id) is None
+
+
+def test_connection_feature_typing_projects_as_a_view_on_the_existing_typing(
+    element_factory,
+):
+    result = map_package(
+        parse("connection def C;\nconnection c : C;"), element_factory
+    )
+    c_def = result.elements_by_name["C"]
+    usage = result.elements_by_name["c"]
+    typing = element_factory.lselect(kerml.FeatureTyping)[0]
+    diagram = element_factory.create(Diagram)
+    drop(c_def, diagram, 0, 0)
+    drop(usage, diagram, 100, 0)
+    typings_before = len(element_factory.lselect(kerml.FeatureTyping))
+
+    line = drop(typing, diagram, 50, 0)
+
+    assert isinstance(line, FeatureTypingItem)
+    assert line.subject is typing
+    connected_subjects = {
+        diagram.connections.get_connection(h).connected.subject
+        for h in line.handles()
+        if diagram.connections.get_connection(h)
+    }
+    assert usage in connected_subjects
+    assert c_def in connected_subjects
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == typings_before
 
 
 def test_port_feature_typing_projects_as_a_view_on_the_existing_typing(

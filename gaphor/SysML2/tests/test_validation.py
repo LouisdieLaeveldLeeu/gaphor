@@ -183,6 +183,8 @@ def test_severity_vocabulary_is_the_conformance_split(element_factory):
         "attribute def AD;\nconstraint c : AD;",
         "part def PD;\nport p : PD;",
         "port def Fuel;\npart p : Fuel;",
+        "part def PD;\nconnection c : PD;",
+        "connection def C;\npart p : C;",
     ],
 )
 def test_cross_kind_typing_is_reported_not_accepted(element_factory, src):
@@ -206,6 +208,7 @@ def test_cross_kind_typing_is_reported_not_accepted(element_factory, src):
         "constraint def CD;\nconstraint c : CD;",
         "requirement def RD;\nrequirement r : RD;",
         "port def Fuel;\nport p : Fuel;",
+        "connection def C;\nconnection c : C;",
     ],
 )
 def test_same_kind_typing_is_accepted(element_factory, src):

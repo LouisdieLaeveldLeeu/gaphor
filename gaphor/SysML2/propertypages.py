@@ -35,7 +35,12 @@ new_builder = new_resource_builder("gaphor.SysML2")
 @PropertyPages.register(sysml2.PartDefinition)
 @PropertyPages.register(sysml2.PartUsage)
 class DeclaredNamePropertyPage(PropertyPageBase):
-    """Edit the KerML/SysML declared name."""
+    """Edit the KerML/SysML declared name.
+
+    ConnectionDefinition/ConnectionUsage are not registered separately: they
+    subclass PartDefinition/PartUsage, so `PropertyPages.find` (isinstance) already
+    yields this page for them. Registering them again would show two name editors.
+    """
 
     order = 10
 
@@ -100,6 +105,14 @@ class PartUsageTypePropertyPage(PropertyPageBase):
         self.event_manager = event_manager
 
     def construct(self):
+        # ConnectionUsage subclasses PartUsage, so this page is also matched for
+        # it by isinstance. A ConnectionUsage is typed by a ConnectionDefinition,
+        # not a PartDefinition, and gets its own ConnectionUsageTypePropertyPage,
+        # so this page defers (returns no widget) to avoid a second, wrong-kind
+        # dropdown on a connection.
+        if isinstance(self.subject, sysml2.ConnectionUsage):
+            return None
+
         builder = new_builder("part-usage-type-editor")
 
         dropdown = builder.get_object("part-usage-type")
@@ -316,6 +329,55 @@ class PortUsageTypePropertyPage(PropertyPageBase):
                 kk.set_feature_type(self.subject, None)
 
 
+@PropertyPages.register(sysml2.ConnectionUsage)
+class ConnectionUsageTypePropertyPage(PropertyPageBase):
+    """Set the ConnectionDefinition type for a ConnectionUsage.
+
+    ConnectionUsage subclasses PartUsage, so PartUsageTypePropertyPage also
+    matches it; that page defers (returns no widget) for a ConnectionUsage, and
+    this page provides the correct ConnectionDefinition dropdown -- so a
+    ConnectionUsage gets exactly one type editor, of the right kind.
+    """
+
+    order = 20
+
+    def __init__(self, subject: sysml2.ConnectionUsage, event_manager):
+        super().__init__()
+        self.subject = subject
+        self.event_manager = event_manager
+
+    def construct(self):
+        builder = new_builder("connection-usage-type-editor")
+
+        dropdown = builder.get_object("connection-usage-type")
+        model = list_of_definitions(self.subject.model, sysml2.ConnectionDefinition)
+        dropdown.set_model(model)
+
+        if isinstance(
+            type_ := kk.feature_type(self.subject), sysml2.ConnectionDefinition
+        ):
+            selected = next(
+                (n for n, lv in enumerate(model) if lv.value == type_.id),
+                None,
+            )
+            if selected is not None:
+                dropdown.set_selected(selected)
+
+        dropdown.connect("notify::selected", self._on_type_changed)
+
+        return builder.get_object("connection-usage-type-editor")
+
+    def _on_type_changed(self, dropdown, _pspec):
+        selected = dropdown.get_selected_item()
+        with Transaction(self.event_manager, context="editing"):
+            if selected and selected.value:
+                type_ = self.subject.model.lookup(selected.value)
+                assert isinstance(type_, sysml2.ConnectionDefinition)
+                kk.set_feature_type(self.subject, type_)
+            else:
+                kk.set_feature_type(self.subject, None)
+
+
 def list_of_definitions(
     element_factory,
     definition_type: type[
@@ -325,6 +387,7 @@ def list_of_definitions(
         | sysml2.ConstraintDefinition
         | sysml2.RequirementDefinition
         | sysml2.PortDefinition
+        | sysml2.ConnectionDefinition
     ],
 ) -> Gio.ListStore:
     # Exact-kind filter (type(d) is definition_type), not isinstance: a usage is
@@ -351,7 +414,8 @@ def _definition_label(
     | sysml2.ActionDefinition
     | sysml2.ConstraintDefinition
     | sysml2.RequirementDefinition
-    | sysml2.PortDefinition,
+    | sysml2.PortDefinition
+    | sysml2.ConnectionDefinition,
 ) -> str:
     qualified_name = kk.qualified_name(definition).lstrip(kk.QUALIFIED_NAME_SEPARATOR)
     return qualified_name or definition.declaredName or type(definition).__name__

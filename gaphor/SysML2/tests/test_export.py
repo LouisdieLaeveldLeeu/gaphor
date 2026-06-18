@@ -107,3 +107,31 @@ def test_port_export_is_reparseable(element_factory):
     result = map_package(parse(src), element_factory)
     exported = export_namespace(result.root)
     assert parse(exported) == parse(src)
+
+
+def test_exports_connection_definition_and_typed_usage(element_factory):
+    result = map_package(
+        parse("connection def C;\nconnection c : C;"), element_factory
+    )
+    text = export_namespace(result.root)
+    assert "connection def C;" in text
+    assert "connection c : C;" in text
+    # ConnectionDefinition is a PartDefinition subclass but must NOT render as
+    # `part def` (most-derived keyword wins).
+    assert "part def C" not in text
+    assert "part c :" not in text
+
+
+def test_connection_export_is_reparseable(element_factory):
+    src = "connection def C;\nconnection c : C;"
+    result = map_package(parse(src), element_factory)
+    exported = export_namespace(result.root)
+    assert parse(exported) == parse(src)
+
+
+def test_connection_and_part_export_disambiguated(element_factory):
+    # A connection and a part in the same model must each keep their own keyword.
+    src = "connection def C;\nconnection c : C;\npart def PD;\npart p : PD;"
+    result = map_package(parse(src), element_factory)
+    exported = export_namespace(result.root)
+    assert parse(exported) == parse(src)

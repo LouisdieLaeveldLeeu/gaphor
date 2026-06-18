@@ -13,6 +13,8 @@ from gaphor.SysML2.diagramitems import (
     ActionUsageItem,
     AttributeDefinitionItem,
     AttributeUsageItem,
+    ConnectionDefinitionItem,
+    ConnectionUsageItem,
     ConstraintDefinitionItem,
     ConstraintUsageItem,
     PackageItem,
@@ -28,6 +30,7 @@ from gaphor.SysML2.modelinglanguage import SysML2ModelingLanguage
 from gaphor.SysML2.propertypages import (
     ActionUsageTypePropertyPage,
     AttributeUsageTypePropertyPage,
+    ConnectionUsageTypePropertyPage,
     ConstraintRequirementTypePropertyPage,
     DeclaredNamePropertyPage,
     PartUsageTypePropertyPage,
@@ -216,6 +219,39 @@ def test_port_toolbox_entries_create_element_and_projection(
     assert item in item.subject.presentation
 
 
+@pytest.mark.parametrize(
+    ("tool_id", "item_cls", "element_cls", "default_name"),
+    [
+        (
+            "toolbox-connection-definition",
+            ConnectionDefinitionItem,
+            sysml2.ConnectionDefinition,
+            "ConnectionDefinition",
+        ),
+        (
+            "toolbox-connection-usage",
+            ConnectionUsageItem,
+            sysml2.ConnectionUsage,
+            "connectionUsage",
+        ),
+    ],
+)
+def test_connection_toolbox_entries_create_element_and_projection(
+    element_factory, tool_id, item_cls, element_cls, default_name
+):
+    diagram = element_factory.create(SysML2Diagram)
+
+    item = _toolbox_item(tool_id, diagram)
+
+    # ConnectionUsage subclasses PartUsage; the tool must create exactly the
+    # connection item/element, not the part one.
+    assert type(item) is item_cls
+    assert type(item.subject) is element_cls
+    assert item.subject.declaredName == default_name
+    assert item in diagram.ownedPresentation
+    assert item in item.subject.presentation
+
+
 def test_property_pages_are_registered_for_part_constructs(element_factory):
     package = element_factory.create(kerml.Package)
     attribute_definition = element_factory.create(sysml2.AttributeDefinition)
@@ -228,6 +264,8 @@ def test_property_pages_are_registered_for_part_constructs(element_factory):
     requirement_usage = element_factory.create(sysml2.RequirementUsage)
     port_definition = element_factory.create(sysml2.PortDefinition)
     port_usage = element_factory.create(sysml2.PortUsage)
+    connection_definition = element_factory.create(sysml2.ConnectionDefinition)
+    connection_usage = element_factory.create(sysml2.ConnectionUsage)
     part_definition = element_factory.create(sysml2.PartDefinition)
     part_usage = element_factory.create(sysml2.PartUsage)
 
@@ -242,6 +280,8 @@ def test_property_pages_are_registered_for_part_constructs(element_factory):
     requirement_usage_pages = set(PropertyPages.find(requirement_usage))
     port_definition_pages = set(PropertyPages.find(port_definition))
     port_usage_pages = set(PropertyPages.find(port_usage))
+    connection_definition_pages = set(PropertyPages.find(connection_definition))
+    connection_usage_pages = set(PropertyPages.find(connection_usage))
     definition_pages = set(PropertyPages.find(part_definition))
     usage_pages = set(PropertyPages.find(part_usage))
 
@@ -256,8 +296,26 @@ def test_property_pages_are_registered_for_part_constructs(element_factory):
     assert DeclaredNamePropertyPage in requirement_usage_pages
     assert DeclaredNamePropertyPage in port_definition_pages
     assert DeclaredNamePropertyPage in port_usage_pages
+    assert DeclaredNamePropertyPage in connection_definition_pages
+    assert DeclaredNamePropertyPage in connection_usage_pages
     assert DeclaredNamePropertyPage in definition_pages
     assert DeclaredNamePropertyPage in usage_pages
+    # ConnectionUsage subclasses PartUsage, but DeclaredNamePropertyPage is
+    # registered only on the part classes (not re-registered for connection), so
+    # find yields it exactly once -- no duplicate name editor.
+    assert (
+        sum(
+            1
+            for p in PropertyPages.find(connection_usage)
+            if p is DeclaredNamePropertyPage
+        )
+        == 1
+    )
+    # ConnectionUsage gets its own type page, NOT the constraint/requirement one.
+    assert ConnectionUsageTypePropertyPage in connection_usage_pages
+    assert ConnectionUsageTypePropertyPage not in connection_definition_pages
+    assert ConnectionUsageTypePropertyPage not in usage_pages
+    assert ConnectionUsageTypePropertyPage not in port_usage_pages
     assert AttributeUsageTypePropertyPage in attribute_usage_pages
     assert AttributeUsageTypePropertyPage not in attribute_definition_pages
     assert AttributeUsageTypePropertyPage not in usage_pages
@@ -726,6 +784,114 @@ def test_port_usage_type_property_page_can_clear_type(
 
     widget = property_page.construct()
     dropdown = find(widget, "port-usage-type")
+    dropdown.set_selected(0)
+
+    assert kk.feature_type(usage) is None
+    assert element_factory.lselect(kerml.FeatureTyping) == []
+
+
+@pytest.mark.parametrize(
+    ("element_cls", "new_name"),
+    [
+        (sysml2.ConnectionDefinition, "C"),
+        (sysml2.ConnectionUsage, "c"),
+    ],
+)
+def test_declared_name_property_page_renames_connection(
+    element_factory, event_manager, element_cls, new_name
+):
+    element = element_factory.create(element_cls)
+    property_page = DeclaredNamePropertyPage(element, event_manager)
+
+    widget = property_page.construct()
+    entry = find(widget, "declared-name")
+    entry.set_text(new_name)
+
+    assert element.declaredName == new_name
+
+
+def test_part_usage_type_property_page_defers_for_connection_usage(
+    element_factory, event_manager
+):
+    # PartUsageTypePropertyPage matches a ConnectionUsage by isinstance, but must
+    # produce NO widget for it (the dedicated connection page handles it), so a
+    # ConnectionUsage never gets a second, wrong-kind (PartDefinition) dropdown.
+    connection_usage = element_factory.create(sysml2.ConnectionUsage)
+    property_page = PartUsageTypePropertyPage(connection_usage, event_manager)
+
+    assert property_page.construct() is None
+
+
+def test_connection_usage_type_property_page_sets_and_replaces_type(
+    element_factory,
+    event_manager,
+):
+    c1 = element_factory.create(sysml2.ConnectionDefinition)
+    c1.declaredName = "Flow"
+    c2 = element_factory.create(sysml2.ConnectionDefinition)
+    c2.declaredName = "Link"
+    engine = element_factory.create(sysml2.PartDefinition)
+    engine.declaredName = "Engine"
+    usage = element_factory.create(sysml2.ConnectionUsage)
+    usage.declaredName = "c"
+    property_page = ConnectionUsageTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "connection-usage-type")
+    # The dropdown lists ConnectionDefinitions only -- not PartDefinitions (even
+    # though ConnectionDefinition subclasses PartDefinition, the exact-kind filter
+    # keeps a plain PartDefinition out, and keeps ConnectionDefinitions in).
+    values = {lv.value for lv in dropdown.get_model()}
+    assert c1.id in values
+    assert c2.id in values
+    assert engine.id not in values
+
+    c1_index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == c1.id
+    )
+    dropdown.set_selected(c1_index)
+    assert kk.feature_type(usage) is c1
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+    c2_index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == c2.id
+    )
+    dropdown.set_selected(c2_index)
+    assert kk.feature_type(usage) is c2
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+
+def test_part_usage_type_dropdown_excludes_connection_definitions(
+    element_factory, event_manager
+):
+    # Conversely, a plain PartUsage must not be offered a ConnectionDefinition
+    # (which subclasses PartDefinition) -- exact-kind filtering keeps it out.
+    plain_part = element_factory.create(sysml2.PartDefinition)
+    plain_part.declaredName = "Engine"
+    connection_def = element_factory.create(sysml2.ConnectionDefinition)
+    connection_def.declaredName = "Flow"
+    usage = element_factory.create(sysml2.PartUsage)
+    usage.declaredName = "p"
+    property_page = PartUsageTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "part-usage-type")
+    values = {lv.value for lv in dropdown.get_model()}
+    assert plain_part.id in values
+    assert connection_def.id not in values
+
+
+def test_connection_usage_type_property_page_can_clear_type(
+    element_factory,
+    event_manager,
+):
+    flow = element_factory.create(sysml2.ConnectionDefinition)
+    usage = element_factory.create(sysml2.ConnectionUsage)
+    kk.set_feature_type(usage, flow)
+    property_page = ConnectionUsageTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "connection-usage-type")
     dropdown.set_selected(0)
 
     assert kk.feature_type(usage) is None

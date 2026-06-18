@@ -82,6 +82,15 @@ class _ASTBuilder(Transformer):
         type_name = items[1] if len(items) > 1 else None
         return ast.PortUsage(name=name, type_name=type_name)
 
+    def connection_definition(self, items):
+        (name,) = items
+        return ast.ConnectionDefinition(name=name)
+
+    def connection_usage(self, items):
+        name = items[0]
+        type_name = items[1] if len(items) > 1 else None
+        return ast.ConnectionUsage(name=name, type_name=type_name)
+
     def package_definition(self, items):
         name = items[0]
         members = items[1]  # package_body -> tuple

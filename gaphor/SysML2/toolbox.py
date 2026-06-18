@@ -228,6 +228,37 @@ ports = ToolSection(
 )
 
 
+connections = ToolSection(
+    gettext("Connections"),
+    (
+        ToolDef(
+            "toolbox-connection-definition",
+            gettext("Connection Definition"),
+            "gaphor-association-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.ConnectionDefinitionItem,
+                sysml2_model.ConnectionDefinition,
+                config_func=_declared_name_config("ConnectionDefinition"),
+            ),
+            handle_index=SE,
+        ),
+        ToolDef(
+            "toolbox-connection-usage",
+            gettext("Connection Usage"),
+            "gaphor-connector-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.ConnectionUsageItem,
+                sysml2_model.ConnectionUsage,
+                config_func=_declared_name_config("connectionUsage"),
+            ),
+            handle_index=SE,
+        ),
+    ),
+)
+
+
 sysml2_toolbox_actions: ToolboxDefinition = (
     packages,
     parts,
@@ -235,13 +266,14 @@ sysml2_toolbox_actions: ToolboxDefinition = (
     actions,
     requirements,
     ports,
+    connections,
 )
 
 sysml2_diagram_types: DiagramTypes = (
     SysML2DiagramType(
         SysML2Diagram,
         i18nize("SysML v2 Diagram"),
-        (packages, parts, attributes, actions, requirements, ports),
+        (packages, parts, attributes, actions, requirements, ports, connections),
     ),
 )
 

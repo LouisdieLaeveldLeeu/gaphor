@@ -33,11 +33,11 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
             return f"{pad}package {element.declaredName} {{\n{inner}{pad}}}\n"
         return f"{pad}package {element.declaredName} {{ }}\n"
     # Definitions before usages, and the most-derived class before its bases:
-    # PartDefinition is an ItemDefinition/OccurrenceDefinition but must render as
-    # `part def`, ActionDefinition is an OccurrenceDefinition rendering as
-    # `action def`, and RequirementDefinition is a ConstraintDefinition that must
-    # render as `requirement def` -- so the more specific classes are checked
-    # first (RequirementDefinition before ConstraintDefinition, likewise usages).
+    # RequirementDefinition is a ConstraintDefinition (-> `requirement def`), and
+    # ConnectionDefinition is a PartDefinition (-> `connection def`), so the more
+    # specific classes are checked first; likewise for the usages.
+    if isinstance(element, sysml2.ConnectionDefinition):
+        return f"{pad}connection def {element.declaredName};\n"
     if isinstance(element, sysml2.PartDefinition):
         return f"{pad}part def {element.declaredName};\n"
     if isinstance(element, sysml2.AttributeDefinition):
@@ -50,6 +50,8 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         return f"{pad}constraint def {element.declaredName};\n"
     if isinstance(element, sysml2.PortDefinition):
         return f"{pad}port def {element.declaredName};\n"
+    if isinstance(element, sysml2.ConnectionUsage):
+        return f"{pad}connection {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.PartUsage):
         return f"{pad}part {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.AttributeUsage):

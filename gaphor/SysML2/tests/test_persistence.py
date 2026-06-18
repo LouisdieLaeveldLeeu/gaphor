@@ -174,6 +174,24 @@ def test_port_tracer_persists_with_typing(element_factory, saver, loader):
     assert fuel in list(typings[0].type)
 
 
+def test_connection_tracer_persists_with_typing(element_factory, saver, loader):
+    result = map_package(
+        parse("connection def C;\nconnection c : C;"), element_factory
+    )
+    ids = _ids(result)
+
+    loader(saver())
+
+    c_def = element_factory.lookup(ids["C"])
+    c = element_factory.lookup(ids["c"])
+    assert isinstance(c_def, sysml2.ConnectionDefinition)
+    assert isinstance(c, sysml2.ConnectionUsage)
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 1
+    assert c in list(typings[0].typedFeature)
+    assert c_def in list(typings[0].type)
+
+
 def test_qualified_names_survive_reload(element_factory, saver, loader):
     result = map_package(parse(TRACER), element_factory)
     result.root.declaredName = "Vehicles"

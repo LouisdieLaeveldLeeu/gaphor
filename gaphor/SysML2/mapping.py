@@ -40,6 +40,7 @@ USAGE_DEFINITION_KIND: dict[type, type] = {
     sysml2.ConstraintUsage: sysml2.ConstraintDefinition,
     sysml2.RequirementUsage: sysml2.RequirementDefinition,
     sysml2.PortUsage: sysml2.PortDefinition,
+    sysml2.ConnectionUsage: sysml2.ConnectionDefinition,
 }
 
 
@@ -155,6 +156,12 @@ def _build_members(
             element = factory.create(sysml2.PortDefinition)
         elif isinstance(member, ast.PortUsage):
             element = factory.create(sysml2.PortUsage)
+            if member.type_name is not None:
+                typed_usages.append((element, namespace, member.type_name))
+        elif isinstance(member, ast.ConnectionDefinition):
+            element = factory.create(sysml2.ConnectionDefinition)
+        elif isinstance(member, ast.ConnectionUsage):
+            element = factory.create(sysml2.ConnectionUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name))
         elif isinstance(member, ast.PackageDefinition):

@@ -33,7 +33,10 @@ honestly claimed (claim discipline: a cell advances only with a passing test).
   cells; held at alpha on a named dependency: port conjugation (`~P`) and
   interface/flow semantics are unmodeled, and Conjugation is intentionally not in
   the kernel).
-- SysML ConnectionUsage: `not-started`.
+- SysML ConnectionDefinition, ConnectionUsage: `alpha` (Phase G D1+D2+D3 done --
+  all nine cells; kernel grew to carry AssociationStructure/Connector; held at
+  alpha on a named dependency: the connector ENDS (relatedFeature/connectorEnd)
+  are derived, not persisted, and need a behavior-layer phase).
 - Resolution scope so far: same-namespace + simple qualified name (incl. nested
   + cross-package). No inheritance / visibility / aliases / feature chains.
 
@@ -152,11 +155,22 @@ Exit (reached): PortDefinition/PortUsage rows = `alpha`, all nine cells
 implemented and tested for unconjugated ports typed by a PortDefinition, held on
 the named conjugation/interface dependency.
 
-### Phase G -- ConnectionUsage, split into three review gates
-Repeat the D1/D2/D3 pattern for ConnectionUsage. This is a relationship-style
-usage, so the diagram phase reuses and extends the view-only connector work.
-Connector/end semantics are likely a dependency gate.
-Exit: ConnectionUsage row = `supported` or `alpha` with named dependency.
+### Phase G -- ConnectionUsage, split into three review gates -- DONE (kernel-expansion 6e517126c, D1+D2+D3; ConnectionDefinition/Usage alpha, connector-end dependency)
+Repeated the D1/D2/D3 pattern for ConnectionDefinition/ConnectionUsage, plus the
+ConnectorAsUsage super pulled into the closure. The predicted dependency gate
+surfaced and was cleared as a prerequisite: ConnectionDefinition ->
+AssociationStructure and ConnectorAsUsage -> Connector needed KerML relationship
+roots not in the kernel, so the kernel was first grown 24 -> 27
+(AssociationStructure/Connector + closure Association). ConnectionUsage subclasses
+PartUsage (and ConnectionDefinition subclasses PartDefinition), so export,
+round-trip canonical form, diagram-item lookup, and the property pages all treat
+the more-derived connection kind first (a connection never renders/projects/types
+as a part). The connector END semantics (relatedFeature/connectorEnd/association)
+are derived in the XMI and are NOT persisted or faked -- a named later
+behavior-layer dependency.
+Exit (reached): ConnectionDefinition/ConnectionUsage rows = `alpha`, all nine
+cells implemented and tested for the declaration-and-typing surface, held on the
+named connector-end dependency.
 
 ### Phase H -- KerML kernel rows: resolve `internal-only`
 Decide and execute the honest end-state for the kernel rows (Element, Namespace,

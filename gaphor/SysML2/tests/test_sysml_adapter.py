@@ -87,6 +87,29 @@ def test_port_classes_generalize_the_kerml_supermodel():
     assert "OccurrenceUsage" in mro and "Feature" in mro
 
 
+def test_sysml_closure_contains_the_connection_classes():
+    kernel = xmi_adapter.extract_sysml(SYSML_XMI)
+    names = {c.name for c in kernel.classes}
+    assert {
+        "ConnectionDefinition",
+        "ConnectionUsage",
+        "ConnectorAsUsage",
+    } <= names
+
+
+def test_connection_classes_generalize_the_kerml_supermodel():
+    # ConnectionDefinition -> {AssociationStructure, PartDefinition}; ConnectionUsage
+    # -> {ConnectorAsUsage -> Connector, PartUsage} -> ... -> Feature. The KerML
+    # relationship supers (now in the kernel) are kept, not dropped.
+    from gaphor.SysML2 import kerml
+
+    assert issubclass(sysml2.ConnectionUsage, sysml2.PartUsage)
+    assert issubclass(sysml2.ConnectionDefinition, sysml2.PartDefinition)
+    assert issubclass(sysml2.ConnectionUsage, kerml.Connector)
+    assert issubclass(sysml2.ConnectionDefinition, kerml.AssociationStructure)
+    assert issubclass(sysml2.ConnectionUsage, kerml.Feature)
+
+
 def test_action_classes_keep_their_behavior_step_supers():
     # Regression: ActionDefinition -> Behavior and ActionUsage -> Step are real
     # KerML generalizations that were silently dropped before the kernel carried

@@ -166,6 +166,25 @@ def test_port_usage_typed_by_port_definition(element_factory):
     assert fuel in list(typings[0].type)
 
 
+def test_connection_usage_typed_by_connection_definition(element_factory):
+    result = map_package(
+        parse("connection def C;\nconnection c : C;"), element_factory
+    )
+    c_def = result.elements_by_name["C"]
+    c = result.elements_by_name["c"]
+    assert isinstance(c_def, sysml2.ConnectionDefinition)
+    assert isinstance(c, sysml2.ConnectionUsage)
+    # ConnectionUsage is a PartUsage subclass and reaches the KerML Connector /
+    # Feature spine.
+    assert isinstance(c, sysml2.PartUsage)
+    assert isinstance(c, kerml.Connector)
+    assert isinstance(c, kerml.Feature)
+    typings = element_factory.lselect(kerml.FeatureTyping)
+    assert len(typings) == 1
+    assert c in list(typings[0].typedFeature)
+    assert c_def in list(typings[0].type)
+
+
 def test_unresolved_type_leaves_usage_untyped(element_factory):
     # Forward/undefined reference: no FeatureTyping is created; validation (a
     # later sub-step) is responsible for reporting it.

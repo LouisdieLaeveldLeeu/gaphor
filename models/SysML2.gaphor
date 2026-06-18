@@ -15,6 +15,11 @@
 <UML:Package id="d542be19-154d-5f87-b863-0aa5cce14b95">
 <name><val>KerML</val></name>
 </UML:Package>
+<UML:Class id="2216fc5d-0a60-515c-837e-726875a4e1d9">
+<name><val>AssociationStructure</val></name>
+<owningPackage><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></owningPackage>
+<package><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></package>
+</UML:Class>
 <UML:Class id="d280e364-1790-52ec-9642-92d2f8b2f07b">
 <name><val>Behavior</val></name>
 <owningPackage><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></owningPackage>
@@ -32,6 +37,11 @@
 </UML:Class>
 <UML:Class id="2ce861ec-fe54-5239-9261-17dfc3e91d2d">
 <name><val>Classifier</val></name>
+<owningPackage><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></owningPackage>
+<package><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></package>
+</UML:Class>
+<UML:Class id="bbe3e7ff-b780-560c-abba-9c381d440d92">
+<name><val>Connector</val></name>
 <owningPackage><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></owningPackage>
 <package><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></package>
 </UML:Class>
@@ -120,6 +130,42 @@
 </reflist></ownedAttribute>
 <generalization><reflist>
 <ref refid="f173a2f2-f996-58a8-9e83-541d8c7493aa"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
+<UML:Class id="6c9fcc72-8346-5298-90fa-81b17bf66867">
+<name><val>ConnectionDefinition</val></name>
+<ownedAttribute><reflist>
+<ref refid="4ba463a3-ffc8-5dd8-808c-d6415d136bee"/>
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="c3a1a007-3a27-5dd7-ace8-7d0fd2e2cc5e"/>
+<ref refid="15e8fd02-5f05-5e2c-a01b-e8a4640ed140"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
+<UML:Class id="828aa4cb-17a3-5e71-9ec8-8c57164e65da">
+<name><val>ConnectionUsage</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="3a63251f-e4e3-502b-98ac-4d4b6e261bb2"/>
+<ref refid="3d5757c1-42f4-5f56-94d8-6ff2aa90036e"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
+<UML:Class id="0c95894c-2fc6-5c09-a068-1da787d529c1">
+<name><val>ConnectorAsUsage</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="ed62146c-4051-53e8-8811-b8e43b6302e7"/>
+<ref refid="74774e23-5a5c-5d1e-8382-beb9c117976e"/>
 </reflist></generalization>
 <owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
 <package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
@@ -312,6 +358,30 @@
 <general><ref refid="8fe3b35a-fd8f-5694-b48c-13123e9ad33e"/></general>
 <specific><ref refid="923ef55f-3176-5717-a2e0-25352a07f8c8"/></specific>
 </UML:Generalization>
+<UML:Generalization id="c3a1a007-3a27-5dd7-ace8-7d0fd2e2cc5e">
+<general><ref refid="2216fc5d-0a60-515c-837e-726875a4e1d9"/></general>
+<specific><ref refid="6c9fcc72-8346-5298-90fa-81b17bf66867"/></specific>
+</UML:Generalization>
+<UML:Generalization id="15e8fd02-5f05-5e2c-a01b-e8a4640ed140">
+<general><ref refid="989b0654-b31c-5976-9467-582158e9b122"/></general>
+<specific><ref refid="6c9fcc72-8346-5298-90fa-81b17bf66867"/></specific>
+</UML:Generalization>
+<UML:Generalization id="3a63251f-e4e3-502b-98ac-4d4b6e261bb2">
+<general><ref refid="bf8166f1-958e-59f8-9413-21001aed4cdd"/></general>
+<specific><ref refid="828aa4cb-17a3-5e71-9ec8-8c57164e65da"/></specific>
+</UML:Generalization>
+<UML:Generalization id="3d5757c1-42f4-5f56-94d8-6ff2aa90036e">
+<general><ref refid="0c95894c-2fc6-5c09-a068-1da787d529c1"/></general>
+<specific><ref refid="828aa4cb-17a3-5e71-9ec8-8c57164e65da"/></specific>
+</UML:Generalization>
+<UML:Generalization id="ed62146c-4051-53e8-8811-b8e43b6302e7">
+<general><ref refid="8fe3b35a-fd8f-5694-b48c-13123e9ad33e"/></general>
+<specific><ref refid="0c95894c-2fc6-5c09-a068-1da787d529c1"/></specific>
+</UML:Generalization>
+<UML:Generalization id="74774e23-5a5c-5d1e-8382-beb9c117976e">
+<general><ref refid="bbe3e7ff-b780-560c-abba-9c381d440d92"/></general>
+<specific><ref refid="0c95894c-2fc6-5c09-a068-1da787d529c1"/></specific>
+</UML:Generalization>
 <UML:Generalization id="e61e3a57-d02a-56c1-a866-2bb49abb5525">
 <general><ref refid="0fe1f9f7-1d81-5cae-b50d-143b07f39321"/></general>
 <specific><ref refid="f67d12c4-cea7-54cf-ad89-f610613d1b96"/></specific>
@@ -388,6 +458,11 @@
 <general><ref refid="0881ea28-4f58-593f-8ae6-bac84fc6c5fd"/></general>
 <specific><ref refid="8fe3b35a-fd8f-5694-b48c-13123e9ad33e"/></specific>
 </UML:Generalization>
+<UML:Property id="4ba463a3-ffc8-5dd8-808c-d6415d136bee">
+<name><val>isSufficient</val></name>
+<structuredClassifier><ref refid="6c9fcc72-8346-5298-90fa-81b17bf66867"/></structuredClassifier>
+<typeValue><val>bool</val></typeValue>
+</UML:Property>
 <UML:Property id="addced59-9e39-57a8-83a0-eb78a8e375de">
 <name><val>isVariation</val></name>
 <structuredClassifier><ref refid="e1156fcd-c775-55e0-913d-0ce75246ac5f"/></structuredClassifier>

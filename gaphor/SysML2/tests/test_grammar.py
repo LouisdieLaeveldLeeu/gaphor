@@ -151,6 +151,21 @@ def test_parses_untyped_port_usage():
     assert pkg == ast.Package(members=(ast.PortUsage(name="p", type_name=None),))
 
 
+def test_parses_connection_definition_and_usage():
+    pkg = parse("connection def C;\nconnection c : C;")
+    assert pkg.members == (
+        ast.ConnectionDefinition(name="C"),
+        ast.ConnectionUsage(name="c", type_name=("C",)),
+    )
+
+
+def test_parses_untyped_connection_usage():
+    pkg = parse("connection c;")
+    assert pkg == ast.Package(
+        members=(ast.ConnectionUsage(name="c", type_name=None),)
+    )
+
+
 def test_parses_empty_package_semicolon_form():
     pkg = parse("package P;")
     assert pkg == ast.Package(

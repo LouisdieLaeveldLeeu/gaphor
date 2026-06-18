@@ -101,6 +101,22 @@ class PortUsage:
 
 
 @dataclass(frozen=True)
+class ConnectionDefinition:
+    """`connection def <name> ;`"""
+
+    name: str
+
+
+@dataclass(frozen=True)
+class ConnectionUsage:
+    """`connection <name> [ : <type> ] ;` (declaration only; connector ends are
+    later behavior-layer work)."""
+
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
 class PackageDefinition:
     """`package <name> { <members> }` -- a named, nestable container."""
 
@@ -113,7 +129,7 @@ Member = (
     "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage "
     "| ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage "
     "| RequirementDefinition | RequirementUsage | PortDefinition | PortUsage "
-    "| PackageDefinition"
+    "| ConnectionDefinition | ConnectionUsage | PackageDefinition"
 )
 
 
@@ -125,6 +141,6 @@ class Package:
         "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage"
         " | ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage"
         " | RequirementDefinition | RequirementUsage | PortDefinition | PortUsage"
-        " | PackageDefinition",
+        " | ConnectionDefinition | ConnectionUsage | PackageDefinition",
         ...,
     ] = field(default_factory=tuple)
