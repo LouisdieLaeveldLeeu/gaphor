@@ -7,6 +7,8 @@ from gaphor.diagram.propertypages import PropertyPages
 from gaphor.diagram.tests.fixtures import find
 from gaphor.SysML2 import kerml, kerml_kernel as kk, sysml2
 from gaphor.SysML2.diagramitems import (
+    ActionDefinitionItem,
+    ActionUsageItem,
     AttributeDefinitionItem,
     AttributeUsageItem,
     PackageItem,
@@ -16,6 +18,7 @@ from gaphor.SysML2.diagramitems import (
 from gaphor.SysML2.diagramtype import SysML2Diagram
 from gaphor.SysML2.modelinglanguage import SysML2ModelingLanguage
 from gaphor.SysML2.propertypages import (
+    ActionUsageTypePropertyPage,
     AttributeUsageTypePropertyPage,
     DeclaredNamePropertyPage,
     PartUsageTypePropertyPage,
@@ -101,30 +104,69 @@ def test_attribute_usage_toolbox_entry_creates_semantic_element_and_projection(
     assert item in item.subject.presentation
 
 
+def test_action_definition_toolbox_entry_creates_semantic_element_and_projection(
+    element_factory,
+):
+    diagram = element_factory.create(SysML2Diagram)
+
+    item = _toolbox_item("toolbox-action-definition", diagram)
+
+    assert isinstance(item, ActionDefinitionItem)
+    assert isinstance(item.subject, sysml2.ActionDefinition)
+    assert item.subject.declaredName == "ActionDefinition"
+    assert item in diagram.ownedPresentation
+    assert item in item.subject.presentation
+
+
+def test_action_usage_toolbox_entry_creates_semantic_element_and_projection(
+    element_factory,
+):
+    diagram = element_factory.create(SysML2Diagram)
+
+    item = _toolbox_item("toolbox-action-usage", diagram)
+
+    assert isinstance(item, ActionUsageItem)
+    assert isinstance(item.subject, sysml2.ActionUsage)
+    assert item.subject.declaredName == "actionUsage"
+    assert item in diagram.ownedPresentation
+    assert item in item.subject.presentation
+
+
 def test_property_pages_are_registered_for_part_constructs(element_factory):
     package = element_factory.create(kerml.Package)
     attribute_definition = element_factory.create(sysml2.AttributeDefinition)
     attribute_usage = element_factory.create(sysml2.AttributeUsage)
+    action_definition = element_factory.create(sysml2.ActionDefinition)
+    action_usage = element_factory.create(sysml2.ActionUsage)
     part_definition = element_factory.create(sysml2.PartDefinition)
     part_usage = element_factory.create(sysml2.PartUsage)
 
     package_pages = set(PropertyPages.find(package))
     attribute_definition_pages = set(PropertyPages.find(attribute_definition))
     attribute_usage_pages = set(PropertyPages.find(attribute_usage))
+    action_definition_pages = set(PropertyPages.find(action_definition))
+    action_usage_pages = set(PropertyPages.find(action_usage))
     definition_pages = set(PropertyPages.find(part_definition))
     usage_pages = set(PropertyPages.find(part_usage))
 
     assert DeclaredNamePropertyPage in package_pages
     assert DeclaredNamePropertyPage in attribute_definition_pages
     assert DeclaredNamePropertyPage in attribute_usage_pages
+    assert DeclaredNamePropertyPage in action_definition_pages
+    assert DeclaredNamePropertyPage in action_usage_pages
     assert DeclaredNamePropertyPage in definition_pages
     assert DeclaredNamePropertyPage in usage_pages
     assert AttributeUsageTypePropertyPage in attribute_usage_pages
     assert AttributeUsageTypePropertyPage not in attribute_definition_pages
     assert AttributeUsageTypePropertyPage not in usage_pages
+    assert ActionUsageTypePropertyPage in action_usage_pages
+    assert ActionUsageTypePropertyPage not in action_definition_pages
+    assert ActionUsageTypePropertyPage not in usage_pages
+    assert ActionUsageTypePropertyPage not in attribute_usage_pages
     assert PartUsageTypePropertyPage in usage_pages
     assert PartUsageTypePropertyPage not in definition_pages
     assert PartUsageTypePropertyPage not in attribute_usage_pages
+    assert PartUsageTypePropertyPage not in action_usage_pages
 
 
 def test_declared_name_property_page_renames_part_definition(
@@ -181,6 +223,34 @@ def test_declared_name_property_page_renames_attribute_usage(
     entry.set_text("m")
 
     assert attribute_usage.declaredName == "m"
+
+
+def test_declared_name_property_page_renames_action_definition(
+    element_factory,
+    event_manager,
+):
+    action_definition = element_factory.create(sysml2.ActionDefinition)
+    property_page = DeclaredNamePropertyPage(action_definition, event_manager)
+
+    widget = property_page.construct()
+    entry = find(widget, "declared-name")
+    entry.set_text("Brake")
+
+    assert action_definition.declaredName == "Brake"
+
+
+def test_declared_name_property_page_renames_action_usage(
+    element_factory,
+    event_manager,
+):
+    action_usage = element_factory.create(sysml2.ActionUsage)
+    property_page = DeclaredNamePropertyPage(action_usage, event_manager)
+
+    widget = property_page.construct()
+    entry = find(widget, "declared-name")
+    entry.set_text("emergencyBrake")
+
+    assert action_usage.declaredName == "emergencyBrake"
 
 
 def test_part_usage_type_property_page_sets_and_replaces_type(
@@ -281,6 +351,63 @@ def test_attribute_usage_type_property_page_can_clear_type(
 
     widget = property_page.construct()
     dropdown = find(widget, "attribute-usage-type")
+    dropdown.set_selected(0)
+
+    assert kk.feature_type(usage) is None
+    assert element_factory.lselect(kerml.FeatureTyping) == []
+
+
+def test_action_usage_type_property_page_sets_and_replaces_type(
+    element_factory,
+    event_manager,
+):
+    brake = element_factory.create(sysml2.ActionDefinition)
+    brake.declaredName = "Brake"
+    accelerate = element_factory.create(sysml2.ActionDefinition)
+    accelerate.declaredName = "Accelerate"
+    engine = element_factory.create(sysml2.PartDefinition)
+    engine.declaredName = "Engine"
+    usage = element_factory.create(sysml2.ActionUsage)
+    usage.declaredName = "emergencyBrake"
+    property_page = ActionUsageTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "action-usage-type")
+    # The dropdown lists ActionDefinitions only -- not PartDefinitions.
+    values = {lv.value for lv in dropdown.get_model()}
+    assert brake.id in values
+    assert accelerate.id in values
+    assert engine.id not in values
+
+    brake_index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == brake.id
+    )
+    dropdown.set_selected(brake_index)
+
+    assert kk.feature_type(usage) is brake
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+    accelerate_index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == accelerate.id
+    )
+    dropdown.set_selected(accelerate_index)
+
+    # Re-typing replaces the stored FeatureTyping (no duplicate accumulation).
+    assert kk.feature_type(usage) is accelerate
+    assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
+
+
+def test_action_usage_type_property_page_can_clear_type(
+    element_factory,
+    event_manager,
+):
+    brake = element_factory.create(sysml2.ActionDefinition)
+    usage = element_factory.create(sysml2.ActionUsage)
+    kk.set_feature_type(usage, brake)
+    property_page = ActionUsageTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "action-usage-type")
     dropdown.set_selected(0)
 
     assert kk.feature_type(usage) is None

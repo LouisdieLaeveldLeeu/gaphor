@@ -111,13 +111,44 @@ attributes = ToolSection(
 )
 
 
-sysml2_toolbox_actions: ToolboxDefinition = (packages, parts, attributes)
+actions = ToolSection(
+    gettext("Actions"),
+    (
+        ToolDef(
+            "toolbox-action-definition",
+            gettext("Action Definition"),
+            "gaphor-activity-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.ActionDefinitionItem,
+                sysml2_model.ActionDefinition,
+                config_func=_declared_name_config("ActionDefinition"),
+            ),
+            handle_index=SE,
+        ),
+        ToolDef(
+            "toolbox-action-usage",
+            gettext("Action Usage"),
+            "gaphor-action-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.ActionUsageItem,
+                sysml2_model.ActionUsage,
+                config_func=_declared_name_config("actionUsage"),
+            ),
+            handle_index=SE,
+        ),
+    ),
+)
+
+
+sysml2_toolbox_actions: ToolboxDefinition = (packages, parts, attributes, actions)
 
 sysml2_diagram_types: DiagramTypes = (
     SysML2DiagramType(
         SysML2Diagram,
         i18nize("SysML v2 Diagram"),
-        (packages, parts, attributes),
+        (packages, parts, attributes, actions),
     ),
 )
 

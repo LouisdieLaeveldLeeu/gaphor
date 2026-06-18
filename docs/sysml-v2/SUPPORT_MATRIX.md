@@ -32,8 +32,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML AttributeDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML ActionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
-| SysML ActionUsage | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
+| SysML ActionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML ActionUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML RequirementUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML PortUsage | no | no | no | no | no | no | no | no | no | not-started |
 | SysML ConnectionUsage | no | no | no | no | no | no | no | no | no | not-started |
@@ -61,17 +61,20 @@ and AttributeDefinition are `supported`: every matrix cell is implemented and
 focused-tested for the claimed surface. Resolution remains same-namespace +
 simple/qualified name (incl. nested + cross-package).
 
-ActionDefinition and ActionUsage are `alpha`. The seven semantic cells (D1) plus
-the Diagram cell (D2) are implemented and focused-tested for untyped actions and
-actions typed by an ActionDefinition through KerML FeatureTyping
-(`action def Brake; action emergencyBrake : Brake;`); the action FeatureTyping
-also projects as a connected line view. The UI-edit cell is roadmap phase D3
-(toolbox/property-page), still pending its review gate. These rows are held at
-`alpha` on a named behavioral dependency: SysML actions also carry behavior not
-modeled here -- action bodies / nested steps, succession and flow connections,
-and parameters. The declaration-and-typing surface is proven, but the rows stay
-`alpha` (not `supported`) until that behavioral surface is scheduled and built,
-even once D3 makes every cell `yes`.
+ActionDefinition and ActionUsage have all nine cells implemented and
+focused-tested -- the seven semantic cells (D1), the Diagram cell (D2), and the
+UI-edit cell (D3) -- for untyped actions and actions typed by an ActionDefinition
+through KerML FeatureTyping (`action def Brake; action emergencyBrake : Brake;`).
+The action FeatureTyping projects as a connected line view, the toolbox creates
+the semantic element and its projection together, and property pages rename both
+constructs and set/clear/replace an ActionUsage's ActionDefinition type (re-typing
+replaces the stored FeatureTyping, no duplicates). Despite every cell being `yes`,
+both rows are deliberately held at `alpha`, NOT `supported`, on a named behavioral
+dependency: SysML actions also carry behavior not modeled here -- action bodies /
+nested steps, succession and flow connections, and parameters. Only the
+declaration-and-typing surface is proven; promotion to `supported` waits until
+that behavioral surface is scheduled and built. This is the Phase-D behavioral
+gate decision, taken explicitly per the roadmap.
 
 AttributeUsage stays `alpha` on a named dependency. Every one of its cells is
 implemented and focused-tested -- including the Diagram and UI-edit cells added
@@ -91,14 +94,15 @@ and reloads through `.gaphor`, and deleting the element removes its projection.
 Package projection is a package frame/box view of the namespace; semantic
 namespace ownership remains in the KerML ownership spine.
 
-UI-edit scope for Package, PartDefinition, PartUsage, AttributeDefinition, and
-AttributeUsage. `UI-edit=yes` means the SysML2 toolbox has Package, Part
-Definition, Part Usage, Attribute Definition, and Attribute Usage tools that
-create the semantic element and its projection together (never symbol-only), and
-property pages can rename all five constructs. PartUsage can set/clear/replace a
-PartDefinition type; AttributeUsage can set/clear/replace an AttributeDefinition
-type. Re-typing replaces the stored FeatureTyping instead of accumulating
-duplicates.
+UI-edit scope for Package, PartDefinition, PartUsage, AttributeDefinition,
+AttributeUsage, ActionDefinition, and ActionUsage. `UI-edit=yes` means the SysML2
+toolbox has Package, Part Definition, Part Usage, Attribute Definition, Attribute
+Usage, Action Definition, and Action Usage tools that create the semantic element
+and its projection together (never symbol-only), and property pages can rename
+all seven constructs. PartUsage can set/clear/replace a PartDefinition type;
+AttributeUsage can set/clear/replace an AttributeDefinition type; ActionUsage can
+set/clear/replace an ActionDefinition type. Re-typing replaces the stored
+FeatureTyping instead of accumulating duplicates.
 
 The FeatureTyping relation projects as a line (`FeatureTypingItem`) whose
 `subject` is the EXISTING typing -- it appears only when both ends are already

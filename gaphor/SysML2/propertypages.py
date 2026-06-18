@@ -23,6 +23,8 @@ new_builder = new_resource_builder("gaphor.SysML2")
 @PropertyPages.register(kerml.Package)
 @PropertyPages.register(sysml2.AttributeDefinition)
 @PropertyPages.register(sysml2.AttributeUsage)
+@PropertyPages.register(sysml2.ActionDefinition)
+@PropertyPages.register(sysml2.ActionUsage)
 @PropertyPages.register(sysml2.PartDefinition)
 @PropertyPages.register(sysml2.PartUsage)
 class DeclaredNamePropertyPage(PropertyPageBase):
@@ -36,6 +38,8 @@ class DeclaredNamePropertyPage(PropertyPageBase):
             kerml.Package
             | sysml2.AttributeDefinition
             | sysml2.AttributeUsage
+            | sysml2.ActionDefinition
+            | sysml2.ActionUsage
             | sysml2.PartDefinition
             | sysml2.PartUsage
         ),
@@ -155,9 +159,52 @@ class AttributeUsageTypePropertyPage(PropertyPageBase):
                 kk.set_feature_type(self.subject, None)
 
 
+@PropertyPages.register(sysml2.ActionUsage)
+class ActionUsageTypePropertyPage(PropertyPageBase):
+    """Set the ActionDefinition type for an ActionUsage."""
+
+    order = 20
+
+    def __init__(self, subject: sysml2.ActionUsage, event_manager):
+        super().__init__()
+        self.subject = subject
+        self.event_manager = event_manager
+
+    def construct(self):
+        builder = new_builder("action-usage-type-editor")
+
+        dropdown = builder.get_object("action-usage-type")
+        model = list_of_definitions(self.subject.model, sysml2.ActionDefinition)
+        dropdown.set_model(model)
+
+        if isinstance(type_ := kk.feature_type(self.subject), sysml2.ActionDefinition):
+            selected = next(
+                (n for n, lv in enumerate(model) if lv.value == type_.id),
+                None,
+            )
+            if selected is not None:
+                dropdown.set_selected(selected)
+
+        dropdown.connect("notify::selected", self._on_type_changed)
+
+        return builder.get_object("action-usage-type-editor")
+
+    def _on_type_changed(self, dropdown, _pspec):
+        selected = dropdown.get_selected_item()
+        with Transaction(self.event_manager, context="editing"):
+            if selected and selected.value:
+                type_ = self.subject.model.lookup(selected.value)
+                assert isinstance(type_, sysml2.ActionDefinition)
+                kk.set_feature_type(self.subject, type_)
+            else:
+                kk.set_feature_type(self.subject, None)
+
+
 def list_of_definitions(
     element_factory,
-    definition_type: type[sysml2.PartDefinition | sysml2.AttributeDefinition],
+    definition_type: type[
+        sysml2.PartDefinition | sysml2.AttributeDefinition | sysml2.ActionDefinition
+    ],
 ) -> Gio.ListStore:
     model = Gio.ListStore.new(LabelValue)
     model.append(LabelValue("", None))
@@ -171,7 +218,9 @@ def list_of_definitions(
 
 
 def _definition_label(
-    definition: sysml2.PartDefinition | sysml2.AttributeDefinition,
+    definition: sysml2.PartDefinition
+    | sysml2.AttributeDefinition
+    | sysml2.ActionDefinition,
 ) -> str:
     qualified_name = kk.qualified_name(definition).lstrip(kk.QUALIFIED_NAME_SEPARATOR)
     return qualified_name or definition.declaredName or type(definition).__name__
