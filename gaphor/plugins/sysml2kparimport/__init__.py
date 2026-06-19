@@ -54,21 +54,24 @@ class SysML2KparImport(Service, ActionProvider):
     ) -> UserKparImport:
         """Import a KPAR into the current model within one transaction.
 
-        Parseable members become editable model elements. If the import has
-        validation errors and ``allow_invalid`` is False, the just-imported
-        subtree is removed again so nothing is added (the returned result still
-        carries the diagnostics). Raises a :class:`KparError` subclass for a
-        malformed archive.
+        Parseable members become editable model elements. The just-imported
+        subtree is removed again (so nothing is added to the model) when either
+        nothing parseable was imported -- matching the CLI's "no supported
+        content" refusal, rather than leaving an empty root namespace behind --
+        or the import has validation errors and ``allow_invalid`` is False. The
+        returned result still carries the diagnostics. Raises a
+        :class:`KparError` subclass for a malformed archive.
 
         The whole import is one transaction (so it is a single undoable step and
-        the model browser updates). The refusal removes the import's own root
+        the model browser updates). Removal unlinks the import's own root
         namespace, whose composite containment cascades to every imported
         element -- this does not depend on an undo manager being active, and only
         ever touches content from this import, never pre-existing model content.
         """
         with Transaction(self.event_manager):
             result = import_user_kpar(path, factory=self.element_factory)
-            if result.has_validation_errors and not allow_invalid:
+            refuse = result.has_validation_errors and not allow_invalid
+            if not result.imported_any or refuse:
                 result.root.unlink()
         return result
 
@@ -98,6 +101,14 @@ class SysML2KparImport(Service, ActionProvider):
             result = self.import_into_model(path)
         except KparError as exc:
             await self._alert(gettext("Could not import KPAR project"), str(exc))
+            return
+
+        if not result.imported_any:
+            await self._alert(
+                gettext("No supported content found"),
+                diagnostics_detail(result)
+                or gettext("The KPAR contains no importable SysML v2 content."),
+            )
             return
 
         if result.has_validation_errors:
@@ -180,6 +191,16 @@ def diagnostics_detail(result: UserKparImport) -> str:
         lines.append(
             gettext("External dependency not imported: {resource}").format(
                 resource=dep.resource
+            )
+        )
+    # Pre-existing model problems are shown separately: they are not caused by
+    # this import and do not gate it.
+    for diagnostic in result.preexisting_diagnostics:
+        lines.append(
+            gettext("Pre-existing: {severity}: {rule}: {message}").format(
+                severity=diagnostic.severity,
+                rule=diagnostic.rule,
+                message=diagnostic.message,
             )
         )
     return "\n".join(lines)

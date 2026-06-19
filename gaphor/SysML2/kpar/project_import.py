@@ -113,7 +113,11 @@ class UserKparImport:
     )
     external_dependencies: tuple[ExternalDependency, ...] = field(default_factory=tuple)
     element_provenance: dict[str, ElementImportProvenance] = field(default_factory=dict)
+    # Diagnostics caused by THIS import (used to gate the import).
     validation_diagnostics: tuple = field(default_factory=tuple)
+    # Diagnostics already present in the target factory before this import, kept
+    # separate so a valid import is not blamed for pre-existing model problems.
+    preexisting_diagnostics: tuple = field(default_factory=tuple)
     has_validation_errors: bool = False
 
     @property
@@ -170,6 +174,12 @@ def import_user_kpar(
         )
 
     factory = factory if factory is not None else ElementFactory()
+    # Snapshot diagnostics already present in the target factory BEFORE building
+    # this import, so a valid import into a model that already has problems is
+    # not blamed for them (the GUI gates only on import-caused diagnostics).
+    preexisting = list(validate(factory, {}, {}))
+    preexisting_set = set(preexisting)
+
     result, node_provenance = map_project_members(named_packages, factory)
 
     def source_of(member, node) -> tuple[int | None, str]:
@@ -218,8 +228,13 @@ def import_user_kpar(
         for usage_id, (type_name, kind) in result.mistyped.items()
     )
 
+    # Gate only on diagnostics this import introduced: whole-factory validation
+    # minus what was already there. This still catches import-caused problems
+    # (including a name that collides with pre-existing content, which is a new
+    # diagnostic), while ignoring pre-existing-only errors.
+    all_diagnostics = validate(factory, result.unresolved_types, result.mistyped)
     validation_diagnostics = tuple(
-        validate(factory, result.unresolved_types, result.mistyped)
+        d for d in all_diagnostics if d not in preexisting_set
     )
 
     external_dependencies = tuple(
@@ -237,6 +252,7 @@ def import_user_kpar(
         external_dependencies=external_dependencies,
         element_provenance=element_provenance,
         validation_diagnostics=validation_diagnostics,
+        preexisting_diagnostics=tuple(preexisting),
         has_validation_errors=has_errors(validation_diagnostics),
     )
 

@@ -219,7 +219,9 @@ Expose the proven KPAR importer through Gaphor's GUI import flow.
 
 Prerequisite: Phase 3c importer behavior is stable and tested for diagnostics,
 preservation/rejection of unsupported content, unresolved references, dependency
-gaps, duplicate/version conflicts, and output semantics.
+gaps, and output semantics. (Duplicate-import and version-conflict diagnostics
+for re-import into an already-populated model are explicitly deferred in Phase 3c
+and are not a prerequisite here; the GUI inherits that same deferral.)
 
 Work:
 

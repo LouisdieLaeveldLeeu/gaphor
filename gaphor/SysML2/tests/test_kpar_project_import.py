@@ -188,6 +188,22 @@ def test_duplicate_elements_distinguished_by_provenance(tmp_path):
     assert members == {f"{ROOT_DIR}/A.sysml", f"{ROOT_DIR}/B.sysml"}
 
 
+def test_validation_gates_only_on_import_caused_diagnostics(element_factory, tmp_path):
+    # Importing valid content into a factory that already has a validation error
+    # must not be blamed for the pre-existing error.
+    bad = tmp_path / "bad.kpar"
+    _write_user_kpar(bad, {"A.sysml": "part def Dup;", "B.sysml": "part def Dup;"})
+    import_user_kpar(bad, factory=element_factory)  # leaves a duplicate-name error
+
+    good = tmp_path / "good.kpar"
+    _write_user_kpar(good, {"V.sysml": "part def Valid;"})
+    result = import_user_kpar(good, factory=element_factory)
+
+    assert not result.has_validation_errors
+    assert not result.validation_diagnostics
+    assert result.preexisting_diagnostics  # the duplicate is recorded separately
+
+
 def test_declared_names_recorded_per_member(tmp_path):
     archive = tmp_path / "proj.kpar"
     _write_user_kpar(archive, {"A.sysml": "package A { part def Engine; }"})

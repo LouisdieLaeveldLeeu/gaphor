@@ -86,6 +86,40 @@ def test_refusal_leaves_existing_model_content_intact(service, element_factory, 
     }
 
 
+def test_all_unparseable_import_adds_nothing(service, element_factory, tmp_path):
+    # A KPAR with no parseable content must not leave an empty root namespace in
+    # the model (matching the CLI's "no supported content" refusal).
+    archive = _write_user_kpar(tmp_path / "p.kpar", {"Bad.sysml": "garbage @@@"})
+
+    result = service.import_into_model(archive)
+
+    assert not result.imported_any
+    assert element_factory.lookup(result.root.id) is None
+    assert not list(element_factory.select(sysml2.PartDefinition))
+
+
+def test_valid_import_not_refused_after_preexisting_errors(
+    service, element_factory, tmp_path
+):
+    # Pre-existing invalid content (a duplicate) must not cause a subsequent
+    # VALID import to be refused.
+    bad = _write_user_kpar(
+        tmp_path / "bad.kpar",
+        {"A.sysml": "part def Dup;", "B.sysml": "part def Dup;"},
+    )
+    service.import_into_model(bad, allow_invalid=True)
+
+    good = _write_user_kpar(tmp_path / "good.kpar", {"V.sysml": "part def Valid;"})
+    result = service.import_into_model(good)
+
+    assert not result.has_validation_errors
+    assert "Valid" in {
+        d.declaredName for d in element_factory.select(sysml2.PartDefinition)
+    }
+    # The pre-existing duplicate is still surfaced, just separately.
+    assert result.preexisting_diagnostics
+
+
 def test_allow_invalid_commits_despite_errors(service, element_factory, tmp_path):
     archive = _write_user_kpar(
         tmp_path / "p.kpar",

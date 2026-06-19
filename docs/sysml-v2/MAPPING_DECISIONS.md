@@ -521,13 +521,24 @@ menu fragment.
 - **Import into the current model.** Importing adds the KPAR's content to the
   open model's ElementFactory as ordinary editable, undoable elements (reusing
   `import_user_kpar`), wrapped in one `Transaction`.
+- **No empty-root on nothing-imported.** If no member parses (`imported_any` is
+  False), the just-created root namespace is removed and the UI reports "No
+  supported content found" -- matching the CLI's refusal rather than leaving an
+  empty namespace in the model.
+- **Gate only on import-caused diagnostics.** `import_user_kpar` snapshots the
+  target factory's diagnostics before building the import and reports only the
+  new ones (`validation_diagnostics`), keeping pre-existing model problems
+  separate (`preexisting_diagnostics`). So a valid import into a model that
+  already has errors is not refused for those errors, while an import that
+  introduces a problem (including a name colliding with existing content) still
+  is.
 - **Confirm-or-cancel on validation errors.** A first pass imports and, if there
-  are validation errors, removes the just-imported subtree (`result.root.unlink()`,
-  whose composite containment cascades) and asks the user; on confirm it
-  re-imports with `allow_invalid=True`. Subtree removal is used instead of
-  transaction rollback so it does not depend on an undo manager being active and
-  only ever touches this import's content. Mirrors the CLI's refuse-by-default +
-  `--allow-invalid`.
+  are import-caused validation errors, removes the just-imported subtree
+  (`result.root.unlink()`, whose composite containment cascades) and asks the
+  user; on confirm it re-imports with `allow_invalid=True`. Subtree removal is
+  used instead of transaction rollback so it does not depend on an undo manager
+  being active and only ever touches this import's content. Mirrors the CLI's
+  refuse-by-default + `--allow-invalid`.
 - **Diagnostics without losing detail.** A summary toast plus an Adw details
   dialog listing rejected members, unresolved references, validation errors, and
   external dependencies.
