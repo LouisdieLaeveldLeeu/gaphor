@@ -18,6 +18,14 @@ from gaphor.SysML2.kpar.reader import (
     KparProject,
     KparUsage,
     read_kpar,
+    read_member_text,
+)
+from gaphor.SysML2.kpar.library import (
+    ElementProvenance,
+    LibraryImportError,
+    NormativeLibrary,
+    UnresolvedReference,
+    import_scalar_values_library,
 )
 
 __all__ = [
@@ -32,4 +40,10 @@ __all__ = [
     "KparProject",
     "KparUsage",
     "read_kpar",
+    "read_member_text",
+    "ElementProvenance",
+    "LibraryImportError",
+    "NormativeLibrary",
+    "UnresolvedReference",
+    "import_scalar_values_library",
 ]

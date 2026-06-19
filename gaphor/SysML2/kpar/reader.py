@@ -136,6 +136,28 @@ def read_kpar(path: str | Path) -> KparArchive:
     )
 
 
+def read_member_text(
+    archive: KparArchive, member: str, encoding: str = "utf-8"
+) -> str:
+    """Read one model member's text from an already-inspected archive.
+
+    Read-only: it re-opens the validated archive at ``archive.path`` and returns
+    the decoded bytes of ``member``. A member that is not present raises
+    :class:`KparLayoutError` (the archive does not contain what was requested);
+    a corrupt archive raises :class:`KparNotAnArchiveError`.
+    """
+    try:
+        with ZipFile(archive.path) as zf:
+            raw = zf.read(member)
+    except KeyError as exc:
+        raise KparLayoutError(
+            f"{archive.path}: member {member!r} not found in archive"
+        ) from exc
+    except BadZipFile as exc:
+        raise KparNotAnArchiveError(f"{archive.path}: {exc}") from exc
+    return raw.decode(encoding)
+
+
 def _is_noise(name: str) -> bool:
     if any(name.startswith(prefix) for prefix in _NOISE_PREFIXES):
         return True

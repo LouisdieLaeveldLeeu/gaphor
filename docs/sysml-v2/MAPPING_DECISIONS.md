@@ -425,3 +425,36 @@ Ratified decisions (see the contract for the full text):
 - **Entry points:** Phase 3b is Python-API-only; CLI/UI deferred to Phase 3c.
 - **Provenance:** every imported element/reference traces to a pinned KPAR
   (path, SHA-256, member, declaration text, span when available).
+
+### Completion Phase 3b: Minimal Normative Library Import (verified 2026-06-19)
+
+`gaphor/SysML2/kpar/library.py` applies the Phase 3a contract to the KerML
+`ScalarValues` value-type package. `import_scalar_values_library()` returns a
+read-only `NormativeLibrary`.
+
+- **What is imported:** the `ScalarValues` package and its full datatype closure
+  (`ScalarValue`, `Boolean`, `String`, `NumericalValue`, `Number`, `Complex`,
+  `Real`, `Rational`, `Integer`, `Natural`, `Positive`) as real
+  `kerml.Package`/`kerml.DataType` elements, with intra-package `specializes`
+  edges as `kerml.Specialization`. This is the contract's ElementFactory-backed
+  representation, built through the existing kernel Create-API.
+- **Regenerate on load, not persisted:** each call builds the elements in a
+  fresh `ElementFactory`; nothing is written to `.gaphor`. Re-import yields the
+  same qualified names with fresh element instances (tested).
+- **Parser scope:** a focused, strict parser handles exactly the value-type
+  subset `ScalarValues.kerml` uses (`[standard] [library] package`, `doc`,
+  `[private|public] import`, `[abstract] datatype X [specializes A, B];`). Any
+  other construct inside the package would be recorded as unsupported, never
+  silently dropped; for `ScalarValues` the unsupported list is empty (tested).
+- **Cross-library closure:** the minimal closure is `ScalarValues` alone.
+  `ScalarValue specializes DataValue` (DataValue is in `Base`, outside the
+  closure) is recorded as an explicit `UnresolvedReference`; no dangling
+  `Specialization` to a missing element is created. Full dependency-closure
+  import remains Phase 3c.
+- **Provenance / no stubs:** each element records the KPAR path, SHA-256, member
+  file, source declaration text, and line; a test confirms each recorded
+  declaration actually appears in the pinned member bytes.
+- **Closed-world:** the importer only reads `Data-Type-Library.kpar` from the
+  pinned `docs/sysml-v2/omg/20250201` dir (overridable for tests) and never
+  fetches; a missing artifact raises loudly.
+- **Boundary:** Python API only; no CLI/UI; no support-matrix cell moves.

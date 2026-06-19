@@ -148,7 +148,7 @@ Exit (reached): a committed design contract and tests/fixtures for the selected
 invariants where possible; no imported semantic content yet unless the design
 phase is explicitly split and reviewed.
 
-### Phase 3b -- Minimal Normative Library Import
+### Phase 3b -- Minimal Normative Library Import -- DONE
 
 Use the Phase 3a contract to import the smallest real OMG KPAR library content
 needed for primitive/value typing. This phase targets the normative libraries,
@@ -170,8 +170,18 @@ representation (ElementFactory-backed, proxy-backed, or another reviewed form)
 must preserve read-only normative-library treatment unless the design contract
 explicitly says otherwise.
 
-Exit: the real imported standard library can answer value-type resolution
-queries with provenance.
+Delivered as `gaphor/SysML2/kpar/library.py` (`import_scalar_values_library()`
+-> read-only `NormativeLibrary`). The KerML `ScalarValues` package is imported
+from the pinned `Data-Type-Library.kpar` as real `kerml.Package`/`DataType`
+elements with intra-package `Specialization` edges, regenerated into a fresh
+ElementFactory on each load and never persisted. Every element carries
+provenance (KPAR path, SHA-256, member, declaration text, line); the
+cross-library super `ScalarValue :> Base::DataValue` is recorded as an explicit
+unresolved reference, not dropped. Python API only; no support-matrix cell moves
+(AttributeUsage promotion is Phase 4).
+
+Exit (reached): the real imported standard library can answer value-type
+resolution queries with provenance.
 
 ### Phase 3c -- General User KPAR Import
 
