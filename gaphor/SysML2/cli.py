@@ -174,6 +174,51 @@ def _run_kpar_info(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_kpar_import(args: argparse.Namespace) -> int:
+    """Import a user KPAR project into a `.gaphor` model (editable content).
+
+    Per-member partial import: parseable members are imported and saved, rejected
+    members and unresolved references are reported as diagnostics. Exits non-zero
+    if the archive is invalid or nothing supported was found.
+    """
+    import gaphor.storage as storage
+    from gaphor.SysML2.kpar import KparError
+    from gaphor.SysML2.kpar.project_import import import_user_kpar
+
+    try:
+        result = import_user_kpar(Path(args.archive))
+    except KparError as exc:
+        print(f"kpar error: {exc}", file=sys.stderr)
+        return ERROR_EXIT_CODE
+
+    for rejected in result.rejected_members:
+        print(
+            f"warning: skipped unsupported member {rejected.member}: "
+            f"{rejected.message}",
+            file=sys.stderr,
+        )
+    for ref in result.unresolved_references:
+        print(
+            f"warning: unresolved type reference {ref.type_name} ({ref.reason})",
+            file=sys.stderr,
+        )
+    for dep in result.external_dependencies:
+        print(
+            f"warning: external dependency not imported (self-contained import): "
+            f"{dep.resource}",
+            file=sys.stderr,
+        )
+
+    if not result.imported_any:
+        print("kpar import: no supported content found", file=sys.stderr)
+        return ERROR_EXIT_CODE
+
+    with open(args.model, "w", encoding="utf-8") as f:
+        storage.save(f, result.factory)
+    print(f"imported {len(result.imported_members)} member(s) into {args.model}")
+    return 0
+
+
 def validate_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Validate SysML v2 text without importing it."
@@ -224,6 +269,16 @@ def kpar_info_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def kpar_import_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Import a user KPAR project into a Gaphor model (editable)."
+    )
+    parser.add_argument("archive", help="path to a .kpar project archive")
+    parser.add_argument("model", help="target .gaphor model")
+    parser.set_defaults(command=_run_kpar_import)
+    return parser
+
+
 def parser_names() -> Sequence[str]:
     return (
         "sysml2-validate",
@@ -231,4 +286,5 @@ def parser_names() -> Sequence[str]:
         "sysml2-export",
         "sysml2-round-trip",
         "sysml2-kpar-info",
+        "sysml2-kpar-import",
     )

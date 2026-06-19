@@ -78,8 +78,9 @@ its focused tests pass.
 - Because library elements are regenerated from pinned bytes on load, any
   in-memory change would be discarded; the contract makes that an explicit
   read-only guarantee rather than an accident of regeneration.
-- User KPAR imports (Phase 3c) may become editable only under an explicit,
-  separately reviewed policy. Until then, all KPAR-imported content is read-only.
+- User KPAR imports are editable, persisted user content (ratified in Phase 3c:
+  imported members become ordinary Gaphor model elements saved into `.gaphor`,
+  like importing a `.sysml` file). Only the normative libraries are read-only.
 
 ## Dependency Closure
 
@@ -143,8 +144,8 @@ its focused tests pass.
   provenance. No CLI and no UI import entry point ships in 3b.
 - The existing read-only `sysml2-kpar-info` command stays inspection-only; it
   does not gain import behavior in 3b.
-- CLI and UI import entry points are deferred to **Phase 3c** ("if appropriate
-  for Gaphor's import flow").
+- The `sysml2-kpar-import` CLI command ships in **Phase 3c** (general user KPAR
+  import); GUI import is **Phase 3d**.
 
 ## Verification
 

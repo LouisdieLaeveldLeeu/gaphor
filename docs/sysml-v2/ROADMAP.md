@@ -183,7 +183,7 @@ unresolved reference, not dropped. Python API only; no support-matrix cell moves
 Exit (reached): the real imported standard library can answer value-type
 resolution queries with provenance.
 
-### Phase 3c -- General User KPAR Import
+### Phase 3c -- General User KPAR Import -- DONE
 
 Expand from minimal normative-library import to user-facing KPAR import for the
 implemented SysML2 surface:
@@ -191,11 +191,45 @@ implemented SysML2 surface:
 - import supported KPAR project archives into the SysML2 model pipeline;
 - preserve or reject unsupported content according to the conformance policy and
   the Phase 3a partial-import decision;
-- add CLI and UI entry points if appropriate for Gaphor's import flow;
+- expose a Python API and `sysml2-kpar-import` CLI entry point;
 - add diagnostics for unsupported constructs, unresolved references, dependency
   gaps, duplicate imports, and version conflicts.
 
-Exit: KPAR import is a supported capability for the implemented SysML2 surface.
+Delivered as `gaphor/SysML2/kpar/project_import.py` (`import_user_kpar()` ->
+`UserKparImport`) plus the `sysml2-kpar-import` CLI command. Each model member is
+parsed independently: parseable members are imported as ordinary editable Gaphor
+model elements (savable into `.gaphor`, unlike read-only libraries), unparseable
+members are recorded as rejected members, and references are resolved
+project-wide across imported members (via the new `mapping.map_project`).
+References outside the project (libraries, declared `usage` dependencies,
+unimported members) are recorded as unresolved references / external-dependency
+diagnostics, never silently dropped. Cross-library resolution is Phase 4; GUI
+import is Phase 3d.
+
+Deferred (recorded, not claimed): duplicate-import and version-conflict
+diagnostics, which apply to re-importing into an already-populated user model --
+a re-import/merge concern beyond this self-contained single-project import slice.
+
+Exit (reached): KPAR import is a supported capability for the implemented SysML2
+surface (self-contained projects; CLI + Python API).
+
+### Phase 3d -- GUI KPAR Import
+
+Expose the proven KPAR importer through Gaphor's GUI import flow.
+
+Prerequisite: Phase 3c importer behavior is stable and tested for diagnostics,
+preservation/rejection of unsupported content, unresolved references, dependency
+gaps, duplicate/version conflicts, and output semantics.
+
+Work:
+
+- add a GUI import entry point for `.kpar` projects;
+- surface importer diagnostics in the UI without losing detail;
+- preserve the same semantics as the Python API and CLI;
+- add headless/service-level tests where possible, plus focused GUI smoke tests.
+
+Exit: users can import supported KPAR projects from the Gaphor UI with the same
+diagnostic and preservation behavior as the CLI/API.
 
 ### Phase 4 -- AttributeUsage Promotion
 

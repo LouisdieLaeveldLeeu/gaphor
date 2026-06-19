@@ -467,3 +467,32 @@ read-only `NormativeLibrary`.
   *content* (full closure) and full semver-range constraint handling remain
   Phase 3c.
 - **Boundary:** Python API only; no CLI/UI; no support-matrix cell moves.
+
+### Completion Phase 3c: General User KPAR Import (verified 2026-06-19)
+
+`gaphor/SysML2/kpar/project_import.py` (`import_user_kpar()` -> `UserKparImport`)
+imports a *user* KPAR project through the existing SysML2 text pipeline, with a
+`sysml2-kpar-import` CLI command. Decisions ratified at the Phase 3c review gate:
+
+- **Editable, persisted (not read-only).** Imported content becomes ordinary
+  Gaphor model elements in the target ElementFactory and is saved into `.gaphor`,
+  exactly like importing a `.sysml` text file -- the opposite of the read-only,
+  regenerated normative libraries. Provenance/diagnostics are recorded on the
+  import result, but they do not make the imported elements read-only.
+- **Per-member partial import.** Each model member is parsed independently;
+  members that parse are imported, members that do not are recorded as rejected
+  members with their parse error. One bad member never blocks the others, and
+  nothing is silently dropped.
+- **Self-contained, project-wide resolution.** A new `mapping.map_project`
+  builds every parseable member under one shared project namespace and resolves
+  typing project-wide, so cross-file references inside the KPAR resolve. A name
+  that belongs to no imported member (a library/external/unimported type) stays
+  unresolved and is recorded. Cross-library resolution into the Phase 3b
+  normative library is Phase 4.
+- **Dependency-gap diagnostics.** A user KPAR's declared `.project.json` `usage`
+  entries are surfaced as external-dependency diagnostics (not resolved/imported
+  in this self-contained phase).
+- **Entry points.** Python API + `sysml2-kpar-import` CLI; GUI import is Phase 3d.
+- **Deferred (recorded, not claimed):** duplicate-import and version-conflict
+  diagnostics, which only arise when re-importing into an already-populated user
+  model -- a re-import/merge concern beyond this single-project import slice.

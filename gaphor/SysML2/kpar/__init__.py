@@ -28,6 +28,15 @@ from gaphor.SysML2.kpar.library import (
     UnresolvedReference,
     import_scalar_values_library,
 )
+from gaphor.SysML2.kpar.project_import import (
+    ExternalDependency,
+    ImportedMember,
+    ProjectProvenance,
+    RejectedMember,
+    UnresolvedTypeReference,
+    UserKparImport,
+    import_user_kpar,
+)
 
 __all__ = [
     "KparArchive",
@@ -48,4 +57,11 @@ __all__ = [
     "NormativeLibrary",
     "UnresolvedReference",
     "import_scalar_values_library",
+    "ExternalDependency",
+    "ImportedMember",
+    "ProjectProvenance",
+    "RejectedMember",
+    "UnresolvedTypeReference",
+    "UserKparImport",
+    "import_user_kpar",
 ]

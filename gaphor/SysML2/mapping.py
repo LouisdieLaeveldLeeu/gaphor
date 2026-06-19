@@ -79,8 +79,6 @@ class MappingResult:
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     """Build semantic elements for a parsed package into `factory`."""
     root = factory.create(kerml.Namespace)
-    unresolved_types: dict[str, str] = {}
-    mistyped: dict[str, tuple[str, str]] = {}
 
     # Phase 1: build the whole ownership tree (definitions, usages, nested
     # packages) so every name exists before any type is resolved. Records each
@@ -88,13 +86,53 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     typed_usages: list[tuple[sysml2.PartUsage, kerml.Namespace, tuple[str, ...]]] = []
     top_level = _build_members(pkg.members, root, factory, typed_usages)
 
-    # Phase 2: resolve usage typing. Resolution is scoped: a simple name resolves
-    # in the usage's own namespace; a qualified name resolves from the root.
-    # - does not resolve / resolves to a non-Type (e.g. a Package) -> unresolved.
-    # - resolves to a Type of the WRONG KIND (e.g. `part p : AttributeDefinition`)
-    #   -> mistyped: still no FeatureTyping, recorded for validation.
-    # Only an exact-kind match (part->PartDefinition, ...) creates the typing, so
-    # nothing is silently dropped and no cross-kind typing is ever stored.
+    unresolved_types, mistyped = _resolve_typed_usages(root, typed_usages)
+    return MappingResult(
+        root=root,
+        elements_by_name=top_level,
+        unresolved_types=unresolved_types,
+        mistyped=mistyped,
+    )
+
+
+def map_project(packages, factory: ElementFactory) -> MappingResult:
+    """Map several parsed packages into one shared project namespace.
+
+    Used for KPAR project import: every package's top-level members are built
+    under a single root, then typing is resolved project-wide -- so a qualified
+    name resolves against any imported member (cross-file references inside the
+    same project resolve), while a name that belongs to no imported member stays
+    unresolved (recorded, never silently dropped). Resolution scope is otherwise
+    the same as `map_package`.
+    """
+    root = factory.create(kerml.Namespace)
+    typed_usages: list[tuple[sysml2.PartUsage, kerml.Namespace, tuple[str, ...]]] = []
+    top_level: dict[str, kerml.Element] = {}
+    for pkg in packages:
+        top_level.update(_build_members(pkg.members, root, factory, typed_usages))
+
+    unresolved_types, mistyped = _resolve_typed_usages(root, typed_usages)
+    return MappingResult(
+        root=root,
+        elements_by_name=top_level,
+        unresolved_types=unresolved_types,
+        mistyped=mistyped,
+    )
+
+
+def _resolve_typed_usages(
+    root: kerml.Namespace, typed_usages: list
+) -> tuple[dict[str, str], dict[str, tuple[str, str]]]:
+    """Resolve usage typing for the collected usages (mapping phase 2).
+
+    A simple name resolves in the usage's own namespace; a qualified name resolves
+    from the root. A name that does not resolve to a Type is recorded as
+    unresolved; one that resolves to the WRONG kind is recorded as mistyped. Only
+    an exact-kind match creates the FeatureTyping, so nothing is silently dropped
+    and no cross-kind typing is ever stored.
+    """
+    unresolved_types: dict[str, str] = {}
+    mistyped: dict[str, tuple[str, str]] = {}
     for usage, namespace, type_name in typed_usages:
         target = _resolve_type(root, namespace, type_name)
         if not isinstance(target, kerml.Type):
@@ -103,13 +141,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
             _set_type(usage, target)
         else:
             mistyped[usage.id] = ("::".join(type_name), type(target).__name__)
-
-    return MappingResult(
-        root=root,
-        elements_by_name=top_level,
-        unresolved_types=unresolved_types,
-        mistyped=mistyped,
-    )
+    return unresolved_types, mistyped
 
 
 def _build_members(
