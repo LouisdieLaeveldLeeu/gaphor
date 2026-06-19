@@ -324,3 +324,36 @@ value types (`Boolean`, `String`, `Real`, `Integer`, `Natural`) in
 Boundary: this phase pins and verifies bytes only. It does not implement the
 KPAR reader, standard-library loader, or semantic resolution against the library;
 those remain the next completion phases.
+
+### Completion Phase 2: KPAR Reader Core (verified 2026-06-19)
+
+The read-only reader lives in `gaphor/SysML2/kpar/` (a forward-looking
+subpackage, since Phases 3/10/11 are also KPAR work). `read_kpar(path)` returns
+frozen dataclasses -- `KparArchive` with `KparProject` (from `.project.json`),
+`KparMeta` (from `.meta.json`, including the qualified-name->file `index`), and a
+deterministic, name-sorted tuple of `KparModelFile`s discovered by `.kerml`/
+`.sysml` extension under the single project directory.
+
+Decisions:
+
+- Error model is a typed exception hierarchy (`KparError` ->
+  `KparNotFoundError`, `KparNotAnArchiveError`, `KparLayoutError`,
+  `KparMetadataError`) rather than a diagnostics list. The reader either yields a
+  trustworthy inspection or fails loudly; that matches the "unknown structure
+  fails loudly" exit criterion and is distinct from the model-validation
+  diagnostics surface, which is a different concern.
+- Layout is validated strictly: exactly one `.project.json`, all real content
+  under its directory, descriptors parseable, `name` present. Anything else
+  raises.
+- Known-benign zip noise is the one explicit exception to "fail on anything
+  unexpected": `__MACOSX/` (macOS zip tooling, present in `Systems-Library.kpar`)
+  and `.DS_Store` are skipped and documented, never treated as model content or
+  as a stray-entry error. This is a deliberate, narrow allowlist, not silent
+  tolerance of arbitrary extra files.
+- A read-only `sysml2-kpar-info` CLI command was added (registered as a
+  `gaphor.argparsers` entry point) so the reader is observable from the command
+  line. It prints metadata and the model-file listing; it does not import.
+
+Boundary: this phase inspects archives only. It does not read or interpret model
+file *content*, load the standard library, or import user models -- those are
+Phases 3 and 10+.

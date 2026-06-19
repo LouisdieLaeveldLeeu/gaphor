@@ -90,7 +90,7 @@ manifest, are readable zip archives, and contain expected internal entries.
 Exit (reached): KPAR bytes are reproducible source artifacts. No semantic import
 yet.
 
-### Phase 2 -- KPAR Reader Core
+### Phase 2 -- KPAR Reader Core -- DONE
 
 Build a read-only KPAR archive reader:
 
@@ -101,8 +101,15 @@ Build a read-only KPAR archive reader:
 
 This phase inspects KPARs but does not import user models into Gaphor.
 
-Exit: pinned KPARs can be inspected deterministically; unknown structure fails
-loudly.
+Delivered as `gaphor/SysML2/kpar/` (a `read_kpar()` reader returning frozen
+`KparArchive`/`KparProject`/`KparMeta`/`KparModelFile` dataclasses, with a typed
+`KparError` hierarchy) plus a read-only `sysml2-kpar-info` CLI command. Benign
+zip noise (`__MACOSX/`, `.DS_Store`) is skipped explicitly; any other
+out-of-project entry, multi-project layout, missing/duplicate descriptor, or
+malformed JSON raises loudly. No model content is interpreted.
+
+Exit (reached): pinned KPARs can be inspected deterministically; unknown
+structure fails loudly.
 
 ### Phase 3 -- Standard Library Loader
 

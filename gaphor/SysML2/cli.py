@@ -143,6 +143,37 @@ def _run_round_trip(args: argparse.Namespace) -> int:
     return 0 if (result.preserved and result.valid) else ERROR_EXIT_CODE
 
 
+def _run_kpar_info(args: argparse.Namespace) -> int:
+    """Inspect a KPAR archive and print its metadata + model files (read-only).
+
+    This does not import the archive into Gaphor; it only reports what the
+    Phase 2 reader can determine. Malformed archives surface as a diagnostic and
+    a non-zero exit, never a silent success.
+    """
+    from gaphor.SysML2.kpar import KparError, read_kpar
+
+    try:
+        archive = read_kpar(Path(args.archive))
+    except KparError as exc:
+        print(f"kpar error: {exc}", file=sys.stderr)
+        return ERROR_EXIT_CODE
+
+    print(f"archive: {archive.path}")
+    print(f"project: {archive.project.name}")
+    if archive.project.version:
+        print(f"version: {archive.project.version}")
+    if archive.project.description:
+        print(f"description: {archive.project.description}")
+    if archive.meta.metamodel:
+        print(f"metamodel: {archive.meta.metamodel}")
+    for usage in archive.project.usage:
+        print(f"uses: {usage.resource}")
+    print(f"model files ({len(archive.model_files)}):")
+    for model_file in archive.model_files:
+        print(f"  {model_file.name}")
+    return 0
+
+
 def validate_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Validate SysML v2 text without importing it."
@@ -184,10 +215,20 @@ def round_trip_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def kpar_info_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Inspect a KPAR archive (read-only): metadata and model files."
+    )
+    parser.add_argument("archive", help="path to a .kpar archive")
+    parser.set_defaults(command=_run_kpar_info)
+    return parser
+
+
 def parser_names() -> Sequence[str]:
     return (
         "sysml2-validate",
         "sysml2-import",
         "sysml2-export",
         "sysml2-round-trip",
+        "sysml2-kpar-info",
     )

@@ -122,6 +122,7 @@ sysml2-validate = "gaphor.SysML2.cli:validate_parser"
 sysml2-import = "gaphor.SysML2.cli:import_parser"
 sysml2-export = "gaphor.SysML2.cli:export_parser"
 sysml2-round-trip = "gaphor.SysML2.cli:round_trip_parser"
+sysml2-kpar-info = "gaphor.SysML2.cli:kpar_info_parser"
 
 [project.entry-points."babel.extractors"]
 "gaphor" = "gaphor.babel:extract_gaphor"
