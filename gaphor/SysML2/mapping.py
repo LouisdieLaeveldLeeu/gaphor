@@ -292,7 +292,11 @@ def _resolve_type(
     scope: kerml.Namespace | None = namespace
     while scope is not None:
         found = kk.owned_member_named(scope, first)
-        if found is not None:
+        # Skip library value-type proxies: they are typing targets reached only
+        # through `_library_value_type`, not user-authored symbols. Binding to one
+        # here would make resolution declaration-order-dependent (a proxy created
+        # for an earlier usage would change how a later name resolves).
+        if found is not None and not _is_library_proxy(found):
             return _descend(found, rest)
         scope = kk.owning_namespace(scope)
     return None
@@ -305,9 +309,20 @@ def _descend(element: kerml.Element, segments: list[str]) -> kerml.Element | Non
         if not isinstance(current, kerml.Namespace):
             return None
         current = kk.owned_member_named(current, segment)
-        if current is None:
+        if current is None or _is_library_proxy(current):
             return None
     return current
+
+
+def _is_library_proxy(element: kerml.Element) -> bool:
+    """A read-only standard-library value-type proxy (a bare ``kerml.DataType``).
+
+    User constructs are SysML2 subclasses (AttributeDefinition, ...) or KerML
+    Packages; only the value-type proxies materialized by `_value_type_proxy` are
+    bare DataTypes. They are excluded from name resolution so user-symbol lookup
+    is independent of whether/when a proxy was created.
+    """
+    return type(element) is kerml.DataType
 
 
 @lru_cache(maxsize=1)

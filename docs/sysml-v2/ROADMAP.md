@@ -276,41 +276,66 @@ promoted to `supported`; `test_attribute_value_typing.py` covers the full chain.
 Exit (reached): AttributeUsage is no longer capped on the standard-library
 dependency.
 
-### Phase 5 -- Deeper Name Resolution -- DONE
+### Phase 5 -- Deeper Name Resolution (Enclosing-Namespace Lookup) -- DONE
 
-Replace the current scoped resolver with the planned resolver:
+Originally this phase listed the full planned resolver (imports, inherited
+members, visibility, aliases, implicit specialization, feature chains, ambiguity
+diagnostics). Those each need new grammar **and** a semantic contract that does
+not exist yet, so they cannot be authored or tested today; they have been
+**formally replanned** into the named follow-up phases 5a-5e below. Phase 5 itself
+is re-scoped to the part that is reachable with the current grammar:
 
-- unqualified lookup through owner namespaces;
-- imports and imported memberships;
-- inherited members;
-- visibility;
-- aliases;
-- implicit specialization;
-- feature chains;
-- diagnostics for ambiguous and unresolved names.
+- a (qualified) type name's first segment is resolved by walking outward from the
+  usage's own namespace through each enclosing namespace to the model root, the
+  nearest declaration winning (inner scopes shadow outer ones); the remaining
+  `::` segments are then navigated as members;
+- enclosing-package lookup and relative-qualified names (e.g. a sibling
+  `A::Engine`) now resolve, beyond the old same-namespace / root-qualified scope;
+- unresolved names remain explicit diagnostics; standard-library value-type
+  proxies are excluded from name resolution, so resolution is independent of
+  declaration order;
+- the unused `kerml_kernel.featuring_types()` raising surface is retired.
 
-Implement or retire the public raising surface for `kerml_kernel.featuring_types()`
-as part of this phase.
-
-Delivered (scoped to the grammar that exists today): `mapping._resolve_type` now
-resolves a (qualified) type name **nearest-first across enclosing namespaces** --
-walking outward from the usage's own namespace through each enclosing namespace to
-the model root, the nearest declaration winning (inner scopes shadow outer ones),
-then navigating the remaining qualified segments. This adds enclosing-namespace
-lookup and relative-qualified names (e.g. a sibling `A::Engine`) on top of the old
-same-namespace / root-qualified scope. Unresolved names stay explicit diagnostics.
-`kerml_kernel.featuring_types()` was **retired** (unused, and unimplementable
-without TypeFeaturing wiring).
-
-Deferred to dedicated follow-up phases (each needs new grammar **and** a semantic
-contract that does not exist yet, so they are unreachable/untestable today):
-imports and imported memberships, aliases, inherited members, visibility, implicit
-specialization, feature chains, and the ambiguity diagnostics those introduce
-(within the current grammar, nearest-first resolution is deterministic, so there
-is no reachable ambiguity to report).
+Within the current grammar nearest-first resolution is deterministic, so there is
+no reachable ambiguity to report; ambiguity diagnostics land with imports
+(Phase 5a).
 
 Exit (reached): the resolver is no longer limited to same-namespace and simple
 root-qualified names for the grammar we support today.
+
+### Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- PLANNED
+
+Add `import` (and `public`/`private` visibility) syntax and resolve names through
+imported memberships, honouring visibility, with ambiguity diagnostics when a
+name is visible from more than one import. Prerequisite: grammar for import
+statements and member visibility, plus the imported-membership/visibility
+semantic contract. Exit: imported names resolve with visibility and ambiguity
+reporting.
+
+### Phase 5b -- Aliases -- PLANNED
+
+Add alias declarations and resolve a name through its alias to the aliased
+element. Prerequisite: alias grammar + the alias-membership semantic contract.
+Exit: an alias resolves to its target wherever the target would resolve.
+
+### Phase 5c -- Inherited Members -- PLANNED
+
+Resolve members inherited through specialization (a feature/member reachable via
+a supertype). Prerequisite: definition bodies (members nested in definitions) in
+the grammar so inheritance is authorable, plus the inheritance-resolution
+contract. Exit: inherited members resolve from a specializing type.
+
+### Phase 5d -- Implicit Specialization -- PLANNED
+
+Apply KerML implicit specialization where the normative model requires it.
+Prerequisite: the implicit-specialization semantic contract (and any grammar it
+implies). Exit: implicit specializations participate in resolution per the spec.
+
+### Phase 5e -- Feature Chains -- PLANNED
+
+Add feature-chain syntax (`a.b.c`) and resolve a chain step-by-step through
+feature types. Prerequisite: feature-chain grammar + the chain-resolution
+contract. Exit: feature chains resolve along their feature types.
 
 ### Phase 6 -- Constraint And Requirement Semantics
 
@@ -429,10 +454,15 @@ environment-only ambiguity.
 10. Phase 8
 11. Phase 6
 12. Phase 7
-13. Phase 10
-14. Phase 11
-15. Phase 12
-16. Phase 13
+13. Phase 5a
+14. Phase 5b
+15. Phase 5c
+16. Phase 5d
+17. Phase 5e
+18. Phase 10
+19. Phase 11
+20. Phase 12
+21. Phase 13
 
 Rationale: the project now intentionally resolves KPAR import architecture
 before standard-library/value-type promotion. Phase 3a prevents import identity,

@@ -188,6 +188,30 @@ def test_set_attribute_library_type_rejects_abstract_library_type():
         set_attribute_library_type(usage, "ScalarValue")  # abstract base
 
 
+def test_library_proxy_does_not_leak_into_name_resolution():
+    # A proxy created for an earlier attribute must not become a resolvable symbol
+    # for a later usage: `part p : Real` stays UNRESOLVED (a PartUsage cannot be
+    # typed by a value type), not mistyped, even though `attribute a : Real`
+    # already materialized the Real proxy.
+    factory, result = _map(
+        "package A { attribute a : Real; package B { part p : Real; } }"
+    )
+    p = next(u for u in factory.select(sysml2.PartUsage) if u.declaredName == "p")
+    assert p.id in result.unresolved_types
+    assert p.id not in result.mistyped
+
+
+def test_part_typed_by_library_name_unresolved_regardless_of_order():
+    # Diagnostics must not depend on declaration order / proxy creation.
+    f1, r1 = _map("package A { package B { part p : Real; } }")
+    f2, r2 = _map("package A { attribute a : Real; package B { part p : Real; } }")
+    p1 = next(iter(f1.select(sysml2.PartUsage)))
+    p2 = next(iter(f2.select(sysml2.PartUsage)))
+    assert p1.id in r1.unresolved_types
+    assert p2.id in r2.unresolved_types
+    assert p1.id not in r1.mistyped and p2.id not in r2.mistyped
+
+
 def test_library_value_type_names_lists_concrete_types():
     from gaphor.SysML2.mapping import library_value_type_names
 

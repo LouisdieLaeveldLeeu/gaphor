@@ -597,13 +597,22 @@ remaining `::` segments as members from that match.
   within the enclosing package) on top of the old same-namespace / root-qualified
   scope, and gives inner scopes shadowing over outer ones. It is the reachable,
   testable part of the planned resolver for the current grammar.
-- **Deferred (documented as follow-up phases).** Imports and imported memberships,
-  aliases, inherited members, visibility, implicit specialization, and feature
-  chains are NOT implemented: each needs new grammar syntax AND a semantic
-  contract, so they are unauthorable/untestable today. Ambiguity diagnostics go
-  with them -- within the current grammar, nearest-first resolution is
-  deterministic, so there is no reachable ambiguity to report (duplicate names in
-  one namespace are already a separate validation rule).
+- **Proxy exclusion (order-independence).** Standard-library value-type proxies
+  (bare `kerml.DataType`s materialized by Phase 4) are excluded from name
+  resolution, so a proxy created for an earlier usage cannot change how a later
+  name resolves. Without this, `package A { attribute a : Real; package B { part
+  p : Real; } }` would make `p` *mistyped* (it would bind to the Real proxy)
+  while the same model without the attribute leaves `p` *unresolved* -- diagnostics
+  must not depend on declaration order.
+- **Deferred (formally replanned as named phases 5a-5e).** Imports/imported
+  memberships + visibility + ambiguity diagnostics (5a), aliases (5b), inherited
+  members (5c), implicit specialization (5d), and feature chains (5e) are NOT
+  implemented: each needs new grammar syntax AND a semantic contract, so they are
+  unauthorable/untestable today and are now named PLANNED phases in the roadmap
+  with prerequisites and exits, rather than a vague deferral. Within the current
+  grammar, nearest-first resolution is deterministic, so there is no reachable
+  ambiguity to report yet (duplicate names in one namespace are a separate
+  validation rule).
 - **featuring_types retired.** `kerml_kernel.featuring_types()` was a raising stub
   with no implementation (no TypeFeaturing wiring) and no caller, so it was
   removed rather than kept as dead surface. It returns as a real derivation if a
