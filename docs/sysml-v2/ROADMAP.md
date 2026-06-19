@@ -112,10 +112,18 @@ malformed JSON raises loudly. No model content is interpreted.
 Exit (reached): pinned KPARs can be inspected deterministically; unknown
 structure fails loudly.
 
-### Phase 3a -- KPAR Import Design Contract
+### Phase 3a -- KPAR Import Design Contract -- DONE
 
 Decide the import semantics before materializing KPAR content as Gaphor model
 state. This is a design/contract phase, not a broad parser implementation.
+
+Delivered as `docs/sysml-v2/KPAR_IMPORT_CONTRACT.md`, anchored by
+`gaphor/SysML2/tests/test_kpar_import_contract.py` and a static existence gate.
+Ratified decisions: ElementFactory-backed read-only library elements regenerated
+from the pinned KPAR on load (not persisted into `.gaphor`); subset-import with
+explicit unresolved/diagnostic records and never silent loss; a Python-API-only
+entry surface for 3b; and a closed-world dependency policy over the pinned
+artifacts (minimal closure; missing required dependency fails the import).
 
 Decisions to settle and document:
 
@@ -136,9 +144,9 @@ Decisions to settle and document:
 - API/CLI/UI boundary: which import entry points are in scope for the first
   implementation and which remain later.
 
-Exit: a committed design contract and tests/fixtures for the selected invariants
-where possible; no imported semantic content yet unless the design phase is
-explicitly split and reviewed.
+Exit (reached): a committed design contract and tests/fixtures for the selected
+invariants where possible; no imported semantic content yet unless the design
+phase is explicitly split and reviewed.
 
 ### Phase 3b -- Minimal Normative Library Import
 

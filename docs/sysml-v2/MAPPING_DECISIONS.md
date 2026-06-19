@@ -400,3 +400,28 @@ The new track is:
 
 AttributeUsage promotion now depends on this imported normative-library path, not
 on a separate pre-import library index.
+
+### Completion Phase 3a: KPAR Import Design Contract (committed 2026-06-19)
+
+The contract is committed as `docs/sysml-v2/KPAR_IMPORT_CONTRACT.md` (the
+authoritative document) and anchored mechanically by
+`gaphor/SysML2/tests/test_kpar_import_contract.py` plus a static existence gate.
+No importer code or imported semantic content lands in this phase; no
+support-matrix cell moves.
+
+Ratified decisions (see the contract for the full text):
+
+- **Representation/storage:** imported normative-library content is materialized
+  as real read-only KerML kernel elements in a dedicated library ElementFactory
+  that is regenerated from the pinned KPAR on load, and is *not* persisted into
+  the user's `.gaphor`.
+- **Identity:** Gaphor `Base.id` stays internal; canonical library identity is
+  the fully-qualified KerML name plus KPAR provenance; no API id minted yet.
+- **Dependency closure:** closed-world over `docs/sysml-v2/omg/20250201`; never
+  fetches; resolves `usage` only to pinned artifacts; imports the minimal closure
+  the targeted declarations need; a missing required dependency fails the import.
+- **Unsupported syntax:** subset-import with explicit unresolved/diagnostic
+  records, never silent loss.
+- **Entry points:** Phase 3b is Python-API-only; CLI/UI deferred to Phase 3c.
+- **Provenance:** every imported element/reference traces to a pinned KPAR
+  (path, SHA-256, member, declaration text, span when available).
