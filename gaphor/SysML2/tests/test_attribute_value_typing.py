@@ -155,6 +155,25 @@ def test_set_attribute_library_type_rejects_non_library_name():
     assert not [e for e in factory.select(kerml.DataType) if type(e) is kerml.DataType]
 
 
+def test_set_attribute_library_type_rejects_non_attribute_usage():
+    import pytest
+
+    from gaphor.SysML2.mapping import set_attribute_library_type
+
+    factory = ElementFactory()
+    root = factory.create(kerml.Namespace)
+    part = factory.create(sysml2.PartUsage)
+    part.declaredName = "p"
+    kk.add_owned_member(root, part, factory.create(kerml.OwningMembership))
+
+    with pytest.raises(TypeError):
+        set_attribute_library_type(part, "Real")
+
+    # No typing or proxy was created on the wrong usage kind.
+    assert kk.feature_type(part) is None
+    assert not [e for e in factory.select(kerml.DataType) if type(e) is kerml.DataType]
+
+
 def test_set_attribute_library_type_rejects_abstract_library_type():
     import pytest
 

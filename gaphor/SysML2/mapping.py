@@ -347,11 +347,18 @@ def set_attribute_library_type(
 
     Materializes (or reuses) the read-only value-type proxy at the usage's model
     root and sets the FeatureTyping, the same representation the text mapper uses.
-    `simple_name` is validated against the pinned library and must name a concrete
-    value type (e.g. "Real", or "ScalarValues::Real"); anything else raises
-    `ValueError` without mutating the model, so the API cannot mint arbitrary
-    non-library proxies.
+    `usage` must be a SysML2 AttributeUsage (library value typing applies only to
+    attributes); anything else raises `TypeError`. `simple_name` is validated
+    against the pinned library and must name a concrete value type (e.g. "Real",
+    or "ScalarValues::Real"); anything else raises `ValueError`. Both checks run
+    before any mutation, so the API can neither type a non-attribute by a value
+    type nor mint arbitrary non-library proxies.
     """
+    if not isinstance(usage, sysml2.AttributeUsage):
+        raise TypeError(
+            "library value typing applies to AttributeUsage, not "
+            f"{type(usage).__name__}"
+        )
     element = _standard_library().resolve(simple_name)
     if not isinstance(element, kerml.DataType) or element.isAbstract:
         raise ValueError(
