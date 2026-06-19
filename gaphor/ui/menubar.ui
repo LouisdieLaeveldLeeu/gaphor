@@ -24,6 +24,9 @@
         </item>
       </section>
       <section>
+        <link name="section" id="import-menu"/>
+      </section>
+      <section>
         <link name="section" id="export-menu"/>
       </section>
     </submenu>

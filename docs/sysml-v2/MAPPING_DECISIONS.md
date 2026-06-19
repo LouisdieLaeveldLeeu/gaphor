@@ -505,3 +505,34 @@ imports a *user* KPAR project through the existing SysML2 text pipeline, with a
 - **Deferred (recorded, not claimed):** duplicate-import and version-conflict
   diagnostics, which only arise when re-importing into an already-populated user
   model -- a re-import/merge concern beyond this single-project import slice.
+
+### Completion Phase 3d: GUI KPAR Import (verified 2026-06-19)
+
+The Phase 3c importer is exposed in the UI via the `gaphor/plugins/sysml2kparimport/`
+plugin (`SysML2KparImport`), registered as the `sysml2_kpar_import` service and
+adding **File -> Import -> Import KPAR Project…** through a new `import_menu`
+menu fragment.
+
+- **Plugin, not modeling-language code.** The service bridges `gaphor.ui` (file
+  dialog, menus, Adw dialogs) and the SysML2 importer. The architecture rules
+  forbid `gaphor.SysML*` from importing `gaphor.ui` (beyond `filedialog`/
+  `errordialog`), so the GUI service lives in `plugins/` like `diagramexport`,
+  while the pure importer stays in `gaphor/SysML2/kpar/`.
+- **Import into the current model.** Importing adds the KPAR's content to the
+  open model's ElementFactory as ordinary editable, undoable elements (reusing
+  `import_user_kpar`), wrapped in one `Transaction`.
+- **Confirm-or-cancel on validation errors.** A first pass imports and, if there
+  are validation errors, removes the just-imported subtree (`result.root.unlink()`,
+  whose composite containment cascades) and asks the user; on confirm it
+  re-imports with `allow_invalid=True`. Subtree removal is used instead of
+  transaction rollback so it does not depend on an undo manager being active and
+  only ever touches this import's content. Mirrors the CLI's refuse-by-default +
+  `--allow-invalid`.
+- **Diagnostics without losing detail.** A summary toast plus an Adw details
+  dialog listing rejected members, unresolved references, validation errors, and
+  external dependencies.
+- **Testability.** The import core (`import_into_model`) is GTK-free and tested
+  headless (commit, refuse-removes-subtree, refusal-preserves-existing-content,
+  allow-invalid, malformed-archive, action/menu registration). The file chooser
+  and dialogs are the thin GUI layer. The menu wiring spans `menubar.ui`,
+  `mainwindow.ui` (hamburger), and the app menu hooks in `gaphor/ui/__init__.py`.

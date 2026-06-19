@@ -63,6 +63,7 @@ class MainWindow(Service, ActionProvider):
         properties,
         modeling_language,
         export_menu,
+        import_menu,
         tools_menu,
     ):
         self.event_manager = event_manager
@@ -70,6 +71,7 @@ class MainWindow(Service, ActionProvider):
         self.properties = properties
         self.modeling_language = modeling_language
         self.export_menu = export_menu
+        self.import_menu = import_menu
         self.tools_menu = tools_menu
 
         self._builder: Gtk.Builder | None = new_builder()
@@ -161,6 +163,9 @@ class MainWindow(Service, ActionProvider):
         if macos_menubar():
             builder.get_object("hamburger-menu-button").unparent()
         else:
+            builder.get_object("import-menu").append_submenu(
+                gettext("Import"), self.import_menu.menu
+            )
             builder.get_object("export-menu").append_submenu(
                 gettext("Export"), self.export_menu.menu
             )
@@ -321,6 +326,7 @@ class MainWindow(Service, ActionProvider):
 
     def _on_window_active(self, window, _prop):
         app = window.get_application()
+        app.update_menu("import", self.import_menu.menu)
         app.update_menu("export", self.export_menu.menu)
         app.update_menu("tools", self.tools_menu.menu)
         self.event_manager.handle(ActiveSessionChanged(self))

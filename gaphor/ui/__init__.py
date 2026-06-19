@@ -199,6 +199,7 @@ class UIApplication(Adw.Application):
             )
             self.set_accels_for_action("selection.unselect-all", ["<Meta><Shift>a"])
 
+        self._menus["import"] = (gettext("Import"), builder.get_object("import-menu"))
         self._menus["export"] = (gettext("Export"), builder.get_object("export-menu"))
         self._menus["tools"] = (gettext("Tools"), builder.get_object("tools-menu"))
 

@@ -213,7 +213,7 @@ a re-import/merge concern beyond this self-contained single-project import slice
 Exit (reached): KPAR import is a supported capability for the implemented SysML2
 surface (self-contained projects; CLI + Python API).
 
-### Phase 3d -- GUI KPAR Import
+### Phase 3d -- GUI KPAR Import -- DONE
 
 Expose the proven KPAR importer through Gaphor's GUI import flow.
 
@@ -228,8 +228,22 @@ Work:
 - preserve the same semantics as the Python API and CLI;
 - add headless/service-level tests where possible, plus focused GUI smoke tests.
 
-Exit: users can import supported KPAR projects from the Gaphor UI with the same
-diagnostic and preservation behavior as the CLI/API.
+Delivered as the `gaphor/plugins/sysml2kparimport/` plugin (`SysML2KparImport`, a
+`Service`/`ActionProvider` registered as the `sysml2_kpar_import` service). It
+lives in `plugins/` rather than `gaphor/SysML2/` because it bridges the UI and
+the modeling language, and the architecture rules forbid a modeling-language
+package from depending on `gaphor.ui` (beyond `filedialog`/`errordialog`). A new
+`import_menu` fragment adds **File -> Import -> Import KPAR Project…** to the
+menu bar. Importing adds the user KPAR's content to the *current* model as
+editable, undoable elements (reusing the Phase 3c `import_user_kpar`); validation
+errors trigger a confirm-or-cancel dialog (cancel removes the just-imported
+subtree, mirroring the CLI's refuse-by-default + `--allow-invalid`); rejected
+members, unresolved references, and validation errors are surfaced via a summary
+toast plus a details dialog. The GTK-free import core (`import_into_model`) is
+unit-tested headless; the file chooser and dialogs are the thin GUI layer.
+
+Exit (reached): users can import supported KPAR projects from the Gaphor UI with
+the same diagnostic and preservation behavior as the CLI/API.
 
 ### Phase 4 -- AttributeUsage Promotion
 

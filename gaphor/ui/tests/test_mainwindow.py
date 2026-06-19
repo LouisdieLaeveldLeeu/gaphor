@@ -16,6 +16,7 @@ def session():
             "element_editor",
             "event_manager",
             "export_menu",
+            "import_menu",
             "component_registry",
             "element_factory",
             "main_window",

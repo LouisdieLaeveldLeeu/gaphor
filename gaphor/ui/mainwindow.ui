@@ -271,6 +271,9 @@
         <attribute name="action">win.file-save-as</attribute>
       </item>
       <item>
+        <link name="section" id="import-menu"/>
+      </item>
+      <item>
         <link name="section" id="export-menu"/>
       </item>
     </section>
