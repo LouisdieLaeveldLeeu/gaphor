@@ -86,6 +86,14 @@ def test_inspection_is_deterministic():
     assert read_kpar(DATA_TYPE) == read_kpar(DATA_TYPE)
 
 
+def test_meta_index_is_read_only():
+    # The frozen result contract must hold for the nested index too: a caller
+    # cannot mutate it.
+    archive = read_kpar(DATA_TYPE)
+    with pytest.raises(TypeError):
+        archive.meta.index["Injected"] = "Injected.kerml"
+
+
 # --- Diagnostics on malformed/unsupported archives --------------------------
 
 
@@ -144,6 +152,16 @@ def test_project_without_name_raises_metadata(tmp_path):
     with zipfile.ZipFile(archive, "w") as zf:
         zf.writestr("Lib/.project.json", json.dumps({"version": "1.0.0"}))
         zf.writestr("Lib/.meta.json", json.dumps({"index": {}}))
+    with pytest.raises(KparMetadataError):
+        read_kpar(archive)
+
+
+def test_non_string_index_entry_raises_metadata(tmp_path):
+    # A malformed index must fail loudly, not be silently coerced to strings.
+    archive = tmp_path / "badindex.kpar"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("Lib/.project.json", json.dumps({"name": "Lib"}))
+        zf.writestr("Lib/.meta.json", json.dumps({"index": {"X": 12}}))
     with pytest.raises(KparMetadataError):
         read_kpar(archive)
 

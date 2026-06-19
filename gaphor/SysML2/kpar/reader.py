@@ -23,6 +23,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
 PROJECT_DESCRIPTOR = ".project.json"
@@ -198,7 +199,18 @@ def _read_meta(zf: ZipFile, path: Path, root: str) -> KparMeta:
     index_raw = data.get("index", {})
     if not isinstance(index_raw, dict):
         raise KparMetadataError(f"{path}: {META_DESCRIPTOR} 'index' is not an object")
-    index = {str(k): str(v) for k, v in sorted(index_raw.items())}
+    # Fail loud on a malformed index rather than coercing: the index maps
+    # qualified names to member files and later phases resolve against it.
+    if any(
+        not isinstance(key, str) or not isinstance(value, str)
+        for key, value in index_raw.items()
+    ):
+        raise KparMetadataError(
+            f"{path}: {META_DESCRIPTOR} 'index' must map strings to strings"
+        )
+    # MappingProxyType keeps the result genuinely read-only (the frozen
+    # dataclass alone does not stop callers mutating a plain dict field).
+    index = MappingProxyType(dict(sorted(index_raw.items())))
     return KparMeta(
         index=index,
         created=_opt_str(data.get("created")),
