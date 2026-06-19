@@ -125,7 +125,7 @@ explicit unresolved/diagnostic records and never silent loss; a Python-API-only
 entry surface for 3b; and a closed-world dependency policy over the pinned
 artifacts (minimal closure; missing required dependency fails the import).
 
-Decisions to settle and document:
+Resolved decision areas (the binding policy for each is in the contract):
 
 - identity: Gaphor `Base.id`, source KPAR identity, API-facing ids if present,
   and canonical identity for imported libraries;
