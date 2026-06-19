@@ -74,6 +74,10 @@ class MappingResult:
     # usage element id -> (declared type name, resolved-type kind name) for a type
     # that resolved but is the WRONG kind for the usage (cross-kind typing).
     mistyped: dict[str, tuple[str, str]] = field(default_factory=dict)
+    # relationship element id -> source element id for relationships the mapper
+    # creates from a source declaration (currently FeatureTyping from typed
+    # usages). Importers can use this to inherit provenance from the declaration.
+    relationship_sources: dict[str, str] = field(default_factory=dict)
 
 
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
@@ -83,15 +87,18 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     # Phase 1: build the whole ownership tree (definitions, usages, nested
     # packages) so every name exists before any type is resolved. Records each
     # typed usage with its owning namespace for phase 2.
-    typed_usages: list[tuple[sysml2.PartUsage, kerml.Namespace, tuple[str, ...]]] = []
+    typed_usages: list[tuple[kerml.Feature, kerml.Namespace, tuple[str, ...]]] = []
     top_level = _build_members(pkg.members, root, factory, typed_usages)
 
-    unresolved_types, mistyped = _resolve_typed_usages(root, typed_usages)
+    unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
+        root, typed_usages
+    )
     return MappingResult(
         root=root,
         elements_by_name=top_level,
         unresolved_types=unresolved_types,
         mistyped=mistyped,
+        relationship_sources=relationship_sources,
     )
 
 
@@ -118,7 +125,7 @@ def map_project_members(named_packages, factory: ElementFactory):
     line to trace each imported element back to its declaration.
     """
     root = factory.create(kerml.Namespace)
-    typed_usages: list[tuple[sysml2.PartUsage, kerml.Namespace, tuple[str, ...]]] = []
+    typed_usages: list[tuple[kerml.Feature, kerml.Namespace, tuple[str, ...]]] = []
     top_level: dict[str, kerml.Element] = {}
     provenance: dict[str, tuple] = {}
     for label, pkg in named_packages:
@@ -130,13 +137,19 @@ def map_project_members(named_packages, factory: ElementFactory):
             _build_members(pkg.members, root, factory, typed_usages, record)
         )
 
-    unresolved_types, mistyped = _resolve_typed_usages(root, typed_usages)
+    unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
+        root, typed_usages
+    )
+    for relationship_id, source_id in relationship_sources.items():
+        if source_id in provenance:
+            provenance[relationship_id] = provenance[source_id]
     return (
         MappingResult(
             root=root,
             elements_by_name=top_level,
             unresolved_types=unresolved_types,
             mistyped=mistyped,
+            relationship_sources=relationship_sources,
         ),
         provenance,
     )
@@ -144,7 +157,7 @@ def map_project_members(named_packages, factory: ElementFactory):
 
 def _resolve_typed_usages(
     root: kerml.Namespace, typed_usages: list
-) -> tuple[dict[str, str], dict[str, tuple[str, str]]]:
+) -> tuple[dict[str, str], dict[str, tuple[str, str]], dict[str, str]]:
     """Resolve usage typing for the collected usages (mapping phase 2).
 
     A simple name resolves in the usage's own namespace; a qualified name resolves
@@ -155,15 +168,18 @@ def _resolve_typed_usages(
     """
     unresolved_types: dict[str, str] = {}
     mistyped: dict[str, tuple[str, str]] = {}
+    relationship_sources: dict[str, str] = {}
     for usage, namespace, type_name in typed_usages:
         target = _resolve_type(root, namespace, type_name)
         if not isinstance(target, kerml.Type):
             unresolved_types[usage.id] = "::".join(type_name)
         elif type_matches_usage_kind(usage, target):
-            _set_type(usage, target)
+            typing = _set_type(usage, target)
+            if typing is not None:
+                relationship_sources[typing.id] = usage.id
         else:
             mistyped[usage.id] = ("::".join(type_name), type(target).__name__)
-    return unresolved_types, mistyped
+    return unresolved_types, mistyped, relationship_sources
 
 
 def _build_members(
@@ -256,7 +272,9 @@ def _resolve_type(
     return kk.resolve_in_namespace(root, "::".join(type_name))
 
 
-def _set_type(usage: kerml.Feature, definition: kerml.Type) -> None:
+def _set_type(
+    usage: kerml.Feature, definition: kerml.Type
+) -> kerml.FeatureTyping | None:
     """Record that `usage` is typed by `definition` via a KerML FeatureTyping.
 
     Ownership follows KerML: the FeatureTyping is owned by the typed feature
@@ -265,4 +283,4 @@ def _set_type(usage: kerml.Feature, definition: kerml.Type) -> None:
     spine -- deleting the usage cascades to the typing -- while the definition is
     only the non-owning `type` target and is never cascade-deleted.
     """
-    kk.set_feature_type(usage, definition)
+    return kk.set_feature_type(usage, definition)

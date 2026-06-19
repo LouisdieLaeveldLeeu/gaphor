@@ -134,6 +134,20 @@ def test_imported_elements_carry_per_element_provenance(tmp_path):
     assert by_qname["e"].declaration == "part e : Engine;"
 
 
+def test_resolved_typing_relationship_carries_provenance(tmp_path):
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(archive, {"V.sysml": "part def Engine;\npart e : Engine;"})
+
+    result = import_user_kpar(archive)
+
+    typing = next(iter(result.factory.select(kerml.FeatureTyping)))
+    prov = result.provenance_of(typing)
+    assert prov is not None
+    assert prov.member == f"{ROOT_DIR}/V.sysml"
+    assert prov.line == 2
+    assert prov.declaration == "part e : Engine;"
+
+
 def test_nested_elements_carry_provenance(tmp_path):
     archive = tmp_path / "proj.kpar"
     _write_user_kpar(

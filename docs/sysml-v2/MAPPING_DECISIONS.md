@@ -497,7 +497,8 @@ imports a *user* KPAR project through the existing SysML2 text pipeline, with a
   names) unless `--allow-invalid` is passed -- matching the single-file
   `sysml2-import` policy.
 - **Per-element/reference provenance.** The grammar now records each
-  declaration's source line, so every imported element (including nested ones)
+  declaration's source line, so every imported element (including nested ones),
+  every relationship created from a declaration (for example `FeatureTyping`),
   and every unresolved reference traces to its source member, declaration text,
   and line. Provenance is metadata only; imported content stays editable.
 - **Entry points.** Python API + `sysml2-kpar-import` CLI; GUI import is Phase 3d.
