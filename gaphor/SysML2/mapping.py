@@ -166,8 +166,8 @@ def _resolve_typed_usages(
 ) -> tuple[dict[str, str], dict[str, tuple[str, str]], dict[str, str]]:
     """Resolve usage typing for the collected usages (mapping phase 2).
 
-    A simple name resolves in the usage's own namespace; a qualified name resolves
-    from the root. A name that does not resolve in the user model is, for an
+    Name resolution is nearest-first across enclosing namespaces (see
+    `_resolve_type`). A name that does not resolve in the user model is, for an
     AttributeUsage, tried against the standard library (e.g. `attribute x : Real`);
     otherwise it is recorded as unresolved. A name that resolves to the WRONG kind
     is recorded as mistyped. Only a kind match creates the FeatureTyping, so
@@ -177,7 +177,7 @@ def _resolve_typed_usages(
     mistyped: dict[str, tuple[str, str]] = {}
     relationship_sources: dict[str, str] = {}
     for usage, namespace, type_name in typed_usages:
-        target = _resolve_type(root, namespace, type_name)
+        target = _resolve_type(namespace, type_name)
         # Only fall back to the standard library when the name resolves to
         # NOTHING in the user model. A user name that resolves to a non-Type
         # (e.g. a local `package Real`) shadows the library and stays
@@ -272,18 +272,42 @@ def _build_members(
 
 
 def _resolve_type(
-    root: kerml.Namespace,
-    namespace: kerml.Namespace,
-    type_name: tuple[str, ...],
+    namespace: kerml.Namespace, type_name: tuple[str, ...]
 ) -> kerml.Element | None:
-    """Resolve a (qualified) type name. M2-scoped: a simple name resolves in the
-    usage's own namespace; a qualified name resolves from the root. No
-    inheritance, visibility, aliases, or feature chains."""
-    if len(type_name) == 1:
-        return kk.owned_member_named(namespace, type_name[0])
-    # Qualified name: resolve relative to the implicit root (its first segment
-    # is a top-level member, e.g. Vehicles::Engine).
-    return kk.resolve_in_namespace(root, "::".join(type_name))
+    """Resolve a (qualified) type name with nearest-first scoping.
+
+    The first segment is looked up by walking outward from the usage's own
+    namespace through each enclosing namespace to the model root; the nearest
+    declaration wins (an inner scope shadows an outer one). The remaining
+    segments are then navigated as members from that match. This resolves names
+    declared in enclosing packages and relative-qualified names (e.g. a sibling
+    `A::Engine` referenced from within the same enclosing package), not only
+    same-namespace names and root-qualified names.
+
+    Deferred to follow-up phases (they need grammar/semantic support that does
+    not exist yet): imports and imported memberships, aliases, inherited members,
+    visibility, implicit specialization, and feature chains.
+    """
+    first, *rest = type_name
+    scope: kerml.Namespace | None = namespace
+    while scope is not None:
+        found = kk.owned_member_named(scope, first)
+        if found is not None:
+            return _descend(found, rest)
+        scope = kk.owning_namespace(scope)
+    return None
+
+
+def _descend(element: kerml.Element, segments: list[str]) -> kerml.Element | None:
+    """Navigate qualified `segments` as members from a resolved first match."""
+    current: kerml.Element | None = element
+    for segment in segments:
+        if not isinstance(current, kerml.Namespace):
+            return None
+        current = kk.owned_member_named(current, segment)
+        if current is None:
+            return None
+    return current
 
 
 @lru_cache(maxsize=1)

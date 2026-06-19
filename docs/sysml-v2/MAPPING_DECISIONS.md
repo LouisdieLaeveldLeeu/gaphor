@@ -583,3 +583,30 @@ AttributeUsage is promoted from `alpha` to `supported`.
   library bases (ScalarValue, NumericalValue, Number) are not offered; per-element
   KPAR-span provenance for proxies is by qualified name (verifiable against the
   pinned library), not a stored span.
+
+### Completion Phase 5: Deeper Name Resolution (verified 2026-06-19)
+
+`mapping._resolve_type` was replaced with a **nearest-first, enclosing-namespace**
+resolver. It looks up a (qualified) type name's first segment by walking outward
+from the usage's own namespace through each enclosing namespace to the model root
+(`kk.owning_namespace`), the nearest declaration winning, then navigates the
+remaining `::` segments as members from that match.
+
+- **Scope decision (matches the grammar we support).** This adds enclosing-package
+  lookup and relative-qualified names (e.g. a sibling `A::Engine` referenced from
+  within the enclosing package) on top of the old same-namespace / root-qualified
+  scope, and gives inner scopes shadowing over outer ones. It is the reachable,
+  testable part of the planned resolver for the current grammar.
+- **Deferred (documented as follow-up phases).** Imports and imported memberships,
+  aliases, inherited members, visibility, implicit specialization, and feature
+  chains are NOT implemented: each needs new grammar syntax AND a semantic
+  contract, so they are unauthorable/untestable today. Ambiguity diagnostics go
+  with them -- within the current grammar, nearest-first resolution is
+  deterministic, so there is no reachable ambiguity to report (duplicate names in
+  one namespace are already a separate validation rule).
+- **featuring_types retired.** `kerml_kernel.featuring_types()` was a raising stub
+  with no implementation (no TypeFeaturing wiring) and no caller, so it was
+  removed rather than kept as dead surface. It returns as a real derivation if a
+  later phase wires TypeFeaturing and a consumer needs it.
+- **No support-matrix cell moves**: this deepens resolution for already-`supported`
+  constructs; no new claim is made.

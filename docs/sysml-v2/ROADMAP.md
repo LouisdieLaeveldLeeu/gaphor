@@ -37,9 +37,11 @@ tests.
   interface, and flow-direction semantics).
 - SysML ConnectionDefinition, ConnectionUsage: `alpha` (all nine cells for the
   declaration-and-typing surface; capped on connector-end semantics).
-- Resolution scope so far: same-namespace plus simple/nested qualified names,
-  including cross-package lookup. Inheritance, visibility, aliases, imports beyond
-  the simple cases, and feature chains remain planned work.
+- Resolution scope so far: nearest-first lookup across enclosing namespaces
+  (Phase 5) -- same-namespace, enclosing-package, relative-qualified, and
+  root-qualified names, with inner scopes shadowing outer ones. Imports, aliases,
+  inherited members, visibility, implicit specialization, and feature chains
+  remain planned follow-up work (they need new grammar and semantics).
 - KPAR is now in completion scope. General KPAR import is the next architectural
   track after the read-only reader: first a design contract, then minimal
   normative-library import, then general user KPAR import. Standard-library
@@ -274,7 +276,7 @@ promoted to `supported`; `test_attribute_value_typing.py` covers the full chain.
 Exit (reached): AttributeUsage is no longer capped on the standard-library
 dependency.
 
-### Phase 5 -- Deeper Name Resolution
+### Phase 5 -- Deeper Name Resolution -- DONE
 
 Replace the current scoped resolver with the planned resolver:
 
@@ -290,8 +292,25 @@ Replace the current scoped resolver with the planned resolver:
 Implement or retire the public raising surface for `kerml_kernel.featuring_types()`
 as part of this phase.
 
-Exit: the resolver is no longer limited to same-namespace and simple qualified
-names.
+Delivered (scoped to the grammar that exists today): `mapping._resolve_type` now
+resolves a (qualified) type name **nearest-first across enclosing namespaces** --
+walking outward from the usage's own namespace through each enclosing namespace to
+the model root, the nearest declaration winning (inner scopes shadow outer ones),
+then navigating the remaining qualified segments. This adds enclosing-namespace
+lookup and relative-qualified names (e.g. a sibling `A::Engine`) on top of the old
+same-namespace / root-qualified scope. Unresolved names stay explicit diagnostics.
+`kerml_kernel.featuring_types()` was **retired** (unused, and unimplementable
+without TypeFeaturing wiring).
+
+Deferred to dedicated follow-up phases (each needs new grammar **and** a semantic
+contract that does not exist yet, so they are unreachable/untestable today):
+imports and imported memberships, aliases, inherited members, visibility, implicit
+specialization, feature chains, and the ambiguity diagnostics those introduce
+(within the current grammar, nearest-first resolution is deterministic, so there
+is no reachable ambiguity to report).
+
+Exit (reached): the resolver is no longer limited to same-namespace and simple
+root-qualified names for the grammar we support today.
 
 ### Phase 6 -- Constraint And Requirement Semantics
 

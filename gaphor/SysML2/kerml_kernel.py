@@ -231,16 +231,10 @@ def imported_elements(namespace: Namespace) -> Iterator[Element]:
                 yield target
 
 
-def featuring_types(feature: Feature) -> Iterator[Element]:  # noqa: ARG001
-    """The types that feature this feature (derived).
-
-    Not yet implemented for the M1b minimum: it derives from TypeFeaturing
-    relationships, which this kernel slice does not yet wire. Raising keeps the
-    derived surface honest rather than returning a misleading empty result.
-    """
-    raise NotImplementedError(
-        "featuring_types is not implemented in the M1b kernel minimum"
-    )
+# `featuring_types` (the derived TypeFeaturing surface) was retired in Phase 5:
+# it had no implementation (the kernel slice does not wire TypeFeaturing) and no
+# caller, so a raising stub added no value. It returns as a real derivation if a
+# later phase wires TypeFeaturing and a consumer needs it.
 
 
 # --- internal helpers --------------------------------------------------------
