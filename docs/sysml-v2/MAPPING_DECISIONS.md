@@ -530,8 +530,10 @@ menu fragment.
   new ones (`validation_diagnostics`), keeping pre-existing model problems
   separate (`preexisting_diagnostics`). So a valid import into a model that
   already has errors is not refused for those errors, while an import that
-  introduces a problem (including a name colliding with existing content) still
-  is.
+  introduces a problem of its own (e.g. a duplicate name within the imported
+  project, or an unresolved/mistyped reference) still is. Because each import
+  lands in a fresh root namespace, detecting a collision against *pre-existing*
+  model content is part of the deferred duplicate/re-import work, not this gate.
 - **Confirm-or-cancel on validation errors.** A first pass imports and, if there
   are import-caused validation errors, removes the just-imported subtree
   (`result.root.unlink()`, whose composite containment cascades) and asks the

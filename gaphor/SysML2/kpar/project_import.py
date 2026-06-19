@@ -229,9 +229,12 @@ def import_user_kpar(
     )
 
     # Gate only on diagnostics this import introduced: whole-factory validation
-    # minus what was already there. This still catches import-caused problems
-    # (including a name that collides with pre-existing content, which is a new
-    # diagnostic), while ignoring pre-existing-only errors.
+    # minus what was already there. This catches problems within the imported
+    # project (e.g. a duplicate name in the same namespace, an unresolved or
+    # mistyped reference) while ignoring pre-existing-only errors. Each import
+    # lands in a fresh root namespace, so detecting a collision against
+    # pre-existing model content is part of the deferred duplicate/re-import
+    # handling, not this gate.
     all_diagnostics = validate(factory, result.unresolved_types, result.mistyped)
     validation_diagnostics = tuple(
         d for d in all_diagnostics if d not in preexisting_set
