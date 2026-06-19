@@ -1,4 +1,21 @@
-"""Pinned OMG machine-readable artifact checks."""
+"""Pinned OMG machine-readable artifact checks.
+
+The human-maintained provenance manifest is the Markdown table in
+``docs/sysml-v2/omg/20250201/README.md``. That file is the single source of
+truth for which OMG artifacts are pinned and for their recorded byte sizes and
+SHA-256 hashes. These tests parse that manifest and enforce it against the bytes
+on disk:
+
+- every manifest row points at a file that exists;
+- the file's SHA-256 (and byte size, where the manifest records one) match;
+- KPAR archives are readable ZIPs that contain their expected internal entries;
+- XMI abstract-syntax rows match their recorded hashes (no size column).
+
+The Python structures below hold ONLY expectations that the prose manifest does
+not naturally express: the required internal entries of each KPAR archive and a
+scalar-value-type smoke check. Sizes and hashes deliberately live only in the
+manifest so it cannot drift away from what the tests enforce.
+"""
 
 from __future__ import annotations
 
@@ -11,103 +28,73 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 OMG_DIR = ROOT / "docs/sysml-v2/omg/20250201"
+MANIFEST = OMG_DIR / "README.md"
 
-KPAR_ARTIFACTS = {
+
+# Structural expectations the prose manifest does not capture: the internal
+# entries each KPAR archive must contain. Sizes/hashes are NOT duplicated here;
+# they are read from the manifest table.
+KPAR_ENTRIES = {
     "Semantic-Library.kpar": {
-        "size": 33031,
-        "sha256": "6d9e311646a557cb08b64313cab6a7931109751b2ac7fbfcefad5c2216a6167b",
-        "entries": {
-            "Kernel Semantic Library/.project.json",
-            "Kernel Semantic Library/.meta.json",
-            "Kernel Semantic Library/KerML.kerml",
-            "Kernel Semantic Library/Base.kerml",
-        },
+        "Kernel Semantic Library/.project.json",
+        "Kernel Semantic Library/.meta.json",
+        "Kernel Semantic Library/KerML.kerml",
+        "Kernel Semantic Library/Base.kerml",
     },
     "Data-Type-Library.kpar": {
-        "size": 4260,
-        "sha256": "957e4ff5c60f7fc5eedaf0b6d4f776856061c0aa7a424e260eeccb8d6ed7bfbd",
-        "entries": {
-            "Kernel Data Type Library/.project.json",
-            "Kernel Data Type Library/.meta.json",
-            "Kernel Data Type Library/ScalarValues.kerml",
-        },
+        "Kernel Data Type Library/.project.json",
+        "Kernel Data Type Library/.meta.json",
+        "Kernel Data Type Library/ScalarValues.kerml",
     },
     "Function-Library.kpar": {
-        "size": 15929,
-        "sha256": "a8319da3ab1d8ffc0f390ea1aef29d85a00451655c41a9267ce396845c2b1c8d",
-        "entries": {
-            "Kernel Function Library/.project.json",
-            "Kernel Function Library/.meta.json",
-            "Kernel Function Library/RealFunctions.kerml",
-            "Kernel Function Library/StringFunctions.kerml",
-        },
+        "Kernel Function Library/.project.json",
+        "Kernel Function Library/.meta.json",
+        "Kernel Function Library/RealFunctions.kerml",
+        "Kernel Function Library/StringFunctions.kerml",
     },
     "Systems-Library.kpar": {
-        "size": 27577,
-        "sha256": "df7d8b2c6e08232ca7ce123a63148949c383fcbeaeba8d89c27ceece43793a1f",
-        "entries": {
-            "Systems Library/.project.json",
-            "Systems Library/.meta.json",
-            "Systems Library/SysML.sysml",
-            "Systems Library/Parts.sysml",
-        },
+        "Systems Library/.project.json",
+        "Systems Library/.meta.json",
+        "Systems Library/SysML.sysml",
+        "Systems Library/Parts.sysml",
     },
     "Analysis-Domain-Library.kpar": {
-        "size": 6035,
-        "sha256": "96f0230cd7091faa2d27345b7f7748e0249fb42cfbdc48265ce6e82d6ecc1b38",
-        "entries": {
-            "Analysis/.project.json",
-            "Analysis/.meta.json",
-            "Analysis/AnalysisTooling.sysml",
-        },
+        "Analysis/.project.json",
+        "Analysis/.meta.json",
+        "Analysis/AnalysisTooling.sysml",
     },
     "Cause-and-Effect-Domain-Library.kpar": {
-        "size": 3135,
-        "sha256": "c097c70232b8c9d38acbc92b402d8caa3b67f4d847dade0f29994164a4e25e94",
-        "entries": {
-            "Cause and Effect/.project.json",
-            "Cause and Effect/.meta.json",
-            "Cause and Effect/CauseAndEffect.sysml",
-        },
+        "Cause and Effect/.project.json",
+        "Cause and Effect/.meta.json",
+        "Cause and Effect/CauseAndEffect.sysml",
     },
     "Geometry-Domain-Library.kpar": {
-        "size": 7169,
-        "sha256": "9cc40d628dfe8717b79af74297a7115103e3469708a54221cac0e42344ed8427",
-        "entries": {
-            "Geometry/.project.json",
-            "Geometry/.meta.json",
-            "Geometry/SpatialItems.sysml",
-        },
+        "Geometry/.project.json",
+        "Geometry/.meta.json",
+        "Geometry/SpatialItems.sysml",
     },
     "Metadata-Domain-Library.kpar": {
-        "size": 4573,
-        "sha256": "5c51cd3b21b60c89742dbba0f59f25bdbc34224d05e32975d77bb93092458b9b",
-        "entries": {
-            "Metadata/.project.json",
-            "Metadata/.meta.json",
-            "Metadata/ModelingMetadata.sysml",
-        },
+        "Metadata/.project.json",
+        "Metadata/.meta.json",
+        "Metadata/ModelingMetadata.sysml",
     },
     "Quantities-and-Units-Domain-Library.kpar": {
-        "size": 154748,
-        "sha256": "81a6e7264a9f287e482ec5b35f8ef98725b81f393e0b2e82dae3599511c0adc7",
-        "entries": {
-            "Quantities and Units/.project.json",
-            "Quantities and Units/.meta.json",
-            "Quantities and Units/SI.sysml",
-            "Quantities and Units/Quantities.sysml",
-        },
+        "Quantities and Units/.project.json",
+        "Quantities and Units/.meta.json",
+        "Quantities and Units/SI.sysml",
+        "Quantities and Units/Quantities.sysml",
     },
     "Requirement-Derivation-Domain-Library.kpar": {
-        "size": 2650,
-        "sha256": "a136e72ac6afbd96ede220cfec77fd54c75242d577d3f5ab9e5278b25baee6e5",
-        "entries": {
-            "Requirement Derivation/.project.json",
-            "Requirement Derivation/.meta.json",
-            "Requirement Derivation/RequirementDerivation.sysml",
-        },
+        "Requirement Derivation/.project.json",
+        "Requirement Derivation/.meta.json",
+        "Requirement Derivation/RequirementDerivation.sysml",
     },
 }
+
+# XMI abstract-syntax artifacts the manifest must list (provenance + hashes live
+# in the manifest; presence is asserted so the manifest cannot silently drop a
+# generator input).
+EXPECTED_XMI = {"KerML.xmi", "SysML.xmi"}
 
 
 def _sha256(path: Path) -> str:
@@ -118,21 +105,84 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-@pytest.mark.parametrize("filename", sorted(KPAR_ARTIFACTS))
-def test_pinned_kpar_artifact_matches_manifest(filename):
-    expected = KPAR_ARTIFACTS[filename]
+def _clean(cell: str) -> str:
+    """Strip Markdown table padding and inline-code backticks from a cell."""
+    return cell.strip().strip("`").strip()
+
+
+def _parse_markdown_tables(md_text: str) -> list[dict[str, str]]:
+    """Return one dict per data row across every Markdown table in the text.
+
+    A table is a header line, then a `---` separator line, then `|`-delimited
+    data rows. Rows are keyed by the header cells.
+    """
+    rows: list[dict[str, str]] = []
+    lines = md_text.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        nxt = lines[i + 1].strip() if i + 1 < len(lines) else ""
+        is_separator = bool(nxt) and "-" in nxt and set(nxt) <= set("|-: ")
+        if line.startswith("|") and is_separator:
+            headers = [_clean(c) for c in line.strip("|").split("|")]
+            j = i + 2
+            while j < len(lines) and lines[j].strip().startswith("|"):
+                cells = [_clean(c) for c in lines[j].strip().strip("|").split("|")]
+                if len(cells) == len(headers):
+                    rows.append(dict(zip(headers, cells)))
+                j += 1
+            i = j
+        else:
+            i += 1
+    return rows
+
+
+def _artifact_rows() -> list[dict[str, str]]:
+    rows = _parse_markdown_tables(MANIFEST.read_text(encoding="utf-8"))
+    return [r for r in rows if r.get("File", "").endswith((".kpar", ".xmi"))]
+
+
+ARTIFACT_ROWS = _artifact_rows()
+
+
+def test_manifest_and_structural_expectations_agree():
+    """README is the provenance source; the Python expectations must track it.
+
+    The manifest must list both XMI inputs and exactly the KPAR set whose
+    internal entries we structurally check, so neither side can drift without a
+    failure.
+    """
+    listed = {r["File"] for r in ARTIFACT_ROWS}
+    listed_kpars = {f for f in listed if f.endswith(".kpar")}
+
+    assert EXPECTED_XMI <= listed
+    assert listed_kpars == set(KPAR_ENTRIES)
+
+
+@pytest.mark.parametrize(
+    "row", ARTIFACT_ROWS, ids=[r["File"] for r in ARTIFACT_ROWS]
+)
+def test_manifest_row_matches_pinned_file(row):
+    """Every manifest row resolves to a file whose bytes match the manifest."""
+    path = OMG_DIR / row["File"]
+
+    assert path.exists(), f"manifest lists {row['File']} but the file is missing"
+    assert _sha256(path) == row["SHA-256"]
+    # The KPAR table records byte sizes; the XMI table does not.
+    if row.get("Bytes"):
+        assert path.stat().st_size == int(row["Bytes"])
+
+
+@pytest.mark.parametrize("filename", sorted(KPAR_ENTRIES))
+def test_pinned_kpar_is_valid_zip_with_entries(filename):
     path = OMG_DIR / filename
 
-    assert path.exists()
-    assert path.stat().st_size == expected["size"]
-    assert _sha256(path) == expected["sha256"]
     assert is_zipfile(path)
-
     with ZipFile(path) as zf:
         assert zf.testzip() is None
         names = set(zf.namelist())
 
-    assert expected["entries"] <= names
+    assert KPAR_ENTRIES[filename] <= names
 
 
 def test_data_type_library_contains_scalar_value_types():
