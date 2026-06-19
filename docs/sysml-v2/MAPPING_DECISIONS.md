@@ -294,3 +294,33 @@ each KPAR phase must carry its own focused tests and support-matrix claim update
 The SysML v2 API/client surface is also no longer dismissed by the old kickoff
 boundary. It is a later decision phase and remains separate from Gaphor's
 internal identity model unless that phase proves a concrete API-facing need.
+
+### Completion Phase 1: KPAR Artifact Baseline (verified 2026-06-19)
+
+The direct binary-delivery question was tested first, using the formal OMG About
+pages as the source of truth for exact URLs. The OMG KPAR links are publicly
+downloadable with `curl -L --fail`; all ten direct responses returned HTTP 200,
+non-empty payloads, and ZIP magic bytes (`PK\x03\x04`). OMG serves them with
+`content-type: text/plain; charset=UTF-8`, so the project verifies them by
+source URL, file id, byte size, SHA-256, and ZIP structure rather than MIME type.
+
+Pinned KPAR artifacts under `docs/sysml-v2/omg/20250201/`:
+
+- KerML: `Semantic-Library.kpar`, `Data-Type-Library.kpar`,
+  `Function-Library.kpar`.
+- SysML: `Systems-Library.kpar`, `Analysis-Domain-Library.kpar`,
+  `Cause-and-Effect-Domain-Library.kpar`, `Geometry-Domain-Library.kpar`,
+  `Metadata-Domain-Library.kpar`, `Quantities-and-Units-Domain-Library.kpar`,
+  `Requirement-Derivation-Domain-Library.kpar`.
+
+The artifact manifest in `docs/sysml-v2/omg/20250201/README.md` records exact
+URLs, OMG file ids, byte sizes, and SHA-256 hashes. The Phase 1 tests verify
+that each archive exists, matches the manifest, is a valid ZIP/KPAR archive, and
+contains representative `.project.json`, `.meta.json`, and library text entries.
+They also smoke-check that `Data-Type-Library.kpar` contains the expected scalar
+value types (`Boolean`, `String`, `Real`, `Integer`, `Natural`) in
+`ScalarValues.kerml`.
+
+Boundary: this phase pins and verifies bytes only. It does not implement the
+KPAR reader, standard-library loader, or semantic resolution against the library;
+those remain the next completion phases.

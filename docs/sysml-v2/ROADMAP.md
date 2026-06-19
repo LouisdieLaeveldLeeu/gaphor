@@ -75,7 +75,7 @@ support-matrix spreadsheet if the Markdown matrix changes.
 Exit: no behavior changes; documentation, controller state, and verification
 instructions are internally consistent; gates pass.
 
-### Phase 1 -- KPAR Artifact Baseline
+### Phase 1 -- KPAR Artifact Baseline -- DONE
 
 Fetch and pin the OMG 20250201 `.kpar` artifacts:
 
@@ -87,7 +87,8 @@ Record source URLs, OMG file ids, SHA-256 hashes, and archive sizes in the
 artifact manifest. Add tests that verify the pinned archives exist, match the
 manifest, are readable zip archives, and contain expected internal entries.
 
-Exit: KPAR bytes are reproducible source artifacts. No semantic import yet.
+Exit (reached): KPAR bytes are reproducible source artifacts. No semantic import
+yet.
 
 ### Phase 2 -- KPAR Reader Core
 
