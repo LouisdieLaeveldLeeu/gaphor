@@ -1,8 +1,9 @@
 """Read-only KPAR archive support for SysML v2 (completion-roadmap Phase 2+).
 
 Phase 2 ships the read-only reader: validate an archive, extract its
-project/index metadata, and discover its model files. Later phases build the
-standard-library loader and general KPAR import/export on top of this.
+project/index metadata, and discover its model files. Later phases first settle
+the semantic import contract, then use that import path for normative standard
+libraries, general user KPAR projects, and KPAR export/round-trip.
 """
 
 from gaphor.SysML2.kpar.reader import (

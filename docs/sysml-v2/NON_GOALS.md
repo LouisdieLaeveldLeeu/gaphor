@@ -14,9 +14,10 @@ now moved past that boundary. These are the current non-goals:
 - Comparing round-trip output by raw text or Gaphor element id.
 - Using opaque preservation as a blanket fallback for unsupported syntax that contains untracked outbound references.
 
-KPAR is no longer a blanket non-goal. Pinned KPAR library ingestion, general KPAR
-import, and KPAR export/round-trip are planned completion phases in
-`ROADMAP.md`. The SysML v2 API/client surface is also no longer dismissed by the
-old kickoff boundary; it is a later decision phase and must remain separate from
-Gaphor's internal identity model unless that phase proves a concrete API-facing
-need.
+KPAR is no longer a blanket non-goal. Pinned KPAR artifacts and read-only archive
+inspection have landed; semantic KPAR import is now the next completion track in
+three stages (import design contract, minimal normative-library import, general
+user KPAR import), followed later by KPAR export/round-trip. The SysML v2
+API/client surface is also no longer dismissed by the old kickoff boundary; it is
+a later decision phase and must remain separate from Gaphor's internal identity
+model unless that phase proves a concrete API-facing need.

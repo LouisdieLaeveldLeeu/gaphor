@@ -6,8 +6,9 @@ the project's ``.kerml``/``.sysml`` model files. This module validates such an
 archive, extracts its project/index metadata, and discovers its model files.
 
 It deliberately does NOT interpret model content or import anything into Gaphor.
-That is later completion-roadmap work (the standard-library loader, then general
-KPAR import/export). This phase only inspects.
+That is later completion-roadmap work: the import design contract, minimal
+normative-library import, general user KPAR import, and KPAR export/round-trip.
+This phase only inspects.
 
 Diagnostics are loud and typed: anything that is not a readable ZIP with exactly
 one recognised project layout raises a :class:`KparError` subclass rather than

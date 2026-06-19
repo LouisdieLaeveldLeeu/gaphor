@@ -40,10 +40,11 @@ tests.
 - Resolution scope so far: same-namespace plus simple/nested qualified names,
   including cross-package lookup. Inheritance, visibility, aliases, imports beyond
   the simple cases, and feature chains remain planned work.
-- KPAR is now in completion scope. General KPAR support is not a detour around
-  the standard library; it is a first-class interchange/library capability,
-  phased below so the stdlib path does not require full user import/export to
-  land first.
+- KPAR is now in completion scope. General KPAR import is the next architectural
+  track after the read-only reader: first a design contract, then minimal
+  normative-library import, then general user KPAR import. Standard-library
+  value typing and AttributeUsage promotion build on that import path rather
+  than on a separate pre-import library index.
 
 ## Definition Of Supported
 
@@ -111,33 +112,84 @@ malformed JSON raises loudly. No model content is interpreted.
 Exit (reached): pinned KPARs can be inspected deterministically; unknown
 structure fails loudly.
 
-### Phase 3 -- Standard Library Loader
+### Phase 3a -- KPAR Import Design Contract
 
-Load the normative model libraries from pinned KPARs into a read-only library
-layer. Resolve at minimum:
+Decide the import semantics before materializing KPAR content as Gaphor model
+state. This is a design/contract phase, not a broad parser implementation.
+
+Decisions to settle and document:
+
+- identity: Gaphor `Base.id`, source KPAR identity, API-facing ids if present,
+  and canonical identity for imported libraries;
+- storage: whether imported elements are saved into `.gaphor`, referenced by
+  pinned source/provenance, or regenerated from KPAR on load;
+- mutability: normative OMG libraries are read-only by default; user KPAR
+  imports may become editable only under an explicit policy;
+- dependency closure: how `.project.json` `usage` dependencies resolve to pinned
+  KPARs, missing KPARs, version constraints, and import order;
+- duplicate/re-import/update behavior: same KPAR twice, newer versions, and
+  conflicts with existing user elements;
+- unsupported syntax policy: fail the import, import a tested subset with
+  diagnostics, or create explicit unresolved/proxy records -- no silent loss;
+- provenance: every imported element/reference must trace to KPAR path, member
+  file, declaration span when available, and source declaration text;
+- API/CLI/UI boundary: which import entry points are in scope for the first
+  implementation and which remain later.
+
+Exit: a committed design contract and tests/fixtures for the selected invariants
+where possible; no imported semantic content yet unless the design phase is
+explicitly split and reviewed.
+
+### Phase 3b -- Minimal Normative Library Import
+
+Use the Phase 3a contract to import the smallest real OMG KPAR library content
+needed for primitive/value typing. This phase targets the normative libraries,
+not arbitrary user projects.
+
+Import enough of the pinned KerML libraries to materialize at minimum:
 
 - `ScalarValues::Real`
 - `ScalarValues::String`
 - `ScalarValues::Boolean`
 - `ScalarValues::Integer`
-- any required qualified aliases or owning packages needed by the formal library
-  structure.
+- `ScalarValues::Natural`
+- required owning packages, aliases, and dependency links needed by the formal
+  library structure.
 
-Every loaded library element must trace back to a pinned KPAR source entry. No
-hand-authored curated value-type stubs.
+Every imported library element must trace back to a pinned KPAR, member file,
+and source declaration. No hand-authored curated value-type stubs. The chosen
+representation (ElementFactory-backed, proxy-backed, or another reviewed form)
+must preserve read-only normative-library treatment unless the design contract
+explicitly says otherwise.
 
-Exit: the real standard library can answer value-type resolution queries.
+Exit: the real imported standard library can answer value-type resolution
+queries with provenance.
+
+### Phase 3c -- General User KPAR Import
+
+Expand from minimal normative-library import to user-facing KPAR import for the
+implemented SysML2 surface:
+
+- import supported KPAR project archives into the SysML2 model pipeline;
+- preserve or reject unsupported content according to the conformance policy and
+  the Phase 3a partial-import decision;
+- add CLI and UI entry points if appropriate for Gaphor's import flow;
+- add diagnostics for unsupported constructs, unresolved references, dependency
+  gaps, duplicate imports, and version conflicts.
+
+Exit: KPAR import is a supported capability for the implemented SysML2 surface.
 
 ### Phase 4 -- AttributeUsage Promotion
 
-Use the standard-library loader to finish primitive/value-typed attributes.
+Use the imported normative standard library to finish primitive/value-typed
+attributes.
 
 Work:
 
 - parse, map, validate, export, and round-trip `attribute x : Real` and related
   primitive/value types;
 - update UI type selection if the existing AttributeUsage editor should expose
-  read-only library types;
+  read-only imported library types;
 - promote `SysML AttributeUsage` to `supported` only after focused tests pass.
 
 Exit: AttributeUsage is no longer capped on the standard-library dependency.
@@ -213,18 +265,7 @@ Complete actual connector endpoints:
 Exit: ConnectionDefinition and ConnectionUsage can be promoted from `alpha` when
 all claimed cells pass.
 
-### Phase 10 -- General KPAR Import
-
-Move from library-only KPAR handling to user-facing KPAR import:
-
-- import supported KPAR project archives into the SysML2 model pipeline;
-- preserve or reject unsupported content according to the conformance policy;
-- add CLI and UI entry points if appropriate for Gaphor's import flow;
-- add diagnostics for unsupported constructs and references.
-
-Exit: KPAR import is a supported capability for the implemented SysML2 surface.
-
-### Phase 11 -- General KPAR Export And Round-Trip
+### Phase 10 -- General KPAR Export And Round-Trip
 
 Export Gaphor SysML2 models to KPAR and prove interchange round-trips:
 
@@ -236,7 +277,7 @@ Export Gaphor SysML2 models to KPAR and prove interchange round-trips:
 Exit: KPAR support is complete for the implemented SysML2 surface, not just
 stdlib ingestion.
 
-### Phase 12 -- Versioned Spec-Ingestion Pipeline
+### Phase 11 -- Versioned Spec-Ingestion Pipeline
 
 Build the future-spec machinery:
 
@@ -250,7 +291,7 @@ Build the future-spec machinery:
 Exit: future OMG SysML/KerML releases can be assessed mechanically before human
 mapping decisions.
 
-### Phase 13 -- SysML v2 API Alignment
+### Phase 12 -- SysML v2 API Alignment
 
 Decide and implement the SysML v2 API/client surface needed by Gaphor, if any:
 
@@ -262,7 +303,7 @@ Decide and implement the SysML v2 API/client surface needed by Gaphor, if any:
 Exit: API-related scope is either implemented and tested or explicitly closed
 with a documented rationale.
 
-### Phase 14 -- CI And Release Hardening
+### Phase 13 -- CI And Release Hardening
 
 Make verification authoritative:
 
@@ -280,25 +321,29 @@ environment-only ambiguity.
 1. Phase 0
 2. Phase 1
 3. Phase 2
-4. Phase 3
-5. Phase 4
-6. Phase 5
-7. Phase 9
-8. Phase 8
-9. Phase 6
-10. Phase 7
-11. Phase 10
-12. Phase 11
-13. Phase 12
-14. Phase 13
-15. Phase 14
+4. Phase 3a
+5. Phase 3b
+6. Phase 3c
+7. Phase 4
+8. Phase 5
+9. Phase 9
+10. Phase 8
+11. Phase 6
+12. Phase 7
+13. Phase 10
+14. Phase 11
+15. Phase 12
+16. Phase 13
 
-Rationale: KPAR and the standard library unblock value typing first. Deeper
+Rationale: the project now intentionally resolves KPAR import architecture
+before standard-library/value-type promotion. Phase 3a prevents import identity,
+storage, read-only, and partial-import policy from being decided accidentally.
+Phase 3b proves that policy on the real normative library content needed for
+`attribute x : Real`, and Phase 3c expands it to general user KPAR import. Deeper
 resolution then becomes shared infrastructure for the remaining semantic work.
 Connector ends and ports are closely related, so they should be addressed before
-the larger expression/action behavior phases. General KPAR import/export should
-come after the semantic surface is strong enough to represent the imported
-content. Spec-ingestion and CI hardening close the loop.
+the larger expression/action behavior phases. KPAR export/round-trip follows
+after import semantics exist. Spec-ingestion and CI hardening close the loop.
 
 ## Definition Of Done
 

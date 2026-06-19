@@ -24,7 +24,10 @@ The implementation layers will be:
 6. Persistence: standard Gaphor `.gaphor` persistence through `Base` properties.
 7. Export: textual SysML v2 from semantic elements.
 8. Round-trip: canonical form comparison independent of raw text and ids.
-9. Projection: optional diagrams as views onto semantic elements after textual and semantic paths are proven.
+9. KPAR import/export: archive inspection is done; semantic import proceeds
+   next through a design contract, minimal normative-library import, then
+   general user KPAR import.
+10. Projection: optional diagrams as views onto semantic elements after textual and semantic paths are proven.
 
 ## M0 Scaffold Boundary
 

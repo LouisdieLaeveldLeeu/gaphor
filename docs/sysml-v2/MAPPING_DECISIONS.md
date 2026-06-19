@@ -27,7 +27,7 @@ Usable M0 inputs:
 
 - OMG formal SysML 2.0 and KerML 1.0 specification documents for conformance authority.
 - OMG normative MOF XMI for the SysML and KerML abstract syntax as metamodel source input.
-- OMG normative KPAR library artifacts for standard-library interchange when that phase arrives.
+- OMG normative KPAR artifacts for library/interchange import when that phase arrives.
 - JSON schemas for abstract syntax and project interchange, mainly for future validation and API alignment.
 - Systems Modeling Community release BNF files as parser seed material, cross-checked against the formal PDFs.
 - Textual standard-library files in the release repository as readable fixtures and cross-checks, not as the sole conformance authority.
@@ -276,20 +276,20 @@ that stdlib path.
 ### Phase 0 Scope Reset: KPAR is now in completion scope (recorded 2026-06-19)
 
 The project has moved beyond the first vertical slice. KPAR is no longer a
-blanket non-goal. The completion roadmap brings KPAR in deliberately as a phased
-capability:
+blanket non-goal. At that moment, the completion roadmap brought KPAR in
+deliberately as a phased capability:
 
 1. pin the OMG `.kpar` artifacts with provenance and hashes;
 2. build a read-only KPAR archive reader;
-3. load the normative standard libraries from KPAR;
-4. use those libraries to finish primitive/value-typed AttributeUsage;
-5. later add general KPAR import;
-6. later add KPAR export and KPAR round-trip.
+3. decide and implement KPAR import semantics before using imported libraries for
+   value typing (replanned after Phase 2; see below);
+4. use the imported normative libraries to finish primitive/value-typed
+   AttributeUsage;
+5. later add KPAR export and KPAR round-trip.
 
-This does not license a hand-authored value-type stub and does not require full
-user-facing KPAR import/export before the standard-library loader lands. It
-means KPAR is a first-class source/interchange format in the remaining plan, and
-each KPAR phase must carry its own focused tests and support-matrix claim updates.
+This does not license a hand-authored value-type stub. It means KPAR is a
+first-class source/interchange format in the remaining plan, and each KPAR phase
+must carry its own focused tests and support-matrix claim updates.
 
 The SysML v2 API/client surface is also no longer dismissed by the old kickoff
 boundary. It is a later decision phase and remains separate from Gaphor's
@@ -322,17 +322,18 @@ value types (`Boolean`, `String`, `Real`, `Integer`, `Natural`) in
 `ScalarValues.kerml`.
 
 Boundary: this phase pins and verifies bytes only. It does not implement the
-KPAR reader, standard-library loader, or semantic resolution against the library;
-those remain the next completion phases.
+KPAR reader, semantic KPAR import, or value-type resolution against imported
+libraries; those remain the next completion phases.
 
 ### Completion Phase 2: KPAR Reader Core (verified 2026-06-19)
 
 The read-only reader lives in `gaphor/SysML2/kpar/` (a forward-looking
-subpackage, since Phases 3/10/11 are also KPAR work). `read_kpar(path)` returns
-frozen dataclasses -- `KparArchive` with `KparProject` (from `.project.json`),
-`KparMeta` (from `.meta.json`, including the qualified-name->file `index`), and a
-deterministic, name-sorted tuple of `KparModelFile`s discovered by `.kerml`/
-`.sysml` extension under the single project directory.
+subpackage, since Phases 3a/3b/3c and Phase 10 are also KPAR work).
+`read_kpar(path)` returns frozen dataclasses -- `KparArchive` with `KparProject`
+(from `.project.json`), `KparMeta` (from `.meta.json`, including the
+qualified-name->file `index`), and a deterministic, name-sorted tuple of
+`KparModelFile`s discovered by `.kerml`/`.sysml` extension under the single
+project directory.
 
 Decisions:
 
@@ -356,4 +357,46 @@ Decisions:
 
 Boundary: this phase inspects archives only. It does not read or interpret model
 file *content*, load the standard library, or import user models -- those are
-Phases 3 and 10+.
+Phases 3a/3b/3c and later.
+
+### Phase 3 Replan: KPAR import precedes standard-library promotion (recorded 2026-06-19)
+
+After the Phase 2 reader landed, the plan was changed deliberately: do the KPAR
+import architecture before the read-only standard-library/value-type layer. The
+previously discussed in-memory dataclass standard-library index remains a
+possible internal implementation detail only if the import design contract
+chooses it; it is no longer the next standalone phase.
+
+The reason is architectural, not because Phase 2 failed. General import answers
+questions that would otherwise be decided implicitly by a narrow value-type
+loader:
+
+- how imported KPAR content gets identity in Gaphor (`Base.id`, source KPAR
+  identity, API-facing ids, and canonical identity);
+- whether imported elements are saved in `.gaphor`, referenced by pinned
+  provenance, or regenerated from KPAR on load;
+- which content is read-only (normative OMG libraries) versus editable (user
+  imports);
+- how `.project.json` `usage` dependency closure, missing dependencies, and
+  version constraints are handled;
+- what duplicate import, re-import, and update semantics are;
+- whether unsupported textual content fails the import, creates explicit
+  unresolved/proxy records, or is imported as a tested subset with diagnostics;
+- how every imported element/reference records KPAR path, member file, source
+  declaration, and declaration span when available.
+
+The new track is:
+
+1. **Phase 3a -- KPAR Import Design Contract.** Commit the import identity,
+   storage, mutability, dependency, partial-import, duplicate/re-import, and
+   provenance rules before semantic import code materializes content.
+2. **Phase 3b -- Minimal Normative Library Import.** Apply that contract to the
+   pinned OMG libraries and import enough real content to materialize
+   `ScalarValues::Real/String/Boolean/Integer/Natural` plus required owning
+   packages/aliases/dependencies. No hand-authored value-type stubs.
+3. **Phase 3c -- General User KPAR Import.** Expand the same import path to user
+   KPAR projects over the implemented SysML2 surface, with CLI/UI entry points
+   and diagnostics according to the Phase 3a policy.
+
+AttributeUsage promotion now depends on this imported normative-library path, not
+on a separate pre-import library index.
