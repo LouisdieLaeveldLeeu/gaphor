@@ -171,10 +171,10 @@ implemented and focused-tested -- including the Diagram and UI-edit cells added
 in Phase C2 -- for untyped usages and usages typed by an AttributeDefinition
 through KerML FeatureTyping. It is held at `alpha` (not `supported`) because the
 construct is not complete end to end: primitive / value-library typing (e.g.
-`attribute x : Real`) requires the read-only standard-library loader, scheduled
-as roadmap phase Z2. AttributeUsage is promoted to `supported` only once Z2
-lands and `attribute x : Real` round-trips. This is the C2 standard-library gate
-decision, taken explicitly per the roadmap.
+`attribute x : Real`) requires the KPAR-backed standard-library loader scheduled
+in the completion roadmap. AttributeUsage is promoted to `supported` only once
+the pinned-library path lands and `attribute x : Real` round-trips. This is the
+C2 standard-library gate decision, taken explicitly per the roadmap.
 
 Diagram cell scope. `Diagram=yes` for Package, PartDefinition, PartUsage,
 AttributeDefinition, AttributeUsage, ActionDefinition, ActionUsage,

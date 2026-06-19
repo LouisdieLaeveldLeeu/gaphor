@@ -39,4 +39,4 @@ part def Engine;
 part vehicleEngine : Engine;
 ```
 
-Diagram projection remains a later view concern. A diagram item must always project an existing semantic element or create a semantic element and then project it; symbol-only storage is out of scope.
+Diagram projection is a view concern. A diagram item must always project an existing semantic element or create a semantic element and then project it; symbol-only storage is out of scope.

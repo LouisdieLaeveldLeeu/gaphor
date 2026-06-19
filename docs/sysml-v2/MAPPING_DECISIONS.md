@@ -138,7 +138,7 @@ Tradeoff:
 
 The grammar is one layered grammar: SysML textual notation extends KerML textual notation. Port from the BNF, not from intuition. Pilot/Xtext behavior may be used to understand ambiguities, not as the source of truth.
 
-Lark is declared as a core dependency in `pyproject.toml` (`lark>=1.1,<2`, locked to 1.3.1 on 2026-06-16). It is a core dependency rather than an optional extra because SysML2 is registered as a first-class modeling language and is auto-loaded like UML/SysML/C4Model; a base install without it would fail once the parser layer imports `lark`. Being pure Python, Lark adds no build/ABI burden. No code imports it yet — it is staged ahead of the M2 grammar layer.
+Lark is declared as a core dependency in `pyproject.toml` (`lark>=1.1,<2`, locked to 1.3.1 on 2026-06-16). It is a core dependency rather than an optional extra because SysML2 is registered as a first-class modeling language and is auto-loaded like UML/SysML/C4Model; a base install without it would fail once the parser layer imports `lark`. Being pure Python, Lark adds no build/ABI burden. The M2 grammar layer now imports it through `gaphor/SysML2/grammar/parser.py`.
 
 ## Spec Version Pin
 
@@ -222,15 +222,16 @@ M2 scope only:
 
 Do not implement inheritance, visibility, aliases, or feature chains during the first tracer.
 
-## Z2a Blocker: standard model libraries are KPAR-only (recorded 2026-06-18)
+## Former Z2a Blocker: standard model libraries are KPAR-only (recorded 2026-06-18)
 
-Phase Z2 (read-only standard-library loader) would promote AttributeUsage to
-`supported` by resolving `attribute x : Real` against the normative value-type
-library. Per the agreed plan, Z2a was to come first: pin the real OMG model
-libraries, hash them, document provenance, and add existence tests for
-Real/String/Boolean/Integer/ScalarValues -- with the explicit rule "if the
-library files cannot be located or are not published in a stable release bundle,
-pause and document the blocker rather than fall back to a curated subset."
+The formerly named Phase Z2 (read-only standard-library loader) would promote
+AttributeUsage to `supported` by resolving `attribute x : Real` against the
+normative value-type library. Per the earlier plan, Z2a was to come first: pin
+the real OMG model libraries, hash them, document provenance, and add existence
+tests for Real/String/Boolean/Integer/ScalarValues -- with the explicit rule "if
+the library files cannot be located or are not published in a stable release
+bundle, pause and document the blocker rather than fall back to a curated
+subset."
 
 Finding (verified 2026-06-18 against the OMG About pages for the pinned 20250201
 release): the standard model libraries are published **exclusively as `.kpar`
@@ -247,11 +248,12 @@ archives**, with no XMI or plain-text `.kerml`/`.sysml` form:
 - Our pinned artifacts (`KerML.xmi`, `SysML.xmi`) are abstract-syntax only;
   `Real` appears 0 times in them.
 
-This is a blocker, not a path:
+At the time, this was treated as a blocker rather than a path:
 
 1. **Scope conflict.** `.kpar` (KPAR) is explicitly named in the kickoff's
-   NON_GOALS ("KPAR & the SysML v2 API client") as out of scope for this whole
-   effort. Pinning and depending on KPAR archives would contradict that exclusion.
+   NON_GOALS ("KPAR & the SysML v2 API client") as out of scope for the first
+   vertical slice. Pinning and depending on KPAR archives needed an explicit
+   scope reset before implementation.
 2. **Format.** `.kpar` is a zip-based project archive, not the MOF XMI our
    generator path consumes; a faithful loader would need a KPAR
    reader/unzip + the textual library syntax inside, which is itself a
@@ -261,11 +263,34 @@ This is a blocker, not a path:
    possible from this environment without a separate approved binary-download
    step.
 
-Decision: PAUSE Z2 and do NOT fall back to a hand-authored curated value-type
-subset (per the standing instruction). AttributeUsage remains `alpha` with the
-stdlib dependency named. Resuming Z2 requires an explicit decision on one of:
-(a) relax the KPAR NON_GOAL and add a pinned-KPAR reader (binary fetch + unzip +
-the library textual syntax); (b) approve a binary download of the `.kpar`
-artifacts plus a converter to a pinned XMI/text form; or (c) accept a curated
-value-type subset as an explicit, documented exception to the "pin the real
-source" rule. No code was written for Z2.
+Decision at that point: PAUSE Z2 and do NOT fall back to a hand-authored curated
+value-type subset (per the standing instruction). AttributeUsage remains
+`alpha` with the stdlib dependency named. At that point, resuming the stdlib path
+required an explicit decision on one of: (a) relax the first-slice KPAR boundary
+and add a pinned-KPAR reader (binary fetch + unzip + the library textual syntax);
+(b) approve a binary download of the `.kpar` artifacts plus a converter to a
+pinned XMI/text form; or (c) accept a curated value-type subset as an explicit,
+documented exception to the "pin the real source" rule. No code was written for
+that stdlib path.
+
+### Phase 0 Scope Reset: KPAR is now in completion scope (recorded 2026-06-19)
+
+The project has moved beyond the first vertical slice. KPAR is no longer a
+blanket non-goal. The completion roadmap brings KPAR in deliberately as a phased
+capability:
+
+1. pin the OMG `.kpar` artifacts with provenance and hashes;
+2. build a read-only KPAR archive reader;
+3. load the normative standard libraries from KPAR;
+4. use those libraries to finish primitive/value-typed AttributeUsage;
+5. later add general KPAR import;
+6. later add KPAR export and KPAR round-trip.
+
+This does not license a hand-authored value-type stub and does not require full
+user-facing KPAR import/export before the standard-library loader lands. It
+means KPAR is a first-class source/interchange format in the remaining plan, and
+each KPAR phase must carry its own focused tests and support-matrix claim updates.
+
+The SysML v2 API/client surface is also no longer dismissed by the old kickoff
+boundary. It is a later decision phase and remains separate from Gaphor's
+internal identity model unless that phase proves a concrete API-facing need.

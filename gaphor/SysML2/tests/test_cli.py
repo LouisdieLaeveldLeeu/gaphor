@@ -9,7 +9,7 @@ from gaphor.SysML2 import cli
 TRACER = "part def Engine;\npart vehicleEngine : Engine;"
 
 
-def test_cli_stub_parsers_are_registered_by_name():
+def test_cli_parsers_are_registered_by_name():
     assert cli.parser_names() == (
         "sysml2-validate",
         "sysml2-import",

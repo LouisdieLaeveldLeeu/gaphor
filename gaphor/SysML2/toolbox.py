@@ -1,8 +1,8 @@
 """SysML v2 toolbox and diagram metadata.
 
-Phase A intentionally exposes the modeling-language UI foundation only. It does
-not add per-construct toolbox entries; those land in the construct promotion
-phases that also add property pages and conformance tests.
+Phase A introduced the modeling-language UI foundation. Later construct phases
+added the per-construct create-and-project toolbox entries recorded in the
+support matrix.
 """
 
 from __future__ import annotations
