@@ -461,6 +461,9 @@ read-only `NormativeLibrary`.
   never fetches. Each `.project.json` `usage` entry is matched to a pinned
   artifact; a declared dependency that is not pinned fails the import loudly
   (e.g. `Data-Type-Library` without its `Semantic-Library` dependency). Matching
-  is existence-based here; importing the dependency's *content* (full closure)
-  remains Phase 3c.
+  requires the dependency to be a readable, well-formed KPAR (not merely a file
+  with the right name) and, when the usage `versionConstraint` is an exact
+  version, the pinned project version must equal it. Importing the dependency's
+  *content* (full closure) and full semver-range constraint handling remain
+  Phase 3c.
 - **Boundary:** Python API only; no CLI/UI; no support-matrix cell moves.

@@ -25,7 +25,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from gaphor.SysML2.kpar.reader import KparArchive, read_kpar, read_member_text
+from gaphor.SysML2.kpar.reader import (
+    KparArchive,
+    KparError,
+    read_kpar,
+    read_member_text,
+)
 
 if TYPE_CHECKING:
     from gaphor.core.modeling import ElementFactory
@@ -86,12 +91,13 @@ class UnresolvedReference:
 
 @dataclass(frozen=True)
 class KparDependency:
-    """A `.project.json` `usage` dependency resolved to a pinned artifact."""
+    """A `.project.json` `usage` dependency resolved to a pinned KPAR."""
 
     resource: str  # the declared resource URL
     filename: str  # its basename, e.g. "Semantic-Library.kpar"
     path: Path  # the matched pinned artifact
-    version_constraint: str | None
+    version_constraint: str | None  # the declared constraint
+    version: str | None  # the matched pinned KPAR's actual project version
 
 
 @dataclass(frozen=True)
@@ -287,10 +293,13 @@ def import_scalar_values_library(omg_dir: str | Path | None = None) -> Normative
 def _resolve_dependencies(
     archive: KparArchive, base: Path, kpar_path: Path
 ) -> tuple[KparDependency, ...]:
-    """Match each `.project.json` `usage` entry to a pinned artifact.
+    """Match each `.project.json` `usage` entry to a pinned KPAR.
 
-    Closed-world: the importer never fetches, so a declared dependency that does
-    not resolve to a pinned artifact under ``base`` fails the import loudly.
+    Closed-world: the importer never fetches. A declared dependency must (a) exist
+    under ``base``, (b) be a readable, well-formed KPAR (not just a file with the
+    right name), and (c) when its version constraint is an exact version, match
+    the pinned KPAR's actual project version. Any failure aborts the import with a
+    diagnostic.
     """
     resolved: list[KparDependency] = []
     for usage in archive.project.usage:
@@ -302,15 +311,42 @@ def _resolve_dependencies(
                 f"resolve to a pinned artifact (expected {dep_path}); closed-world "
                 f"import over {base} cannot satisfy it"
             )
+        try:
+            dependency = read_kpar(dep_path)
+        except KparError as exc:
+            raise LibraryImportError(
+                f"{kpar_path}: usage dependency {usage.resource!r} at {dep_path} is "
+                f"not a readable pinned KPAR: {exc}"
+            ) from exc
+
+        constraint = usage.version_constraint
+        version = dependency.project.version
+        if (
+            constraint is not None
+            and _is_exact_version(constraint)
+            and version != constraint
+        ):
+            raise LibraryImportError(
+                f"{kpar_path}: usage dependency {usage.resource!r} requires version "
+                f"{constraint!r} but the pinned artifact {dep_path} is version "
+                f"{version!r}"
+            )
+
         resolved.append(
             KparDependency(
                 resource=usage.resource,
                 filename=filename,
                 path=dep_path,
-                version_constraint=usage.version_constraint,
+                version_constraint=constraint,
+                version=version,
             )
         )
     return tuple(resolved)
+
+
+def _is_exact_version(constraint: str) -> bool:
+    """A constraint is exact when it is a bare dotted version (no range syntax)."""
+    return re.fullmatch(r"\d+(?:\.\d+)*", constraint.strip()) is not None
 
 
 def _parse_scalar_library(text: str) -> _LibraryModule | None:

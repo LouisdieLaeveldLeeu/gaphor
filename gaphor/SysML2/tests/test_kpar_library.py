@@ -181,6 +181,63 @@ def test_missing_usage_dependency_fails(tmp_path):
         import_scalar_values_library(omg_dir=tmp_path)
 
 
+def test_bogus_dependency_artifact_is_rejected(tmp_path):
+    # A file named like the dependency but that is not a readable KPAR must be
+    # rejected: "resolved" means a real pinned KPAR, not just a matching name.
+    import shutil
+
+    shutil.copy(DATA_TYPE, tmp_path / "Data-Type-Library.kpar")
+    (tmp_path / "Semantic-Library.kpar").write_text("not a zip", encoding="utf-8")
+    with pytest.raises(LibraryImportError):
+        import_scalar_values_library(omg_dir=tmp_path)
+
+
+def _write_kpar(path, root, project, members):
+    import json
+
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(f"{root}/.project.json", json.dumps(project))
+        zf.writestr(f"{root}/.meta.json", json.dumps({"index": {}}))
+        for name, text in members.items():
+            zf.writestr(f"{root}/{name}", text)
+
+
+def test_exact_version_mismatch_is_rejected(tmp_path):
+    # When the usage constraint is an exact version, a pinned dependency whose
+    # project version differs must fail the import.
+    _write_kpar(
+        tmp_path / "Data-Type-Library.kpar",
+        "Kernel Data Type Library",
+        {
+            "name": "Kernel Data Type Library",
+            "version": "1.0.0",
+            "usage": [
+                {
+                    "resource": "https://example.org/MyDep.kpar",
+                    "versionConstraint": "9.9.9",
+                }
+            ],
+        },
+        {"ScalarValues.kerml": "standard library package ScalarValues {\n\tdatatype Boolean;\n}"},
+    )
+    _write_kpar(
+        tmp_path / "MyDep.kpar",
+        "Dep",
+        {"name": "Dep", "version": "1.0.0"},
+        {"D.kerml": "standard library package Dep {\n}"},
+    )
+    with pytest.raises(LibraryImportError):
+        import_scalar_values_library(omg_dir=tmp_path)
+
+
+def test_resolved_dependency_records_pinned_version(library):
+    semantic = next(
+        dep for dep in library.dependencies if dep.filename == "Semantic-Library.kpar"
+    )
+    assert semantic.version_constraint == "1.0.0"
+    assert semantic.version == "1.0.0"
+
+
 def test_import_is_regenerated_on_load():
     # Two imports yield equivalent content in independent factories (read-only,
     # regenerated-on-load): same qualified names, fresh element instances.
