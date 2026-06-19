@@ -49,6 +49,12 @@ def _member_text() -> str:
         return zf.read(MEMBER).decode("utf-8")
 
 
+def _sha256_of(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 @pytest.fixture(scope="module")
 def library():
     return import_scalar_values_library()
@@ -115,15 +121,31 @@ def test_cross_library_super_is_recorded_not_dropped(library):
     assert library.supertypes(scalar_value) == ()
 
 
+def test_unresolved_reference_carries_full_provenance(library):
+    ref = next(
+        u
+        for u in library.unresolved
+        if u.source == "ScalarValues::ScalarValue" and u.target == "DataValue"
+    )
+    assert ref.kpar_path == DATA_TYPE
+    assert ref.member == MEMBER
+    assert ref.line > 0
+    assert ref.declaration in _member_text()
+    assert ref.kpar_sha256 == _sha256_of(DATA_TYPE)
+
+
 def test_scalar_values_member_fully_parsed_no_unsupported(library):
     # The whole ScalarValues package is within the supported subset, so nothing
     # is recorded as unsupported.
     assert library.unsupported == ()
 
 
-def test_every_element_traces_to_pinned_source(library):
+def test_every_element_and_relationship_traces_to_pinned_source(library):
     member_text = _member_text()
-    for element in library.elements:
+    # Relationships (Specializations) are imported elements too and must carry
+    # provenance, not just the package and datatypes.
+    assert library.relationships
+    for element in (*library.elements, *library.relationships):
         prov = library.provenance_of(element)
         assert prov is not None
         assert prov.kpar_path == DATA_TYPE
@@ -135,11 +157,28 @@ def test_every_element_traces_to_pinned_source(library):
 
 
 def test_provenance_sha_matches_pinned_artifact(library):
-    import hashlib
-
-    expected = hashlib.sha256(DATA_TYPE.read_bytes()).hexdigest()
     real = library.resolve("ScalarValues::Real")
-    assert library.provenance_of(real).kpar_sha256 == expected
+    assert library.provenance_of(real).kpar_sha256 == _sha256_of(DATA_TYPE)
+
+
+def test_usage_dependencies_resolve_to_pinned_artifacts(library):
+    # Data-Type-Library declares a usage dependency on Semantic-Library; it must
+    # be resolved (closed-world) to the pinned artifact.
+    resolved = {dep.filename for dep in library.dependencies}
+    assert "Semantic-Library.kpar" in resolved
+    for dep in library.dependencies:
+        assert dep.path == OMG_DIR / dep.filename
+        assert dep.path.is_file()
+
+
+def test_missing_usage_dependency_fails(tmp_path):
+    # A pinned set containing Data-Type-Library.kpar but NOT its declared
+    # Semantic-Library.kpar dependency must fail the import, not silently succeed.
+    import shutil
+
+    shutil.copy(DATA_TYPE, tmp_path / "Data-Type-Library.kpar")
+    with pytest.raises(LibraryImportError):
+        import_scalar_values_library(omg_dir=tmp_path)
 
 
 def test_import_is_regenerated_on_load():

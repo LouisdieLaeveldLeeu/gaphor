@@ -22,6 +22,7 @@ from gaphor.SysML2.kpar.reader import (
 )
 from gaphor.SysML2.kpar.library import (
     ElementProvenance,
+    KparDependency,
     LibraryImportError,
     NormativeLibrary,
     UnresolvedReference,
@@ -42,6 +43,7 @@ __all__ = [
     "read_kpar",
     "read_member_text",
     "ElementProvenance",
+    "KparDependency",
     "LibraryImportError",
     "NormativeLibrary",
     "UnresolvedReference",

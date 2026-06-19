@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from gaphor.SysML2.kpar.reader import read_kpar, read_member_text
+from gaphor.SysML2.kpar.reader import KparArchive, read_kpar, read_member_text
 
 if TYPE_CHECKING:
     from gaphor.core.modeling import ElementFactory
@@ -67,14 +67,31 @@ class ElementProvenance:
 
 @dataclass(frozen=True)
 class UnresolvedReference:
-    """A reference the minimal import closure does not resolve, recorded loudly."""
+    """A reference the minimal import closure does not resolve, recorded loudly.
+
+    Carries the same provenance an imported element does, so an unresolved
+    cross-library reference traces back to the exact pinned source declaration.
+    """
 
     source: str  # qualified name of the referring element
     target: str  # the unresolved name as written, e.g. "DataValue"
     kind: str  # "specialization"
+    kpar_path: Path
+    kpar_sha256: str
     member: str
     line: int
+    declaration: str  # the source declaration text the reference came from
     message: str
+
+
+@dataclass(frozen=True)
+class KparDependency:
+    """A `.project.json` `usage` dependency resolved to a pinned artifact."""
+
+    resource: str  # the declared resource URL
+    filename: str  # its basename, e.g. "Semantic-Library.kpar"
+    path: Path  # the matched pinned artifact
+    version_constraint: str | None
 
 
 @dataclass(frozen=True)
@@ -111,6 +128,8 @@ class NormativeLibrary:
         index: dict[str, kerml.Element],
         simple_names: dict[str, kerml.Element],
         provenance: dict[str, ElementProvenance],
+        relationships: tuple[kerml.Element, ...],
+        dependencies: tuple[KparDependency, ...],
         unresolved: tuple[UnresolvedReference, ...],
         unsupported: tuple[tuple[str, int], ...],
     ) -> None:
@@ -118,6 +137,8 @@ class NormativeLibrary:
         self._index = index
         self._simple = simple_names
         self._provenance = provenance
+        self._relationships = relationships
+        self.dependencies = dependencies
         self.unresolved = unresolved
         self.unsupported = unsupported
 
@@ -143,8 +164,13 @@ class NormativeLibrary:
 
     @property
     def elements(self) -> tuple[kerml.Element, ...]:
-        """All imported elements, ordered by qualified name for determinism."""
+        """The named imported elements, ordered by qualified name for determinism."""
         return tuple(self._index[name] for name in sorted(self._index))
+
+    @property
+    def relationships(self) -> tuple[kerml.Element, ...]:
+        """Imported relationship elements (Specializations) carrying provenance."""
+        return self._relationships
 
     @property
     def qualified_names(self) -> tuple[str, ...]:
@@ -175,6 +201,10 @@ def import_scalar_values_library(omg_dir: str | Path | None = None) -> Normative
     text = read_member_text(archive, member)
     sha256 = _sha256(kpar_path)
 
+    # Closed-world dependency resolution: every declared `usage` entry must match
+    # a pinned artifact, or the import fails loudly (per the contract).
+    dependencies = _resolve_dependencies(archive, base, kpar_path)
+
     module = _parse_scalar_library(text)
     if module is None:
         raise LibraryImportError(
@@ -202,6 +232,7 @@ def import_scalar_values_library(omg_dir: str | Path | None = None) -> Normative
         )
 
     unresolved: list[UnresolvedReference] = []
+    relationships: list[kerml.Element] = []
     for decl in module.datatypes:
         specific = by_name[decl.name]
         for super_name in decl.specializes:
@@ -212,14 +243,21 @@ def import_scalar_values_library(omg_dir: str | Path | None = None) -> Normative
                 specialization.general = general
                 specific.ownedRelationship = specialization
                 specialization.owningRelatedElement = specific
+                relationships.append(specialization)
+                provenance[specialization.id] = ElementProvenance(
+                    kpar_path, sha256, member, decl.text, decl.line
+                )
             else:
                 unresolved.append(
                     UnresolvedReference(
                         source=kk.qualified_name(specific),
                         target=super_name,
                         kind="specialization",
+                        kpar_path=kpar_path,
+                        kpar_sha256=sha256,
                         member=member,
                         line=decl.line,
+                        declaration=decl.text,
                         message=(
                             f"{decl.name} specializes {super_name!r}, which is not in "
                             f"the imported {module.package} closure; recorded as a "
@@ -239,9 +277,40 @@ def import_scalar_values_library(omg_dir: str | Path | None = None) -> Normative
         index=index,
         simple_names=simple_names,
         provenance=provenance,
+        relationships=tuple(relationships),
+        dependencies=dependencies,
         unresolved=tuple(unresolved),
         unsupported=module.unsupported,
     )
+
+
+def _resolve_dependencies(
+    archive: KparArchive, base: Path, kpar_path: Path
+) -> tuple[KparDependency, ...]:
+    """Match each `.project.json` `usage` entry to a pinned artifact.
+
+    Closed-world: the importer never fetches, so a declared dependency that does
+    not resolve to a pinned artifact under ``base`` fails the import loudly.
+    """
+    resolved: list[KparDependency] = []
+    for usage in archive.project.usage:
+        filename = usage.resource.rsplit("/", 1)[-1]
+        dep_path = base / filename
+        if not dep_path.is_file():
+            raise LibraryImportError(
+                f"{kpar_path}: declared usage dependency {usage.resource!r} does not "
+                f"resolve to a pinned artifact (expected {dep_path}); closed-world "
+                f"import over {base} cannot satisfy it"
+            )
+        resolved.append(
+            KparDependency(
+                resource=usage.resource,
+                filename=filename,
+                path=dep_path,
+                version_constraint=usage.version_constraint,
+            )
+        )
+    return tuple(resolved)
 
 
 def _parse_scalar_library(text: str) -> _LibraryModule | None:

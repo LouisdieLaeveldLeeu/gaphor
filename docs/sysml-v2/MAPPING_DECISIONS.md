@@ -451,10 +451,16 @@ read-only `NormativeLibrary`.
   closure) is recorded as an explicit `UnresolvedReference`; no dangling
   `Specialization` to a missing element is created. Full dependency-closure
   import remains Phase 3c.
-- **Provenance / no stubs:** each element records the KPAR path, SHA-256, member
-  file, source declaration text, and line; a test confirms each recorded
-  declaration actually appears in the pinned member bytes.
-- **Closed-world:** the importer only reads `Data-Type-Library.kpar` from the
-  pinned `docs/sysml-v2/omg/20250201` dir (overridable for tests) and never
-  fetches; a missing artifact raises loudly.
+- **Provenance / no stubs:** every imported element *and relationship*
+  (`Specialization`) records the KPAR path, SHA-256, member file, source
+  declaration text, and line; the unresolved cross-library references carry the
+  same provenance. A test confirms each recorded declaration actually appears in
+  the pinned member bytes.
+- **Closed-world dependency resolution:** the importer reads model content only
+  from the pinned `docs/sysml-v2/omg/20250201` dir (overridable for tests) and
+  never fetches. Each `.project.json` `usage` entry is matched to a pinned
+  artifact; a declared dependency that is not pinned fails the import loudly
+  (e.g. `Data-Type-Library` without its `Semantic-Library` dependency). Matching
+  is existence-based here; importing the dependency's *content* (full closure)
+  remains Phase 3c.
 - **Boundary:** Python API only; no CLI/UI; no support-matrix cell moves.
