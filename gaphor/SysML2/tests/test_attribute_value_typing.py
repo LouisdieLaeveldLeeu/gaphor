@@ -115,6 +115,60 @@ def test_attribute_typed_by_part_definition_is_mistyped():
     assert result.mistyped  # Engine is a Structure, not a DataType
 
 
+def test_user_name_shadows_library_and_is_not_overridden():
+    # A local `package Real` is a non-Type; `attribute x : Real` must stay
+    # unresolved (the library never overrides a user-model name).
+    factory, result = _map("package Real { }\nattribute x : Real;")
+    assert result.unresolved_types
+    usage = next(iter(factory.select(sysml2.AttributeUsage)))
+    assert kk.feature_type(usage) is None
+    # No library proxy was materialized.
+    assert not [e for e in factory.select(kerml.DataType) if type(e) is kerml.DataType]
+
+
+def test_user_attribute_definition_named_real_shadows_library():
+    factory, result = _map("attribute def Real;\nattribute x : Real;")
+    assert not result.unresolved_types and not result.mistyped
+    usage = next(iter(factory.select(sysml2.AttributeUsage)))
+    typed = kk.feature_type(usage)
+    # Typed by the USER's AttributeDefinition, not a library proxy.
+    assert isinstance(typed, sysml2.AttributeDefinition)
+    assert not [e for e in factory.select(kerml.DataType) if type(e) is kerml.DataType]
+
+
+def test_set_attribute_library_type_rejects_non_library_name():
+    import pytest
+
+    from gaphor.SysML2.mapping import set_attribute_library_type
+
+    factory = ElementFactory()
+    root = factory.create(kerml.Namespace)
+    usage = factory.create(sysml2.AttributeUsage)
+    usage.declaredName = "x"
+    kk.add_owned_member(root, usage, factory.create(kerml.OwningMembership))
+
+    with pytest.raises(ValueError):
+        set_attribute_library_type(usage, "BogusNotLibrary")
+
+    # No proxy was created and the usage stays untyped.
+    assert kk.feature_type(usage) is None
+    assert not [e for e in factory.select(kerml.DataType) if type(e) is kerml.DataType]
+
+
+def test_set_attribute_library_type_rejects_abstract_library_type():
+    import pytest
+
+    from gaphor.SysML2.mapping import set_attribute_library_type
+
+    factory = ElementFactory()
+    root = factory.create(kerml.Namespace)
+    usage = factory.create(sysml2.AttributeUsage)
+    kk.add_owned_member(root, usage, factory.create(kerml.OwningMembership))
+
+    with pytest.raises(ValueError):
+        set_attribute_library_type(usage, "ScalarValue")  # abstract base
+
+
 def test_library_value_type_names_lists_concrete_types():
     from gaphor.SysML2.mapping import library_value_type_names
 

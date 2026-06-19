@@ -178,11 +178,15 @@ def _resolve_typed_usages(
     relationship_sources: dict[str, str] = {}
     for usage, namespace, type_name in typed_usages:
         target = _resolve_type(root, namespace, type_name)
-        if not isinstance(target, kerml.Type):
+        # Only fall back to the standard library when the name resolves to
+        # NOTHING in the user model. A user name that resolves to a non-Type
+        # (e.g. a local `package Real`) shadows the library and stays
+        # unresolved/wrong-kind -- the library never overrides user content.
+        if target is None:
             target = _library_value_type(usage, type_name, root)
-            if target is None:
-                unresolved_types[usage.id] = "::".join(type_name)
-                continue
+        if not isinstance(target, kerml.Type):
+            unresolved_types[usage.id] = "::".join(type_name)
+            continue
         if type_matches_usage_kind(usage, target):
             typing = _set_type(usage, target)
             if typing is not None:
@@ -343,8 +347,17 @@ def set_attribute_library_type(
 
     Materializes (or reuses) the read-only value-type proxy at the usage's model
     root and sets the FeatureTyping, the same representation the text mapper uses.
+    `simple_name` is validated against the pinned library and must name a concrete
+    value type (e.g. "Real", or "ScalarValues::Real"); anything else raises
+    `ValueError` without mutating the model, so the API cannot mint arbitrary
+    non-library proxies.
     """
-    return _set_type(usage, _value_type_proxy(_root_of(usage), simple_name))
+    element = _standard_library().resolve(simple_name)
+    if not isinstance(element, kerml.DataType) or element.isAbstract:
+        raise ValueError(
+            f"{simple_name!r} is not a concrete standard-library value type"
+        )
+    return _set_type(usage, _value_type_proxy(_root_of(usage), element.declaredName))
 
 
 def _root_of(element: kerml.Element) -> kerml.Namespace:
