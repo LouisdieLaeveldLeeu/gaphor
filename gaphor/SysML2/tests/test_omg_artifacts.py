@@ -168,8 +168,9 @@ def test_manifest_row_matches_pinned_file(row):
 
     assert path.exists(), f"manifest lists {row['File']} but the file is missing"
     assert _sha256(path) == row["SHA-256"]
-    # The KPAR table records byte sizes; the XMI table does not.
-    if row.get("Bytes"):
+    # The KPAR table records byte sizes; fail closed if that column drifts.
+    if row["File"].endswith(".kpar"):
+        assert row.get("Bytes", "").isdigit()
         assert path.stat().st_size == int(row["Bytes"])
 
 
