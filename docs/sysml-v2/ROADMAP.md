@@ -23,9 +23,9 @@ tests.
 - KerML Package: `supported` (all nine cells).
 - SysML PartDefinition, PartUsage: `supported` (all nine cells).
 - SysML AttributeDefinition: `supported` (all nine cells).
-- SysML AttributeUsage: `alpha` (all nine cells for untyped usages and usages
-  typed by AttributeDefinition; capped until the standard-library/value-type
-  path supports `attribute x : Real` and related primitive/value types).
+- SysML AttributeUsage: `supported` (all nine cells, including usages typed by a
+  standard-library value type such as `attribute x : Real`, resolved against the
+  pinned ScalarValues library via a read-only value-type proxy -- Phase 4).
 - SysML ActionDefinition, ActionUsage: `alpha` (all nine cells for the
   declaration-and-typing surface; capped on action bodies, nested steps,
   succession/flow connections, and parameters).
@@ -247,7 +247,7 @@ unit-tested headless; the file chooser and dialogs are the thin GUI layer.
 Exit (reached): users can import supported KPAR projects from the Gaphor UI with
 the same diagnostic and preservation behavior as the CLI/API.
 
-### Phase 4 -- AttributeUsage Promotion
+### Phase 4 -- AttributeUsage Promotion -- DONE
 
 Use the imported normative standard library to finish primitive/value-typed
 attributes.
@@ -260,7 +260,19 @@ Work:
   read-only imported library types;
 - promote `SysML AttributeUsage` to `supported` only after focused tests pass.
 
-Exit: AttributeUsage is no longer capped on the standard-library dependency.
+Delivered in `gaphor/SysML2/mapping.py`: when an AttributeUsage's declared type
+does not resolve in the user model, the mapper resolves it against the pinned
+`ScalarValues` library and types the attribute through a read-only value-type
+proxy -- a bare `kerml.DataType` materialized at the model root that is a real
+Type for FeatureTyping/validation/persistence but is invisible to textual export
+and the round-trip canonical form (so `attribute x : Real;` round-trips and the
+library declaration is never dumped). The AttributeUsage typing-kind rule was
+relaxed to accept any `DataType` (AttributeDefinition or library value type). The
+property page now also offers the concrete library value types. AttributeUsage is
+promoted to `supported`; `test_attribute_value_typing.py` covers the full chain.
+
+Exit (reached): AttributeUsage is no longer capped on the standard-library
+dependency.
 
 ### Phase 5 -- Deeper Name Resolution
 

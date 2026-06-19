@@ -549,3 +549,37 @@ menu fragment.
   allow-invalid, malformed-archive, action/menu registration). The file chooser
   and dialogs are the thin GUI layer. The menu wiring spans `menubar.ui`,
   `mainwindow.ui` (hamburger), and the app menu hooks in `gaphor/ui/__init__.py`.
+
+### Completion Phase 4: AttributeUsage Promotion (verified 2026-06-19)
+
+`attribute x : Real` now resolves against the pinned standard library, so SysML
+AttributeUsage is promoted from `alpha` to `supported`.
+
+- **Library-aware resolution.** In `gaphor/SysML2/mapping.py`, when an
+  AttributeUsage's declared type does not resolve in the user model, the mapper
+  resolves the name against the pinned `ScalarValues` library
+  (`import_scalar_values_library`, cached per process) and types the attribute.
+  This is global to the mapper, so it applies to text import, the round-trip
+  harness, and user KPAR project import alike (a user KPAR's `attribute x : Real`
+  now resolves instead of being recorded unresolved).
+- **Referenced value-type proxy.** The typing target is a read-only proxy: a bare
+  `kerml.DataType` (declared name = the library type's simple name) materialized
+  once per type at the model root, reused for repeated references. It is a real
+  Type for `FeatureTyping`/validation/persistence, but -- being neither a SysML2
+  construct nor a Package -- it is invisible to `export.py` and the round-trip
+  canonical form, so `attribute x : Real;` round-trips and the library
+  declaration is never dumped. See the KPAR_IMPORT_CONTRACT Storage amendment.
+- **Kind rule relaxed.** `type_matches_usage_kind` now accepts any
+  `kerml.DataType` for an AttributeUsage (an AttributeDefinition, which is a
+  DataType, or a library value type); other usage kinds keep exact matching. This
+  single change covers the mapper and the model-derived validation, which routes
+  kind-checking through the same function.
+- **UI.** The AttributeUsage type property page lists the concrete library value
+  types alongside in-model AttributeDefinitions
+  (`mapping.library_value_type_names` / `mapping.set_attribute_library_type`),
+  and pre-selects the current library type. Bare proxies have no property page, so
+  they are not user-editable.
+- **Scope/limits:** only AttributeUsages get library value typing; abstract
+  library bases (ScalarValue, NumericalValue, Number) are not offered; per-element
+  KPAR-span provenance for proxies is by qualified name (verifiable against the
+  pinned library), not a stored span.

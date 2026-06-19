@@ -19,6 +19,7 @@ with a `FeatureTyping` owned by the usage. An unresolved type name is recorded
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 from gaphor.core.modeling import ElementFactory
 from gaphor.SysML2 import kerml, sysml2
@@ -52,13 +53,18 @@ def is_managed_usage_kind(usage: kerml.Feature) -> bool:
 
 
 def type_matches_usage_kind(usage: kerml.Feature, target: kerml.Type) -> bool:
-    """Whether `target` is the exact definition kind that `usage` must be typed by.
+    """Whether `target` is a kind that `usage` may be typed by.
 
-    Exact-type match (not isinstance), so a RequirementDefinition does not satisfy
-    a plain ConstraintUsage and a ConstraintDefinition does not satisfy a
-    RequirementUsage. A usage kind with no registered definition kind is treated
-    as not matchable (it has no valid textual typing yet).
+    An AttributeUsage may be typed by any KerML `DataType`: an AttributeDefinition
+    (which is a DataType) or a standard-library value type such as
+    `ScalarValues::Real` (materialized as a read-only DataType proxy). For the
+    other usage kinds the match is exact (not isinstance), so a
+    RequirementDefinition does not satisfy a plain ConstraintUsage and a
+    ConstraintDefinition does not satisfy a RequirementUsage. A usage kind with no
+    registered definition kind is treated as not matchable.
     """
+    if isinstance(usage, sysml2.AttributeUsage):
+        return isinstance(target, kerml.DataType)
     required = USAGE_DEFINITION_KIND.get(type(usage))
     return required is not None and type(target) is required
 
@@ -161,10 +167,11 @@ def _resolve_typed_usages(
     """Resolve usage typing for the collected usages (mapping phase 2).
 
     A simple name resolves in the usage's own namespace; a qualified name resolves
-    from the root. A name that does not resolve to a Type is recorded as
-    unresolved; one that resolves to the WRONG kind is recorded as mistyped. Only
-    an exact-kind match creates the FeatureTyping, so nothing is silently dropped
-    and no cross-kind typing is ever stored.
+    from the root. A name that does not resolve in the user model is, for an
+    AttributeUsage, tried against the standard library (e.g. `attribute x : Real`);
+    otherwise it is recorded as unresolved. A name that resolves to the WRONG kind
+    is recorded as mistyped. Only a kind match creates the FeatureTyping, so
+    nothing is silently dropped and no cross-kind typing is ever stored.
     """
     unresolved_types: dict[str, str] = {}
     mistyped: dict[str, tuple[str, str]] = {}
@@ -172,8 +179,11 @@ def _resolve_typed_usages(
     for usage, namespace, type_name in typed_usages:
         target = _resolve_type(root, namespace, type_name)
         if not isinstance(target, kerml.Type):
-            unresolved_types[usage.id] = "::".join(type_name)
-        elif type_matches_usage_kind(usage, target):
+            target = _library_value_type(usage, type_name, root)
+            if target is None:
+                unresolved_types[usage.id] = "::".join(type_name)
+                continue
+        if type_matches_usage_kind(usage, target):
             typing = _set_type(usage, target)
             if typing is not None:
                 relationship_sources[typing.id] = usage.id
@@ -270,6 +280,97 @@ def _resolve_type(
     # Qualified name: resolve relative to the implicit root (its first segment
     # is a top-level member, e.g. Vehicles::Engine).
     return kk.resolve_in_namespace(root, "::".join(type_name))
+
+
+@lru_cache(maxsize=1)
+def _standard_library():
+    """The pinned standard value-type library, loaded once per process.
+
+    Read-only reference data: used to recognise library value-type names and
+    their canonical declared names; the proxies the mapper materialises live in
+    the user's own factory, not here.
+    """
+    from gaphor.SysML2.kpar.library import import_scalar_values_library
+
+    return import_scalar_values_library()
+
+
+def _library_value_type(
+    usage: kerml.Feature, type_name: tuple[str, ...], root: kerml.Namespace
+) -> kerml.DataType | None:
+    """A read-only proxy DataType for a standard-library value type.
+
+    Only AttributeUsages may be typed by a library value type (e.g.
+    `attribute x : Real`). Returns None if `usage` is not an attribute usage or
+    the declared name is not a standard-library value type. The proxy is a bare
+    `kerml.DataType` owned by the model root: it is a real Type for FeatureTyping,
+    persists with the model, and -- being neither a SysML2 construct nor a
+    Package -- is invisible to textual export and the round-trip canonical form,
+    so the library declaration is never dumped. The contract's amendment treats
+    these as read-only, provenance-by-qualified-name references, regenerable from
+    the pinned KPAR.
+    """
+    if not isinstance(usage, sysml2.AttributeUsage):
+        return None
+    element = _standard_library().resolve("::".join(type_name))
+    if not isinstance(element, kerml.DataType):
+        return None
+    return _value_type_proxy(root, element.declaredName)
+
+
+def library_value_type_names() -> tuple[str, ...]:
+    """Sorted simple names of the concrete standard-library value types.
+
+    For the UI type chooser and the Python API: the value types a user may type
+    an attribute by (e.g. Boolean, Integer, Real, String). Abstract library
+    bases (ScalarValue, NumericalValue, Number) are excluded.
+    """
+    return tuple(
+        sorted(
+            element.declaredName
+            for element in _standard_library().elements
+            if isinstance(element, kerml.DataType)
+            and not element.isAbstract
+            and element.declaredName
+        )
+    )
+
+
+def set_attribute_library_type(
+    usage: sysml2.AttributeUsage, simple_name: str
+) -> kerml.FeatureTyping | None:
+    """Type an AttributeUsage by a standard-library value type (UI/Python API).
+
+    Materializes (or reuses) the read-only value-type proxy at the usage's model
+    root and sets the FeatureTyping, the same representation the text mapper uses.
+    """
+    return _set_type(usage, _value_type_proxy(_root_of(usage), simple_name))
+
+
+def _root_of(element: kerml.Element) -> kerml.Namespace:
+    current: kerml.Element = element
+    while True:
+        owner = kk.owning_namespace(current)
+        if owner is None:
+            return current  # type: ignore[return-value]
+        current = owner
+
+
+def _value_type_proxy(root: kerml.Namespace, simple_name: str) -> kerml.DataType:
+    """Find or create the read-only library value-type proxy named `simple_name`
+    owned by `root` (one proxy per library type per model root)."""
+    factory = root.model
+    for existing in factory.select(kerml.DataType):
+        if (
+            type(existing) is kerml.DataType
+            and existing.declaredName == simple_name
+            and kk.owning_namespace(existing) is root
+        ):
+            return existing
+    proxy = factory.create(kerml.DataType)
+    proxy.declaredName = simple_name
+    kk.add_owned_member(root, proxy, factory.create(kerml.OwningMembership))
+    return proxy
 
 
 def _set_type(

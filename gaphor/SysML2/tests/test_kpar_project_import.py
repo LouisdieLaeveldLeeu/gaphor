@@ -93,14 +93,15 @@ def test_unsupported_member_is_recorded_not_dropped(tmp_path):
 
 
 def test_external_reference_is_unresolved_not_invented(tmp_path):
-    # A reference to a library/external type (not in this KPAR) stays unresolved
-    # and is recorded -- cross-library resolution is Phase 4.
+    # A reference to a type that is neither in this KPAR nor a standard-library
+    # value type stays unresolved and is recorded (not invented). (Standard
+    # library value types like Real now resolve -- see Phase 4.)
     archive = tmp_path / "proj.kpar"
-    _write_user_kpar(archive, {"C.sysml": "attribute x : Real;"})
+    _write_user_kpar(archive, {"C.sysml": "attribute x : NotALibraryType;"})
 
     result = import_user_kpar(archive)
 
-    assert "Real" in {ref.type_name for ref in result.unresolved_references}
+    assert "NotALibraryType" in {ref.type_name for ref in result.unresolved_references}
     # No phantom type was invented for the unresolved reference.
     assert not list(result.factory.select(sysml2.AttributeDefinition))
 

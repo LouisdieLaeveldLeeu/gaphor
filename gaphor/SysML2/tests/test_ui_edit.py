@@ -542,6 +542,32 @@ def test_attribute_usage_type_property_page_sets_and_replaces_type(
     assert len(element_factory.lselect(kerml.FeatureTyping)) == 1
 
 
+def test_attribute_usage_type_property_page_offers_library_value_types(
+    element_factory,
+    event_manager,
+):
+    root = element_factory.create(kerml.Namespace)
+    usage = element_factory.create(sysml2.AttributeUsage)
+    usage.declaredName = "speed"
+    kk.add_owned_member(root, usage, element_factory.create(kerml.OwningMembership))
+    property_page = AttributeUsageTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "attribute-usage-type")
+    values = {lv.value for lv in dropdown.get_model()}
+    assert "library:Real" in values
+
+    real_index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == "library:Real"
+    )
+    dropdown.set_selected(real_index)
+
+    typed = kk.feature_type(usage)
+    assert type(typed) is kerml.DataType
+    assert typed.declaredName == "Real"
+    assert kk.owning_namespace(typed) is root
+
+
 def test_attribute_usage_type_property_page_can_clear_type(
     element_factory,
     event_manager,

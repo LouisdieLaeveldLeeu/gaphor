@@ -16,7 +16,10 @@ from gaphor.diagram.propertypages import (
 )
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
+from gaphor.SysML2 import mapping
 from gaphor.SysML2 import sysml2
+
+_LIBRARY_PREFIX = "library:"
 
 new_builder = new_resource_builder("gaphor.SysML2")
 
@@ -144,7 +147,8 @@ class PartUsageTypePropertyPage(PropertyPageBase):
 
 @PropertyPages.register(sysml2.AttributeUsage)
 class AttributeUsageTypePropertyPage(PropertyPageBase):
-    """Set the AttributeDefinition type for an AttributeUsage."""
+    """Set the type for an AttributeUsage: an in-model AttributeDefinition or a
+    read-only standard-library value type (Real, String, ...)."""
 
     order = 20
 
@@ -158,13 +162,14 @@ class AttributeUsageTypePropertyPage(PropertyPageBase):
 
         dropdown = builder.get_object("attribute-usage-type")
         model = list_of_definitions(self.subject.model, sysml2.AttributeDefinition)
+        for name in mapping.library_value_type_names():
+            model.append(LabelValue(f"{name} (library)", f"{_LIBRARY_PREFIX}{name}"))
         dropdown.set_model(model)
 
-        if isinstance(
-            type_ := kk.feature_type(self.subject), sysml2.AttributeDefinition
-        ):
+        selected_value = self._current_value()
+        if selected_value is not None:
             selected = next(
-                (n for n, lv in enumerate(model) if lv.value == type_.id),
+                (n for n, lv in enumerate(model) if lv.value == selected_value),
                 None,
             )
             if selected is not None:
@@ -174,13 +179,28 @@ class AttributeUsageTypePropertyPage(PropertyPageBase):
 
         return builder.get_object("attribute-usage-type-editor")
 
+    def _current_value(self) -> str | None:
+        type_ = kk.feature_type(self.subject)
+        if isinstance(type_, sysml2.AttributeDefinition):
+            return type_.id
+        # A bare DataType is a library value-type proxy.
+        if type(type_) is kerml.DataType:
+            return f"{_LIBRARY_PREFIX}{type_.declaredName}"
+        return None
+
     def _on_type_changed(self, dropdown, _pspec):
         selected = dropdown.get_selected_item()
         with Transaction(self.event_manager, context="editing"):
             if selected and selected.value:
-                type_ = self.subject.model.lookup(selected.value)
-                assert isinstance(type_, sysml2.AttributeDefinition)
-                kk.set_feature_type(self.subject, type_)
+                value = selected.value
+                if value.startswith(_LIBRARY_PREFIX):
+                    mapping.set_attribute_library_type(
+                        self.subject, value[len(_LIBRARY_PREFIX):]
+                    )
+                else:
+                    type_ = self.subject.model.lookup(value)
+                    assert isinstance(type_, sysml2.AttributeDefinition)
+                    kk.set_feature_type(self.subject, type_)
             else:
                 kk.set_feature_type(self.subject, None)
 

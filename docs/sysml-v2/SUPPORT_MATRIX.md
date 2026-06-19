@@ -50,7 +50,7 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML PartDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML PartUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML AttributeDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
-| SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML ActionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML ActionUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML ConstraintDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
@@ -166,17 +166,18 @@ derivation phase. Only the declaration-and-typing surface is proven; promotion
 waits until the connector-end surface is scheduled and built. This is the Phase-G
 connector-end gate decision, taken explicitly per the roadmap.
 
-AttributeUsage stays `alpha` on a named dependency. Every one of its cells is
-implemented and focused-tested -- including the Diagram and UI-edit cells added
-in Phase C2 -- for untyped usages and usages typed by an AttributeDefinition
-through KerML FeatureTyping. It is held at `alpha` (not `supported`) because the
-construct is not complete end to end: primitive / value-library typing (e.g.
-`attribute x : Real`) requires the KPAR-backed import path now scheduled ahead
-of AttributeUsage promotion: import design contract, minimal normative-library
-import, then value-type resolution against the imported pinned library.
-AttributeUsage is promoted to `supported` only once that pinned-library path
-lands and `attribute x : Real` round-trips. This is the C2 standard-library gate
-decision, taken explicitly per the roadmap.
+AttributeUsage is `supported` (Phase 4). Every cell is implemented and
+focused-tested for untyped usages, usages typed by an in-model AttributeDefinition
+through KerML FeatureTyping, AND usages typed by a standard-library value type
+(e.g. `attribute x : Real`). The library dependency that previously capped it at
+`alpha` is now satisfied by the KPAR path (Phases 3a-3b): the mapper resolves a
+value-type name against the pinned `ScalarValues` library and types the attribute
+through a read-only library value-type proxy (a `kerml.DataType` materialized in
+the user model, invisible to textual export and the canonical form). The full
+chain -- parse, map, validate, export, round-trip, persist, diagram, and UI-edit
+(the property page also offers the library value types) -- passes focused tests
+for `attribute x : Real` and related primitive value types. See
+`test_attribute_value_typing.py`.
 
 Diagram cell scope. `Diagram=yes` for Package, PartDefinition, PartUsage,
 AttributeDefinition, AttributeUsage, ActionDefinition, ActionUsage,

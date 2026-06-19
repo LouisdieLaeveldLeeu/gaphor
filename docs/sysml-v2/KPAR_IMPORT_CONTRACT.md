@@ -57,6 +57,21 @@ its focused tests pass.
   General user KPAR import (Phase 3c) may revisit storage for *user* content, but
   the normative-library treatment defined here is the default.
 
+**Amendment (Phase 4 -- referenced value-type proxies).** Full normative
+libraries are still never copied wholesale into `.gaphor`. But a model that
+*uses* a standard-library value type (e.g. `attribute x : Real`) may materialize
+a **read-only referenced-library proxy** for that specific type: a bare
+`kerml.DataType` whose declared name is the library type's name, owned by the
+model root, used as the `FeatureTyping` target so the normal Type machinery works
+for validation, export, save/reload, diagrams, and round-trip. These proxies:
+are not user-authored content and are not editable through the normal UI (no
+property page is registered for a bare `kerml.DataType`); are invisible to
+textual export and the round-trip canonical form, so `attribute x : Real;` is
+emitted rather than the library declaration; and are verifiable against the
+pinned KPAR by their qualified name (the library is regenerated on load). This is
+a narrow, reviewed amendment to "not persisted": only the referenced types are
+materialized, never whole libraries.
+
 ## Representation
 
 - Imported library content is materialized as **real KerML kernel elements**
