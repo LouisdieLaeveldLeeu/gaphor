@@ -105,18 +105,40 @@ def map_project(packages, factory: ElementFactory) -> MappingResult:
     unresolved (recorded, never silently dropped). Resolution scope is otherwise
     the same as `map_package`.
     """
+    result, _ = map_project_members([(None, pkg) for pkg in packages], factory)
+    return result
+
+
+def map_project_members(named_packages, factory: ElementFactory):
+    """Map `(label, package)` pairs into one shared project namespace.
+
+    Like `map_project`, but also returns a provenance map
+    `element.id -> (label, ast_node)` for every created element (including nested
+    ones). KPAR import uses the label (source member) and the AST node's source
+    line to trace each imported element back to its declaration.
+    """
     root = factory.create(kerml.Namespace)
     typed_usages: list[tuple[sysml2.PartUsage, kerml.Namespace, tuple[str, ...]]] = []
     top_level: dict[str, kerml.Element] = {}
-    for pkg in packages:
-        top_level.update(_build_members(pkg.members, root, factory, typed_usages))
+    provenance: dict[str, tuple] = {}
+    for label, pkg in named_packages:
+
+        def record(element, node, _label=label):
+            provenance[element.id] = (_label, node)
+
+        top_level.update(
+            _build_members(pkg.members, root, factory, typed_usages, record)
+        )
 
     unresolved_types, mistyped = _resolve_typed_usages(root, typed_usages)
-    return MappingResult(
-        root=root,
-        elements_by_name=top_level,
-        unresolved_types=unresolved_types,
-        mistyped=mistyped,
+    return (
+        MappingResult(
+            root=root,
+            elements_by_name=top_level,
+            unresolved_types=unresolved_types,
+            mistyped=mistyped,
+        ),
+        provenance,
     )
 
 
@@ -149,9 +171,14 @@ def _build_members(
     namespace: kerml.Namespace,
     factory: ElementFactory,
     typed_usages: list,
+    on_element=None,
 ) -> dict[str, kerml.Element]:
     """Create each AST member as an owned member of `namespace`, recursing into
-    sub-packages. Returns this level's elements by name."""
+    sub-packages. Returns this level's elements by name.
+
+    If `on_element` is given, it is called as `on_element(element, ast_node)` for
+    every created element (including nested ones), so callers can record
+    per-element provenance from the AST node (e.g. its source line)."""
     by_name: dict[str, kerml.Element] = {}
     for member in members:
         if isinstance(member, ast.PartDefinition):
@@ -204,8 +231,12 @@ def _build_members(
         kk.add_owned_member(
             namespace, element, factory.create(kerml.OwningMembership)
         )
+        if on_element is not None:
+            on_element(element, member)
         if isinstance(member, ast.PackageDefinition):
-            _build_members(member.members, element, factory, typed_usages)
+            _build_members(
+                member.members, element, factory, typed_usages, on_element
+            )
         by_name[member.name] = element
     return by_name
 

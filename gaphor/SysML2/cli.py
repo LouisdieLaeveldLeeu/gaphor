@@ -197,11 +197,6 @@ def _run_kpar_import(args: argparse.Namespace) -> int:
             f"{rejected.message}",
             file=sys.stderr,
         )
-    for ref in result.unresolved_references:
-        print(
-            f"warning: unresolved type reference {ref.type_name} ({ref.reason})",
-            file=sys.stderr,
-        )
     for dep in result.external_dependencies:
         print(
             f"warning: external dependency not imported (self-contained import): "
@@ -211,6 +206,18 @@ def _run_kpar_import(args: argparse.Namespace) -> int:
 
     if not result.imported_any:
         print("kpar import: no supported content found", file=sys.stderr)
+        return ERROR_EXIT_CODE
+
+    # Validate before persisting (unresolved/mistyped/duplicate names surface
+    # here, with provenance available via the result for programmatic callers).
+    for d in result.validation_diagnostics:
+        print(f"{d.severity}: {d.rule}: {d.message}", file=sys.stderr)
+    if result.has_validation_errors and not args.allow_invalid:
+        print(
+            "import refused: model has validation errors "
+            "(use --allow-invalid to import anyway)",
+            file=sys.stderr,
+        )
         return ERROR_EXIT_CODE
 
     with open(args.model, "w", encoding="utf-8") as f:
@@ -275,6 +282,11 @@ def kpar_import_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("archive", help="path to a .kpar project archive")
     parser.add_argument("model", help="target .gaphor model")
+    parser.add_argument(
+        "--allow-invalid",
+        action="store_true",
+        help="import even if validation reports errors",
+    )
     parser.set_defaults(command=_run_kpar_import)
     return parser
 

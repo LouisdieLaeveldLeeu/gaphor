@@ -19,86 +19,86 @@ _GRAMMAR_PATH = Path(__file__).with_name("sysml2.lark")
 
 
 class _ASTBuilder(Transformer):
-    def NAME(self, token):
-        return str(token)
-
+    # NAME tokens are kept as Lark Tokens (a str subclass) so each construct can
+    # read the declaration's source `.line` for provenance; they are converted to
+    # plain `str` here where they become AST values.
     def qualified_name(self, names):
-        return tuple(names)
+        return tuple(str(name) for name in names)
 
     def type_ref(self, items):
         return items[0]
 
     def part_definition(self, items):
         (name,) = items
-        return ast.PartDefinition(name=name)
+        return ast.PartDefinition(name=str(name), line=name.line)
 
     def part_usage(self, items):
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.PartUsage(name=name, type_name=type_name)
+        return ast.PartUsage(name=str(name), type_name=type_name, line=name.line)
 
     def attribute_definition(self, items):
         (name,) = items
-        return ast.AttributeDefinition(name=name)
+        return ast.AttributeDefinition(name=str(name), line=name.line)
 
     def attribute_usage(self, items):
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.AttributeUsage(name=name, type_name=type_name)
+        return ast.AttributeUsage(name=str(name), type_name=type_name, line=name.line)
 
     def action_definition(self, items):
         (name,) = items
-        return ast.ActionDefinition(name=name)
+        return ast.ActionDefinition(name=str(name), line=name.line)
 
     def action_usage(self, items):
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.ActionUsage(name=name, type_name=type_name)
+        return ast.ActionUsage(name=str(name), type_name=type_name, line=name.line)
 
     def constraint_definition(self, items):
         (name,) = items
-        return ast.ConstraintDefinition(name=name)
+        return ast.ConstraintDefinition(name=str(name), line=name.line)
 
     def constraint_usage(self, items):
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.ConstraintUsage(name=name, type_name=type_name)
+        return ast.ConstraintUsage(name=str(name), type_name=type_name, line=name.line)
 
     def requirement_definition(self, items):
         (name,) = items
-        return ast.RequirementDefinition(name=name)
+        return ast.RequirementDefinition(name=str(name), line=name.line)
 
     def requirement_usage(self, items):
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.RequirementUsage(name=name, type_name=type_name)
+        return ast.RequirementUsage(name=str(name), type_name=type_name, line=name.line)
 
     def port_definition(self, items):
         (name,) = items
-        return ast.PortDefinition(name=name)
+        return ast.PortDefinition(name=str(name), line=name.line)
 
     def port_usage(self, items):
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.PortUsage(name=name, type_name=type_name)
+        return ast.PortUsage(name=str(name), type_name=type_name, line=name.line)
 
     def connection_definition(self, items):
         (name,) = items
-        return ast.ConnectionDefinition(name=name)
+        return ast.ConnectionDefinition(name=str(name), line=name.line)
 
     def connection_usage(self, items):
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.ConnectionUsage(name=name, type_name=type_name)
+        return ast.ConnectionUsage(name=str(name), type_name=type_name, line=name.line)
 
     def package_definition(self, items):
         name = items[0]
         members = items[1]  # package_body -> tuple
-        return ast.PackageDefinition(name=name, members=members)
+        return ast.PackageDefinition(name=str(name), members=members, line=name.line)
 
     def empty_package_definition(self, items):
         (name,) = items
-        return ast.PackageDefinition(name=name, members=())
+        return ast.PackageDefinition(name=str(name), members=(), line=name.line)
 
     def member(self, items):
         return items[0]

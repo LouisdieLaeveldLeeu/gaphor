@@ -492,6 +492,14 @@ imports a *user* KPAR project through the existing SysML2 text pipeline, with a
 - **Dependency-gap diagnostics.** A user KPAR's declared `.project.json` `usage`
   entries are surfaced as external-dependency diagnostics (not resolved/imported
   in this self-contained phase).
+- **Validation before persist.** The mapped model is validated; the CLI refuses
+  to save a model with validation errors (unresolved/mistyped types, duplicate
+  names) unless `--allow-invalid` is passed -- matching the single-file
+  `sysml2-import` policy.
+- **Per-element/reference provenance.** The grammar now records each
+  declaration's source line, so every imported element (including nested ones)
+  and every unresolved reference traces to its source member, declaration text,
+  and line. Provenance is metadata only; imported content stays editable.
 - **Entry points.** Python API + `sysml2-kpar-import` CLI; GUI import is Phase 3d.
 - **Deferred (recorded, not claimed):** duplicate-import and version-conflict
   diagnostics, which only arise when re-importing into an already-populated user

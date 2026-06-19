@@ -16,8 +16,11 @@ at the Phase 3c review gate:
   members imported from the *same* KPAR. References to normative libraries,
   external dependencies, or unimported members stay unresolved and are recorded
   (cross-library resolution into the Phase 3b library is Phase 4).
-- **Provenance, not read-only.** The result carries provenance/diagnostics, but
+- **Provenance, not read-only.** Every imported element and every unresolved
+  reference traces to its KPAR, member, source declaration text, and line; but
   imported elements are ordinary editable model content.
+- **Validation.** The mapped model is validated; callers (the CLI) refuse to
+  persist a model with validation errors unless explicitly overridden.
 
 Entry surface: this Python API plus the `sysml2-kpar-import` CLI command.
 """
@@ -46,6 +49,16 @@ class ProjectProvenance:
 
 
 @dataclass(frozen=True)
+class ElementImportProvenance:
+    """Traces one imported element back to its source declaration."""
+
+    qualified_name: str
+    member: str  # archive entry the element was declared in
+    line: int | None  # 1-based source line, when available
+    declaration: str  # the source declaration text
+
+
+@dataclass(frozen=True)
 class ImportedMember:
     """A model member that parsed and was imported."""
 
@@ -67,6 +80,10 @@ class UnresolvedTypeReference:
 
     type_name: str
     reason: str  # "unresolved" or "wrong-kind: <ResolvedKind>"
+    source: str  # qualified name of the referring usage
+    member: str  # archive entry the reference was declared in
+    line: int | None  # 1-based source line, when available
+    declaration: str  # the source declaration text the reference came from
 
 
 @dataclass(frozen=True)
@@ -94,13 +111,17 @@ class UserKparImport:
     unresolved_references: tuple[UnresolvedTypeReference, ...] = field(
         default_factory=tuple
     )
-    external_dependencies: tuple[ExternalDependency, ...] = field(
-        default_factory=tuple
-    )
+    external_dependencies: tuple[ExternalDependency, ...] = field(default_factory=tuple)
+    element_provenance: dict[str, ElementImportProvenance] = field(default_factory=dict)
+    validation_diagnostics: tuple = field(default_factory=tuple)
+    has_validation_errors: bool = False
 
     @property
     def imported_any(self) -> bool:
         return bool(self.imported_members)
+
+    def provenance_of(self, element) -> ElementImportProvenance | None:
+        return self.element_provenance.get(element.id)
 
 
 def import_user_kpar(
@@ -110,13 +131,16 @@ def import_user_kpar(
 
     Validates the archive (raising a
     :class:`~gaphor.SysML2.kpar.reader.KparError` subclass on a malformed one),
-    then parses each model member independently, imports the parseable ones into
-    a single project namespace with project-wide type resolution, and records
-    rejected members and unresolved references.
+    parses each model member independently, imports the parseable ones into a
+    single project namespace with project-wide type resolution, validates the
+    result, and records per-element/per-reference provenance plus rejected
+    members, unresolved references, and external-dependency diagnostics.
     """
     from gaphor.core.modeling import ElementFactory
+    from gaphor.SysML2 import kerml_kernel as kk
     from gaphor.SysML2.grammar.parser import parse
-    from gaphor.SysML2.mapping import map_project
+    from gaphor.SysML2.mapping import map_project_members
+    from gaphor.SysML2.validation import has_errors, validate
 
     archive = read_kpar(kpar_path)
     provenance = ProjectProvenance(
@@ -125,7 +149,8 @@ def import_user_kpar(
         project_name=archive.project.name,
     )
 
-    parsed: list = []
+    named_packages: list = []
+    member_lines: dict[str, list[str]] = {}
     imported_members: list[ImportedMember] = []
     rejected_members: list[RejectedMember] = []
     for model_file in archive.model_files:
@@ -135,7 +160,8 @@ def import_user_kpar(
         except SyntaxError as exc:
             rejected_members.append(RejectedMember(model_file.member, str(exc)))
             continue
-        parsed.append(package)
+        named_packages.append((model_file.member, package))
+        member_lines[model_file.member] = text.splitlines()
         imported_members.append(
             ImportedMember(
                 member=model_file.member,
@@ -144,15 +170,56 @@ def import_user_kpar(
         )
 
     factory = factory if factory is not None else ElementFactory()
-    result = map_project(parsed, factory)
+    result, node_provenance = map_project_members(named_packages, factory)
+
+    def source_of(member, node) -> tuple[int | None, str]:
+        line = getattr(node, "line", None)
+        lines = member_lines.get(member, [])
+        text = lines[line - 1].strip() if line and 0 < line <= len(lines) else ""
+        return line, text
+
+    def qualified_name(element) -> str:
+        # The import root is unnamed, so kk.qualified_name yields a leading "::";
+        # strip it so provenance reads "A::Engine", not "::A::Engine".
+        if element is None:
+            return ""
+        name = kk.qualified_name(element)
+        return name[2:] if name.startswith("::") else name
+
+    element_provenance: dict[str, ElementImportProvenance] = {}
+    for element_id, (member, node) in node_provenance.items():
+        element = factory.lookup(element_id)
+        line, declaration = source_of(member, node)
+        element_provenance[element_id] = ElementImportProvenance(
+            qualified_name=qualified_name(element),
+            member=member,
+            line=line,
+            declaration=declaration,
+        )
+
+    def make_unresolved(usage_id, type_name, reason) -> UnresolvedTypeReference:
+        member, node = node_provenance.get(usage_id, ("", None))
+        line, declaration = source_of(member, node)
+        return UnresolvedTypeReference(
+            type_name=type_name,
+            reason=reason,
+            source=qualified_name(factory.lookup(usage_id)),
+            member=member,
+            line=line,
+            declaration=declaration,
+        )
 
     unresolved = [
-        UnresolvedTypeReference(type_name=name, reason="unresolved")
-        for name in result.unresolved_types.values()
+        make_unresolved(usage_id, type_name, "unresolved")
+        for usage_id, type_name in result.unresolved_types.items()
     ]
     unresolved.extend(
-        UnresolvedTypeReference(type_name=name, reason=f"wrong-kind: {kind}")
-        for name, kind in result.mistyped.values()
+        make_unresolved(usage_id, type_name, f"wrong-kind: {kind}")
+        for usage_id, (type_name, kind) in result.mistyped.items()
+    )
+
+    validation_diagnostics = tuple(
+        validate(factory, result.unresolved_types, result.mistyped)
     )
 
     external_dependencies = tuple(
@@ -168,6 +235,9 @@ def import_user_kpar(
         rejected_members=tuple(rejected_members),
         unresolved_references=tuple(unresolved),
         external_dependencies=external_dependencies,
+        element_provenance=element_provenance,
+        validation_diagnostics=validation_diagnostics,
+        has_validation_errors=has_errors(validation_diagnostics),
     )
 
 

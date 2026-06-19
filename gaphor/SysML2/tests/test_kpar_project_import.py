@@ -105,6 +105,75 @@ def test_external_reference_is_unresolved_not_invented(tmp_path):
     assert not list(result.factory.select(sysml2.AttributeDefinition))
 
 
+def test_unresolved_reference_carries_provenance(tmp_path):
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(archive, {"C.sysml": "part def Engine;\npart e : Missing;"})
+
+    result = import_user_kpar(archive)
+
+    ref = next(r for r in result.unresolved_references if r.type_name == "Missing")
+    assert ref.source == "e"
+    assert ref.member == f"{ROOT_DIR}/C.sysml"
+    assert ref.line == 2
+    assert ref.declaration == "part e : Missing;"
+
+
+def test_imported_elements_carry_per_element_provenance(tmp_path):
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(archive, {"V.sysml": "part def Engine;\npart e : Engine;"})
+
+    result = import_user_kpar(archive)
+
+    by_qname = {
+        p.qualified_name: p for p in result.element_provenance.values()
+    }
+    assert by_qname["Engine"].member == f"{ROOT_DIR}/V.sysml"
+    assert by_qname["Engine"].line == 1
+    assert by_qname["Engine"].declaration == "part def Engine;"
+    assert by_qname["e"].line == 2
+    assert by_qname["e"].declaration == "part e : Engine;"
+
+
+def test_nested_elements_carry_provenance(tmp_path):
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(
+        archive,
+        {"V.sysml": "package A {\n  part def Engine;\n}"},
+    )
+
+    result = import_user_kpar(archive)
+
+    engine = next(
+        e for e in result.factory.select(sysml2.PartDefinition)
+        if e.declaredName == "Engine"
+    )
+    prov = result.provenance_of(engine)
+    assert prov is not None
+    assert prov.qualified_name == "A::Engine"
+    assert prov.member == f"{ROOT_DIR}/V.sysml"
+    assert prov.line == 2
+
+
+def test_duplicate_elements_distinguished_by_provenance(tmp_path):
+    # Two members each declare `part def Engine`; both are imported and their
+    # provenance distinguishes them by source member.
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(
+        archive,
+        {"A.sysml": "part def Engine;", "B.sysml": "part def Engine;"},
+    )
+
+    result = import_user_kpar(archive)
+
+    engines = [
+        e for e in result.factory.select(sysml2.PartDefinition)
+        if e.declaredName == "Engine"
+    ]
+    assert len(engines) == 2
+    members = {result.provenance_of(e).member for e in engines}
+    assert members == {f"{ROOT_DIR}/A.sysml", f"{ROOT_DIR}/B.sysml"}
+
+
 def test_declared_names_recorded_per_member(tmp_path):
     archive = tmp_path / "proj.kpar"
     _write_user_kpar(archive, {"A.sysml": "package A { part def Engine; }"})
@@ -198,6 +267,38 @@ def test_kpar_import_cli_reports_and_fails_when_nothing_imports(tmp_path, capsys
     err = capsys.readouterr().err
     assert "skipped unsupported member" in err
     assert not model.exists()
+
+
+def test_kpar_import_cli_refuses_validation_errors(tmp_path, capsys):
+    # Two members both declaring `part def Engine` produce a duplicate-name
+    # validation error; the CLI must refuse to save by default (like
+    # sysml2-import), not exit 0 with a written model.
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(
+        archive,
+        {"A.sysml": "part def Engine;", "B.sysml": "part def Engine;"},
+    )
+    model = tmp_path / "out.gaphor"
+
+    parser = cli.kpar_import_parser()
+    args = parser.parse_args([str(archive), str(model)])
+    assert args.command(args) == cli.ERROR_EXIT_CODE
+    assert "import refused" in capsys.readouterr().err
+    assert not model.exists()
+
+
+def test_kpar_import_cli_allow_invalid_overrides(tmp_path):
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(
+        archive,
+        {"A.sysml": "part def Engine;", "B.sysml": "part def Engine;"},
+    )
+    model = tmp_path / "out.gaphor"
+
+    parser = cli.kpar_import_parser()
+    args = parser.parse_args([str(archive), str(model), "--allow-invalid"])
+    assert args.command(args) == 0
+    assert model.exists()
 
 
 def test_kpar_import_cli_reports_archive_error(tmp_path, capsys):

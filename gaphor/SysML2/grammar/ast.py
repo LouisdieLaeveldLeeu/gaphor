@@ -3,11 +3,18 @@
 These are deliberately small, pure-data nodes: parsing produces them, and the
 mapping layer (M2 sub-step 2) consumes them to build KerML/SysML semantic
 elements. They carry no semantics themselves.
+
+Each declaration node also carries the 1-based source `line` of its declaration
+(set by the parser). `line` is excluded from equality (`compare=False`) so AST
+comparisons stay position-independent; it exists for provenance (e.g. KPAR
+import tracing each imported element/reference back to its source line).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+
+_line = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -15,6 +22,7 @@ class PartDefinition:
     """`part def <name> ;`"""
 
     name: str
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -23,6 +31,7 @@ class PartUsage:
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -30,6 +39,7 @@ class AttributeDefinition:
     """`attribute def <name> ;`"""
 
     name: str
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -38,6 +48,7 @@ class AttributeUsage:
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -45,6 +56,7 @@ class ActionDefinition:
     """`action def <name> ;`"""
 
     name: str
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -53,6 +65,7 @@ class ActionUsage:
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -60,6 +73,7 @@ class ConstraintDefinition:
     """`constraint def <name> ;`"""
 
     name: str
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -68,6 +82,7 @@ class ConstraintUsage:
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -75,6 +90,7 @@ class RequirementDefinition:
     """`requirement def <name> ;`"""
 
     name: str
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -83,6 +99,7 @@ class RequirementUsage:
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -90,6 +107,7 @@ class PortDefinition:
     """`port def <name> ;`"""
 
     name: str
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -98,6 +116,7 @@ class PortUsage:
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -105,6 +124,7 @@ class ConnectionDefinition:
     """`connection def <name> ;`"""
 
     name: str
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -114,6 +134,7 @@ class ConnectionUsage:
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    line: int | None = _line
 
 
 @dataclass(frozen=True)
@@ -122,6 +143,7 @@ class PackageDefinition:
 
     name: str
     members: tuple["Member", ...] = field(default_factory=tuple)
+    line: int | None = _line
 
 
 # A member is any construct that can appear in a (package) body.

@@ -29,6 +29,7 @@ from gaphor.SysML2.kpar.library import (
     import_scalar_values_library,
 )
 from gaphor.SysML2.kpar.project_import import (
+    ElementImportProvenance,
     ExternalDependency,
     ImportedMember,
     ProjectProvenance,
@@ -57,6 +58,7 @@ __all__ = [
     "NormativeLibrary",
     "UnresolvedReference",
     "import_scalar_values_library",
+    "ElementImportProvenance",
     "ExternalDependency",
     "ImportedMember",
     "ProjectProvenance",
