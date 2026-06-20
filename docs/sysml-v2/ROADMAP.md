@@ -335,7 +335,9 @@ implies). Exit: implicit specializations participate in resolution per the spec.
 
 Add feature-chain syntax (`a.b.c`) and resolve a chain step-by-step through
 feature types. Prerequisite: feature-chain grammar + the chain-resolution
-contract. Exit: feature chains resolve along their feature types.
+contract. Exit: feature chains resolve along their feature types. Also enables
+feature-chain connector endpoints (`connect a.b to c.d`), the explicit extension
+deferred by Phase 9's non-chain endpoint scope.
 
 ### Phase 6 -- Constraint And Requirement Semantics
 
@@ -386,8 +388,16 @@ Complete actual connector endpoints:
   than only declaration typing;
 - validate broken or mismatched endpoints.
 
+Scope limitation (endpoint references): connector ends are limited to
+simple-name and qualified-name references resolvable by the Phase 5 resolver
+(e.g. `connect a to b`, `connect A::a to B::b`). Feature-chain endpoints
+(e.g. `connect a.b to c.d`) depend on Phase 5e (Feature Chains) and are an
+explicit extension scheduled with 5e, not part of this phase -- so Phase 9 does
+not need 5e to land first.
+
 Exit: ConnectionDefinition and ConnectionUsage can be promoted from `alpha` when
-all claimed cells pass.
+all claimed cells pass for the non-chain endpoint surface (feature-chain
+endpoints follow with Phase 5e).
 
 ### Phase 10 -- General KPAR Export And Round-Trip
 
