@@ -226,3 +226,23 @@ def test_conjugate_without_port_conjugation_is_reported():
 def test_consistent_conjugation_has_no_broken_diagnostic():
     factory, _ = _map("port def Fuel;\nport p : ~Fuel;\nport q : ~Fuel;")
     assert not any(d.rule == "broken-conjugation" for d in validate(factory))
+
+
+def test_appended_extra_typing_type_is_reported():
+    # The ends are relation-many at runtime, so `typing.type = power` APPENDS a
+    # second target (the conjugate stays first). A first-value-only check would
+    # miss it; the exact-target check catches the contradictory extra end.
+    factory, _ = _map("port def Fuel;\nport def Power;\nport p : ~Fuel;")
+    typing = conjugation.conjugated_typing(_port(factory, "p"))
+    typing.type = _def(factory, "Power")
+    assert len(list(typing.type)) == 2
+    assert any(d.rule == "broken-conjugation" for d in validate(factory))
+
+
+def test_appended_extra_conjugated_type_is_reported():
+    factory, _ = _map("port def Fuel;\nport def Power;\nport p : ~Fuel;")
+    pc = conjugation.port_conjugation(_conjugate(factory))
+    # Append a second conjugatedType end alongside the correct conjugate.
+    pc.conjugatedType = _def(factory, "Power")
+    assert len(list(pc.conjugatedType)) == 2
+    assert any(d.rule == "broken-conjugation" for d in validate(factory))

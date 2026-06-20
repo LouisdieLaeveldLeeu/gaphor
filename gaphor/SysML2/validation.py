@@ -40,7 +40,6 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 from gaphor.core.modeling import ElementFactory
-from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import sysml2
@@ -99,24 +98,45 @@ def validate(
     return diagnostics
 
 
+def _sole(values) -> kerml.Element | None:
+    """The single element of a stored association, or None if it does not hold
+    EXACTLY one. The conjugation ends are conceptually single-valued, but the
+    generated associations are relation-many at runtime, so an API mutation can
+    APPEND a second target. `_single` (first-only) would miss that; `_sole`
+    returns None for both an empty and a multi-valued association so either is
+    treated as broken."""
+    items = list(values)
+    return items[0] if len(items) == 1 else None
+
+
+def _holds_only(values, expected) -> bool:
+    """Whether a stored association holds EXACTLY the one `expected` element
+    (not merely as its first value -- an appended extra target is a mismatch)."""
+    return list(values) == [expected]
+
+
 def _check_conjugated_typing(factory: ElementFactory) -> Iterator[Diagnostic]:
     """A conjugated port typing must be internally consistent across ALL its
-    stored ends, not merely navigable along one path.
+    stored ends -- each holding EXACTLY its expected target, not merely navigable
+    along one path nor merely correct in its first value.
 
     Model-derived (no mapping context): a `ConjugatedPortTyping` stores both the
     inherited FeatureTyping `type` AND the `conjugatedPortDefinition`, and the
     conjugate stores a `PortConjugation` with both the SysML `originalPortDefinition`
     and the KerML `Conjugation` ends (`originalType`/`conjugatedType`). The normal
-    mapper/UI path sets all of these consistently, but a hand-edited/persisted
-    .gaphor or an API mutation can store contradictory ends (e.g. `type` retargeted
-    to a different definition while `conjugatedPortDefinition` still renders `~Fuel`
-    on export). Every end is checked so such a model is reported, not silently
-    accepted as a clean `~Fuel`:
+    mapper/UI path sets each of these to a single, agreeing target, but a
+    hand-edited/persisted .gaphor or an API mutation can store contradictory ends
+    -- including an APPENDED extra target, since these generated associations are
+    relation-many at runtime (`typing.type = power` appends rather than replaces).
+    Every end is checked for exactly its expected target so such a model is
+    reported, not silently accepted as a clean `~Fuel`:
 
-    - the typing's `type` must BE its `conjugatedPortDefinition`;
-    - the conjugate must own a `PortConjugation` naming an original `PortDefinition`;
-    - that PortConjugation's `originalType` must equal its `originalPortDefinition`,
-      and its `conjugatedType` must equal the conjugate.
+    - the typing's `conjugatedPortDefinition` is exactly one ConjugatedPortDefinition;
+    - the typing's `type` is exactly that conjugate;
+    - the conjugate owns exactly one `PortConjugation` naming exactly one original
+      `PortDefinition`;
+    - that PortConjugation's `originalType` is exactly that original, and its
+      `conjugatedType` is exactly the conjugate.
     """
     for typing in factory.select(sysml2.ConjugatedPortTyping):
         feature = kk._single(typing.typedFeature)
@@ -125,31 +145,46 @@ def _check_conjugated_typing(factory: ElementFactory) -> Iterator[Diagnostic]:
         def broken(message: str, _id=element_id) -> Diagnostic:
             return Diagnostic(Severity.ERROR, "broken-conjugation", message, _id)
 
-        conjugate = kk._single(typing.conjugatedPortDefinition)
+        conjugate = _sole(typing.conjugatedPortDefinition)
         if not isinstance(conjugate, sysml2.ConjugatedPortDefinition):
-            yield broken("conjugated port typing has no conjugated port definition")
-            continue
-        # The inherited typing target must be the conjugate itself, or the port is
-        # really typed by something other than what `~<original>` renders.
-        if kk._single(typing.type) is not conjugate:
             yield broken(
-                "conjugated port typing's type is not its conjugated port definition"
+                "conjugated port typing does not have exactly one "
+                "conjugated port definition"
             )
-        pc = conjugation.port_conjugation(conjugate)
-        if pc is None:
-            yield broken("conjugated port definition has no port conjugation")
             continue
-        original = kk._single(pc.originalPortDefinition)
+        # The inherited typing target must be EXACTLY the conjugate, or the port
+        # is really typed by something other than what `~<original>` renders.
+        if not _holds_only(typing.type, conjugate):
+            yield broken(
+                "conjugated port typing's type is not exactly its "
+                "conjugated port definition"
+            )
+        conjugators = [
+            r
+            for r in conjugate.ownedRelationship
+            if isinstance(r, sysml2.PortConjugation)
+        ]
+        if len(conjugators) != 1:
+            yield broken(
+                "conjugated port definition does not have exactly one "
+                "port conjugation"
+            )
+            continue
+        pc = conjugators[0]
+        original = _sole(pc.originalPortDefinition)
         if not isinstance(original, sysml2.PortDefinition):
-            yield broken("conjugated port definition has no original port definition")
+            yield broken(
+                "port conjugation does not have exactly one original "
+                "port definition"
+            )
             continue
-        # The KerML Conjugation ends must agree with the SysML ends.
-        if kk._single(pc.originalType) is not original:
+        # The KerML Conjugation ends must agree (exactly) with the SysML ends.
+        if not _holds_only(pc.originalType, original):
             yield broken(
                 "port conjugation original type does not match its "
                 "original port definition"
             )
-        if kk._single(pc.conjugatedType) is not conjugate:
+        if not _holds_only(pc.conjugatedType, conjugate):
             yield broken(
                 "port conjugation conjugated type does not match its conjugate"
             )
