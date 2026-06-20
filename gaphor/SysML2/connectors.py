@@ -30,6 +30,7 @@ from gaphas.connector import Connector as ConnectorAspect
 
 from gaphor.diagram.connectors import Connector, MetadataRelationConnect
 from gaphor.diagram.presentation import ElementPresentation
+from gaphor.diagram.support import get_diagram_item_metadata
 from gaphor.SysML2 import kerml
 from gaphor.SysML2.diagramitems import ConnectionUsageItem, FeatureTypingItem
 
@@ -112,16 +113,61 @@ class ConnectionUsageConnect(MetadataRelationConnect):
 
     Unlike the view-only FeatureTyping connector, a connection's ends are
     authorable: connecting the head/tail to a feature item sets the connection's
-    source/target (via the head/tail metadata the base applies). But the
-    connection's OWN subject is preserved -- it is created by the toolbox or the
-    projection drop, never find-or-created here -- so neither drawing nor
-    reconnecting duplicates the connection.
+    source/target. But the connection's OWN subject is preserved -- it is created
+    by the toolbox or the projection drop, never find-or-created here -- so
+    neither drawing nor reconnecting duplicates the connection.
+
+    Two narrowings over the generic relationship connector:
+
+    - A connector end must be a `Feature` (a usage). The item metadata types
+      source/target as the generic `Element`, so the base `allow` would let a
+      handle land on a `ConnectionDefinitionItem` even though the text mapper
+      rejects definitions as ends. `allow` is narrowed to refuse a non-feature
+      endpoint, keeping the diagram consistent with the textual semantics.
+    - For an EXISTING connection (toolbox/projection) `connect_subject` authors
+      the ends onto that subject itself rather than returning early (which would
+      leave `source`/`target` None) or find-or-creating (which would duplicate
+      the connection). source/target are multi-valued, so each end is cleared
+      before being set, making a reconnect replace rather than accumulate ends.
     """
 
+    def _is_feature_end(self, item) -> bool:
+        # An unconnected handle (item is None) or one whose item has no subject
+        # yet is fine; a connected endpoint must be a feature.
+        return (
+            item is None
+            or item.subject is None
+            or isinstance(item.subject, kerml.Feature)
+        )
+
+    def allow(self, handle, port):
+        if not super().allow(handle, port):
+            return False
+        opposite = self.get_connected(self.line.opposite(handle))
+        return self._is_feature_end(self.element) and self._is_feature_end(opposite)
+
+    def _set_end(self, relation, value) -> None:
+        # source/target are relation_many: replace the end rather than append,
+        # so authoring or re-authoring never accumulates duplicate ends.
+        subject = self.line.subject
+        for existing in list(relation.get(subject) or ()):
+            relation.delete(subject, existing)
+        if value is not None:
+            relation.set(subject, value)
+
     def connect_subject(self, handle):
-        if self.line.subject is not None:
-            return True
-        return super().connect_subject(handle)
+        metadata = get_diagram_item_metadata(type(self.line))
+        if not metadata:
+            return False
+        line = self.line
+        if line.subject is None:
+            # Drawn fresh rather than projected: defer to find-or-create.
+            return super().connect_subject(handle)
+        head_item = self.get_connected(line.head)
+        tail_item = self.get_connected(line.tail)
+        self._set_end(metadata["head"], head_item.subject if head_item else None)
+        self._set_end(metadata["tail"], tail_item.subject if tail_item else None)
+        return True
 
     def disconnect_subject(self, handle):
         # Keep the connection while a handle is temporarily detached; the base

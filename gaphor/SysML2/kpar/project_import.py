@@ -76,11 +76,17 @@ class RejectedMember:
 
 @dataclass(frozen=True)
 class UnresolvedTypeReference:
-    """A type reference that did not resolve within the imported project."""
+    """A reference that did not resolve within the imported project.
 
-    type_name: str
-    reason: str  # "unresolved" or "wrong-kind: <ResolvedKind>"
-    source: str  # qualified name of the referring usage
+    Covers a usage's declared type as well as a connector endpoint reference; the
+    `reason` distinguishes them. `type_name` holds the referenced name in both
+    cases (the kind is in `reason`), so endpoints get the same per-member, line,
+    and declaration provenance as type references.
+    """
+
+    type_name: str  # the referenced name (a type name, or a connector end name)
+    reason: str  # "unresolved", "wrong-kind: <ResolvedKind>", or "unresolved-endpoint"
+    source: str  # qualified name of the referring usage / connection
     member: str  # archive entry the reference was declared in
     line: int | None  # 1-based source line, when available
     declaration: str  # the source declaration text the reference came from
@@ -226,6 +232,14 @@ def import_user_kpar(
     unresolved.extend(
         make_unresolved(usage_id, type_name, f"wrong-kind: {kind}")
         for usage_id, (type_name, kind) in result.mistyped.items()
+    )
+    # Connector endpoints are references too: a broken end gets the same
+    # provenance-rich record (member/line/declaration) as a type reference, so
+    # every unresolved reference traces back to its KPAR member and declaration.
+    unresolved.extend(
+        make_unresolved(connection_id, end_name, "unresolved-endpoint")
+        for connection_id, ends in result.unresolved_ends.items()
+        for end_name in ends
     )
 
     # Gate only on diagnostics this import introduced: whole-factory validation

@@ -65,16 +65,48 @@ def test_broken_endpoint_is_recorded_and_validated():
 
 def test_endpoint_to_non_feature_is_mismatched():
     # An endpoint that resolves to a definition (a Classifier, not a Feature) is a
-    # mismatched end.
+    # mismatched end; the ends are atomic, so the good end `a` is NOT kept either.
     factory, result = _map("part def D;\npart a;\nconnection c connect a to D;")
-    assert "D" in result.unresolved_ends[_conn(factory).id]
+    connection = _conn(factory)
+    assert "D" in result.unresolved_ends[connection.id]
+    assert kk._single(connection.source) is None
+    assert kk._single(connection.target) is None
 
 
-def test_partial_endpoint_resolution_sets_the_resolved_end():
+def test_partial_endpoint_resolution_drops_both_ends():
+    # Binary ends are atomic: if one end is broken the connect clause is reported
+    # broken and NEITHER end is materialised (a one-ended connection has no valid
+    # textual form and would otherwise be dropped silently on export).
     factory, result = _map("part a;\nconnection c connect a to missing;")
     connection = _conn(factory)
-    assert kk._single(connection.source).declaredName == "a"
     assert result.unresolved_ends[connection.id] == ["missing"]
+    assert kk._single(connection.source) is None
+    assert kk._single(connection.target) is None
+
+
+def test_one_ended_connection_is_reported_model_derived():
+    # A one-ended connection that reaches the model outside the textual path (here
+    # via the kernel API) is caught model-derived, with no mapping context.
+    factory, _ = _map("part a;\nconnection c;")
+    connection = _conn(factory)
+    part_a = next(p for p in factory.select(sysml2.PartUsage) if p.declaredName == "a")
+    connection.source = part_a
+
+    diagnostics = validate(factory)
+
+    assert any(d.rule == "incomplete-connection" for d in diagnostics)
+    assert has_errors(diagnostics)
+
+
+def test_complete_and_endless_connections_are_not_flagged():
+    # Neither a fully-connected (two ends) nor a declaration-only (no ends)
+    # connection trips the incomplete-connection rule.
+    factory, _ = _map(
+        "part a;\npart b;\nconnection c connect a to b;\nconnection d;"
+    )
+    assert not any(
+        d.rule == "incomplete-connection" for d in validate(factory)
+    )
 
 
 def test_connection_exports_with_endpoints():

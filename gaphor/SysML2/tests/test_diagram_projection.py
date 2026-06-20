@@ -555,6 +555,82 @@ def test_connection_with_unprojected_ends_projects_as_free_line(element_factory)
     assert diagram.connections.get_connection(c_item.head) is None
 
 
+def _project_endless_connection(element_factory):
+    map_package(parse("part a;\npart b;\nconnection c;"), element_factory)
+    parts = {
+        p.declaredName: p for p in element_factory.select(sysml2.PartUsage)
+    }
+    a, b = parts["a"], parts["b"]
+    c = next(iter(element_factory.select(sysml2.ConnectionUsage)))
+    diagram = element_factory.create(Diagram)
+    a_item = drop(a, diagram, 0, 0)
+    b_item = drop(b, diagram, 100, 0)
+    c_item = drop(c, diagram, 50, 0)
+    return diagram, a, b, c, a_item, b_item, c_item
+
+
+def test_connecting_handles_authors_connection_ends(element_factory):
+    # Connecting a projected/toolbox connection line's handles to feature items
+    # authors the connector's source/target onto the EXISTING subject (it must not
+    # leave them None, nor create a second connection).
+    _diagram, a, b, c, a_item, b_item, c_item = _project_endless_connection(
+        element_factory
+    )
+    assert not list(c.source) and not list(c.target)
+
+    connect(c_item, c_item.head, a_item)
+    connect(c_item, c_item.tail, b_item)
+
+    assert list(c.source) == [a]
+    assert list(c.target) == [b]
+    assert len(list(element_factory.select(sysml2.ConnectionUsage))) == 1
+
+
+def test_reconnecting_an_end_replaces_rather_than_appends(element_factory):
+    # source/target are multi-valued; re-authoring an end must REPLACE it, not
+    # accumulate a duplicate.
+    map_package(
+        parse("part a;\npart b;\npart e;\nconnection c;"), element_factory
+    )
+    parts = {
+        p.declaredName: p for p in element_factory.select(sysml2.PartUsage)
+    }
+    a, b, e = parts["a"], parts["b"], parts["e"]
+    c = next(iter(element_factory.select(sysml2.ConnectionUsage)))
+    diagram = element_factory.create(Diagram)
+    a_item = drop(a, diagram, 0, 0)
+    b_item = drop(b, diagram, 100, 0)
+    e_item = drop(e, diagram, 200, 0)
+    c_item = drop(c, diagram, 50, 0)
+    connect(c_item, c_item.head, a_item)
+    connect(c_item, c_item.tail, b_item)
+    assert list(c.source) == [a]
+
+    connect(c_item, c_item.head, e_item)
+
+    assert list(c.source) == [e]
+    assert list(c.target) == [b]
+
+
+def test_connection_handle_refuses_non_feature_endpoint(element_factory):
+    # The item metadata types ends as the generic Element, but a connector end
+    # must be a Feature: a feature item is allowed, a definition item is refused
+    # (matching the text mapper, which rejects definitions as ends).
+    map_package(
+        parse("connection def D;\npart a;\nconnection c;"), element_factory
+    )
+    d = next(iter(element_factory.select(sysml2.ConnectionDefinition)))
+    a = next(iter(element_factory.select(sysml2.PartUsage)))
+    c = next(iter(element_factory.select(sysml2.ConnectionUsage)))
+    diagram = element_factory.create(Diagram)
+    d_item = drop(d, diagram, 0, 0)
+    a_item = drop(a, diagram, 100, 0)
+    c_item = drop(c, diagram, 50, 0)
+
+    assert _allows(c_item, c_item.head, a_item)
+    assert not _allows(c_item, c_item.head, d_item)
+
+
 @pytest.mark.parametrize(
     "element_cls", [sysml2.ConnectionDefinition, sysml2.ConnectionUsage]
 )

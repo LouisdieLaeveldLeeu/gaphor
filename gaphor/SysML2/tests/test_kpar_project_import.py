@@ -119,6 +119,24 @@ def test_unresolved_reference_carries_provenance(tmp_path):
     assert ref.declaration == "part e : Missing;"
 
 
+def test_broken_connection_endpoint_carries_provenance(tmp_path):
+    # A connector endpoint is a reference too: a broken end gets the same
+    # provenance-rich unresolved-reference record as a type reference.
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(
+        archive, {"C.sysml": "part a;\nconnection c connect a to missing;"}
+    )
+
+    result = import_user_kpar(archive)
+
+    ref = next(r for r in result.unresolved_references if r.type_name == "missing")
+    assert ref.reason == "unresolved-endpoint"
+    assert ref.source == "c"
+    assert ref.member == f"{ROOT_DIR}/C.sysml"
+    assert ref.line == 2
+    assert ref.declaration == "connection c connect a to missing;"
+
+
 def test_imported_elements_carry_per_element_provenance(tmp_path):
     archive = tmp_path / "proj.kpar"
     _write_user_kpar(archive, {"V.sysml": "part def Engine;\npart e : Engine;"})

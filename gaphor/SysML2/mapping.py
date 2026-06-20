@@ -214,25 +214,32 @@ def _resolve_connection_ends(connection_ends: list) -> dict[str, list[str]]:
     """Resolve binary connector endpoints to features (mapping phase 2).
 
     Each endpoint name is resolved nearest-first from the connection's namespace.
-    An endpoint that resolves to a `Feature` (a usage) is set as the connection's
-    `source`/`target`; one that does not resolve, or resolves to a non-feature
-    (e.g. a package or a definition), is recorded as a broken/mismatched end. Each
-    end is independent: a resolved end is still set even if the other is broken.
+    A binary connection's ends are ATOMIC: source and target are set together
+    only when BOTH names resolve to a `Feature` (a usage). If either name does not
+    resolve, or resolves to a non-feature (a package or a definition), the broken
+    name(s) are recorded and NEITHER end is set -- the connect clause is reported
+    as broken (`broken-connection-end`) rather than materialised half-formed. This
+    keeps the model from ever holding a one-ended binary connection, which has no
+    valid textual form and would otherwise be dropped silently on export.
     """
     unresolved_ends: dict[str, list[str]] = {}
     for connection, namespace, source_name, target_name in connection_ends:
         broken: list[str] = []
+        resolved: dict[str, kerml.Feature] = {}
         for name, setter in (
             (source_name, "source"),
             (target_name, "target"),
         ):
             target = _resolve_type(namespace, name)
             if isinstance(target, kerml.Feature):
-                setattr(connection, setter, target)
+                resolved[setter] = target
             else:
                 broken.append("::".join(name))
         if broken:
             unresolved_ends[connection.id] = broken
+        else:
+            for setter, feature in resolved.items():
+                setattr(connection, setter, feature)
     return unresolved_ends
 
 

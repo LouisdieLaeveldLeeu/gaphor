@@ -15,6 +15,10 @@ severity per the conformance policy (decision sec 4):
                               both from mapping context and model-derived, so a
                               wrong-kind relation is caught whether it came from
                               text or was injected via the API / a reloaded model
+- broken connection end    -> a connector endpoint did not resolve to a feature
+                              (mapping context)
+- incomplete connection    -> a binary connection has exactly one end set,
+                              caught model-derived (no valid textual form)
 
 Rules that need mapping context (unresolved-symbol, mapping-context kind
 mismatch) take it as an argument; the rest are recomputed from the stored model
@@ -33,6 +37,7 @@ from dataclasses import dataclass
 from gaphor.core.modeling import ElementFactory
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
+from gaphor.SysML2 import sysml2
 from gaphor.SysML2.mapping import is_managed_usage_kind, type_matches_usage_kind
 
 
@@ -83,7 +88,36 @@ def validate(
     )
     diagnostics.extend(_check_type_kind_mismatch(factory, mistyped or {}))
     diagnostics.extend(_check_connection_ends(factory, unresolved_ends or {}))
+    diagnostics.extend(_check_incomplete_connection(factory))
     return diagnostics
+
+
+def _check_incomplete_connection(factory: ElementFactory) -> Iterator[Diagnostic]:
+    """A binary connection must have both ends or neither -- never exactly one.
+
+    Model-derived (needs no mapping context), so it catches a one-ended
+    connection that reached the model outside the textual path -- via the
+    Python/kernel API or a hand-edited/persisted .gaphor. The textual mapper
+    already keeps ends atomic (a broken end materialises none), and a one-ended
+    binary connection has no valid textual form, so it would otherwise be dropped
+    silently on export; flagging it here keeps that loss from being silent.
+    """
+    for connection in factory.select(sysml2.ConnectionUsage):
+        source = kk._single(connection.source)
+        target = kk._single(connection.target)
+        if (source is None) != (target is None):
+            present, missing = (
+                ("source", "target") if source is not None else ("target", "source")
+            )
+            name = connection.declaredName
+            yield Diagnostic(
+                Severity.ERROR,
+                "incomplete-connection",
+                f"connection {name!r} has a {present} end but no {missing} end"
+                if name
+                else f"connection has a {present} end but no {missing} end",
+                connection.id,
+            )
 
 
 def _check_connection_ends(

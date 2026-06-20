@@ -633,7 +633,18 @@ and diagrammable; ConnectionDefinition/ConnectionUsage are promoted to
   (Phase 5) to a `Feature`; a name that resolves to a non-feature (a package or a
   definition) or not at all is a broken/mismatched end, recorded in
   `MappingResult.unresolved_ends` and reported by the `broken-connection-end`
-  validation rule (each end is independent -- a resolved end is still set).
+  validation rule.
+- **Atomic ends (revised 2026-06-20).** A binary connection's ends are atomic:
+  source and target are materialised together only when BOTH names resolve to a
+  feature. If either is broken, the broken name(s) are recorded and NEITHER end is
+  set -- the connect clause is reported broken, not half-formed. The earlier
+  "each end is independent" behaviour left a one-ended connection in the model,
+  which has no valid textual form and was dropped silently on export; keeping ends
+  atomic removes that silent-loss path (the broken end is the only thing reported,
+  and the import gate already trips on it). A one-ended connection that still
+  reaches the model by another route (the Python/kernel API, a hand-edited
+  `.gaphor`) is caught model-derived by the `incomplete-connection` rule -- the
+  Connector counterpart to `broken-typing`.
 - **Grammar.** `connection NAME (":" type_ref)? connect_clause? ";"`, where
   `connect_clause: "connect" connection_end "to" connection_end`. `connect`/`to`
   become reserved words (LALR keyword terminals), consistent with the other
@@ -647,10 +658,22 @@ and diagrammable; ConnectionDefinition/ConnectionUsage are promoted to
   `LinePresentation` registered with `@represents(head=Relationship.source,
   tail=Relationship.target)` and a name label, so a connection projects as a line
   whose handles bind to the source/target items. `ConnectionUsageConnect` authors
-  the ends on connect (head->source, tail->target via the head/tail metadata) but
-  preserves the connection's own subject (never find-or-creates), so neither
-  drawing nor anchoring duplicates the connection. `drop` anchors the line to the
-  endpoint items when present, else projects a free line.
+  the ends onto the EXISTING subject: on connect it writes head->source and
+  tail->target itself (clearing each multi-valued end first, so a reconnect
+  replaces rather than appends), never find-or-creating, so neither drawing nor
+  anchoring duplicates the connection. Returning early when a subject is already
+  present (the first cut) left `source`/`target` None for a projected/toolbox line
+  -- the visual line connected but the model ends did not -- so authoring is now
+  unconditional for an existing subject. `allow` is also narrowed: an end must be a
+  `Feature`, so a handle cannot land on a `ConnectionDefinitionItem` even though
+  the generic metadata types ends as `Element` (matching the text mapper, which
+  rejects definitions as ends). `drop` anchors the line to the endpoint items when
+  present, else projects a free line.
+- **Endpoint provenance (KPAR import).** A broken connector endpoint is recorded
+  as an `UnresolvedTypeReference` (reason `unresolved-endpoint`) with the same
+  per-member/line/declaration provenance as a type reference, so every unresolved
+  reference -- type or endpoint -- traces back to its KPAR member and declaration
+  (Phase 3c contract).
 - **Scope.** Binary, non-chain endpoints only. Feature-chain endpoints
   (`connect a.b to c.d`) depend on Phase 5e; n-ary/unnamed connection forms are
   later work.
