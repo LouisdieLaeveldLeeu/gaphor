@@ -100,31 +100,58 @@ def validate(
 
 
 def _check_conjugated_typing(factory: ElementFactory) -> Iterator[Diagnostic]:
-    """A conjugated port typing must resolve to a real conjugate of a port.
+    """A conjugated port typing must be internally consistent across ALL its
+    stored ends, not merely navigable along one path.
 
-    Model-derived (no mapping context): a `ConjugatedPortTyping` must point at a
-    `ConjugatedPortDefinition`, and that conjugate must have a `PortConjugation`
-    naming the original `PortDefinition`. This catches a conjugation broken by the
-    Python/kernel API or a hand-edited/persisted .gaphor (e.g. the original port
-    definition deleted), where the textual mapper's checks no longer apply.
+    Model-derived (no mapping context): a `ConjugatedPortTyping` stores both the
+    inherited FeatureTyping `type` AND the `conjugatedPortDefinition`, and the
+    conjugate stores a `PortConjugation` with both the SysML `originalPortDefinition`
+    and the KerML `Conjugation` ends (`originalType`/`conjugatedType`). The normal
+    mapper/UI path sets all of these consistently, but a hand-edited/persisted
+    .gaphor or an API mutation can store contradictory ends (e.g. `type` retargeted
+    to a different definition while `conjugatedPortDefinition` still renders `~Fuel`
+    on export). Every end is checked so such a model is reported, not silently
+    accepted as a clean `~Fuel`:
+
+    - the typing's `type` must BE its `conjugatedPortDefinition`;
+    - the conjugate must own a `PortConjugation` naming an original `PortDefinition`;
+    - that PortConjugation's `originalType` must equal its `originalPortDefinition`,
+      and its `conjugatedType` must equal the conjugate.
     """
     for typing in factory.select(sysml2.ConjugatedPortTyping):
-        conjugate = kk._single(typing.conjugatedPortDefinition)
         feature = kk._single(typing.typedFeature)
         element_id = feature.id if feature is not None else typing.id
+
+        def broken(message: str, _id=element_id) -> Diagnostic:
+            return Diagnostic(Severity.ERROR, "broken-conjugation", message, _id)
+
+        conjugate = kk._single(typing.conjugatedPortDefinition)
         if not isinstance(conjugate, sysml2.ConjugatedPortDefinition):
-            yield Diagnostic(
-                Severity.ERROR,
-                "broken-conjugation",
-                "conjugated port typing has no conjugated port definition",
-                element_id,
+            yield broken("conjugated port typing has no conjugated port definition")
+            continue
+        # The inherited typing target must be the conjugate itself, or the port is
+        # really typed by something other than what `~<original>` renders.
+        if kk._single(typing.type) is not conjugate:
+            yield broken(
+                "conjugated port typing's type is not its conjugated port definition"
             )
-        elif conjugation.original_port_definition(conjugate) is None:
-            yield Diagnostic(
-                Severity.ERROR,
-                "broken-conjugation",
-                "conjugated port definition has no original port definition",
-                element_id,
+        pc = conjugation.port_conjugation(conjugate)
+        if pc is None:
+            yield broken("conjugated port definition has no port conjugation")
+            continue
+        original = kk._single(pc.originalPortDefinition)
+        if not isinstance(original, sysml2.PortDefinition):
+            yield broken("conjugated port definition has no original port definition")
+            continue
+        # The KerML Conjugation ends must agree with the SysML ends.
+        if kk._single(pc.originalType) is not original:
+            yield broken(
+                "port conjugation original type does not match its "
+                "original port definition"
+            )
+        if kk._single(pc.conjugatedType) is not conjugate:
+            yield broken(
+                "port conjugation conjugated type does not match its conjugate"
             )
 
 

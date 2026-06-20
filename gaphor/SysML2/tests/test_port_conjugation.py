@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from gaphor.core.modeling import ElementFactory
 from gaphor.SysML2 import conjugation
+from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import sysml2
 from gaphor.SysML2.export import export_namespace
@@ -26,6 +27,20 @@ def _map(text: str):
 
 def _port(factory, name: str) -> sysml2.PortUsage:
     return next(u for u in factory.select(sysml2.PortUsage) if u.declaredName == name)
+
+
+def _def(factory, name: str) -> sysml2.PortDefinition:
+    return next(
+        d for d in factory.select(sysml2.PortDefinition) if d.declaredName == name
+    )
+
+
+def _retarget(association, obj, new) -> None:
+    """Replace a multi-valued association's value (mimics an API/hand mutation)."""
+    for old in list(association.get(obj) or ()):
+        association.delete(obj, old)
+    if new is not None:
+        association.set(obj, new)
 
 
 # --- parse -------------------------------------------------------------------
@@ -160,3 +175,54 @@ def test_deleting_usage_keeps_the_shared_conjugate():
     # The conjugate is shared and owned by the original, so it survives.
     assert len(list(factory.select(sysml2.ConjugatedPortDefinition))) == 1
     assert len(list(factory.select(sysml2.ConjugatedPortTyping))) == 1
+
+
+# --- inconsistent stored ends (API / hand-edited mutations) ------------------
+#
+# The normal mapper/UI path sets every conjugation end consistently. A model
+# mutated outside that path (the kernel API, a hand-edited/persisted .gaphor) can
+# store contradictory ends and would otherwise validate clean while export still
+# renders `~Fuel`. Each end is now checked model-derived.
+
+
+def _conjugate(factory) -> sysml2.ConjugatedPortDefinition:
+    return next(iter(factory.select(sysml2.ConjugatedPortDefinition)))
+
+
+def test_typing_type_not_the_conjugate_is_reported():
+    factory, _ = _map("port def Fuel;\nport p : ~Fuel;")
+    typing = conjugation.conjugated_typing(_port(factory, "p"))
+    # Retarget the inherited FeatureTyping.type away from the conjugate -- export
+    # still renders `~Fuel`, so the model is internally contradictory.
+    _retarget(kerml.FeatureTyping.type, typing, _def(factory, "Fuel"))
+    diagnostics = validate(factory)
+    assert any(d.rule == "broken-conjugation" for d in diagnostics)
+    assert "port p : ~Fuel;" in export_namespace(
+        next(iter(factory.select(kerml.Namespace)))
+    )
+
+
+def test_port_conjugation_wrong_original_type_is_reported():
+    factory, _ = _map("port def Fuel;\nport def Power;\nport p : ~Fuel;")
+    pc = conjugation.port_conjugation(_conjugate(factory))
+    # The KerML Conjugation `originalType` no longer matches originalPortDefinition.
+    _retarget(kerml.Conjugation.originalType, pc, _def(factory, "Power"))
+    assert any(d.rule == "broken-conjugation" for d in validate(factory))
+
+
+def test_port_conjugation_missing_conjugated_type_is_reported():
+    factory, _ = _map("port def Fuel;\nport p : ~Fuel;")
+    pc = conjugation.port_conjugation(_conjugate(factory))
+    _retarget(kerml.Conjugation.conjugatedType, pc, None)
+    assert any(d.rule == "broken-conjugation" for d in validate(factory))
+
+
+def test_conjugate_without_port_conjugation_is_reported():
+    factory, _ = _map("port def Fuel;\nport p : ~Fuel;")
+    conjugation.port_conjugation(_conjugate(factory)).unlink()
+    assert any(d.rule == "broken-conjugation" for d in validate(factory))
+
+
+def test_consistent_conjugation_has_no_broken_diagnostic():
+    factory, _ = _map("port def Fuel;\nport p : ~Fuel;\nport q : ~Fuel;")
+    assert not any(d.rule == "broken-conjugation" for d in validate(factory))
