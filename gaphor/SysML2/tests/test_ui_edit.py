@@ -816,6 +816,66 @@ def test_port_usage_type_property_page_can_clear_type(
     assert element_factory.lselect(kerml.FeatureTyping) == []
 
 
+def test_port_usage_type_property_page_sets_conjugated_typing(
+    element_factory,
+    event_manager,
+):
+    from gaphor.SysML2 import conjugation
+
+    fuel = element_factory.create(sysml2.PortDefinition)
+    fuel.declaredName = "Fuel"
+    usage = element_factory.create(sysml2.PortUsage)
+    usage.declaredName = "p"
+    property_page = PortUsageTypePropertyPage(usage, event_manager)
+
+    widget = property_page.construct()
+    dropdown = find(widget, "port-usage-type")
+    conjugated = find(widget, "port-usage-conjugated")
+
+    fuel_index = next(
+        n for n, lv in enumerate(dropdown.get_model()) if lv.value == fuel.id
+    )
+    dropdown.set_selected(fuel_index)
+    # Plain typing first.
+    assert kk.feature_type(usage) is fuel
+    assert conjugation.conjugated_typing(usage) is None
+
+    # Toggling conjugation re-types by the conjugate of Fuel, with no duplicate.
+    conjugated.set_active(True)
+    typing = conjugation.conjugated_typing(usage)
+    assert typing is not None
+    assert conjugation.conjugated_type_name(usage) is fuel
+    assert len(element_factory.lselect(sysml2.ConjugatedPortTyping)) == 1
+
+    # Toggling it back off restores the plain typing.
+    conjugated.set_active(False)
+    assert conjugation.conjugated_typing(usage) is None
+    assert kk.feature_type(usage) is fuel
+
+
+def test_port_usage_type_property_page_reflects_existing_conjugation(
+    element_factory,
+    event_manager,
+):
+    from gaphor.SysML2 import conjugation
+
+    fuel = element_factory.create(sysml2.PortDefinition)
+    fuel.declaredName = "Fuel"
+    usage = element_factory.create(sysml2.PortUsage)
+    usage.declaredName = "p"
+    conjugation.set_conjugated_port_type(usage, fuel)
+
+    property_page = PortUsageTypePropertyPage(usage, event_manager)
+    widget = property_page.construct()
+    dropdown = find(widget, "port-usage-type")
+    conjugated = find(widget, "port-usage-conjugated")
+
+    # The page preselects the ORIGINAL definition and shows conjugation on.
+    assert conjugated.get_active() is True
+    selected = dropdown.get_selected_item()
+    assert selected is not None and selected.value == fuel.id
+
+
 @pytest.mark.parametrize(
     ("element_cls", "new_name"),
     [

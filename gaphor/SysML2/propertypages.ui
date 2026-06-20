@@ -136,6 +136,11 @@
         </property>
       </object>
     </child>
+    <child>
+      <object class="GtkCheckButton" id="port-usage-conjugated">
+        <property name="label" translatable="yes">Conjugated (~)</property>
+      </object>
+    </child>
     <style>
       <class name="propertypage"/>
     </style>

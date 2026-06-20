@@ -33,7 +33,7 @@ vocabulary. Evidence for these rows: generated from the pinned OMG XMI, created
 via `ElementFactory`, persist/reload, and behaviour tests for ownership,
 membership, typing, imports, delete cascade, and qualified names.
 
-M1b status (internal-only): the listed KerML kernel classes are generated from the normative MOF XMI through Gaphor's coder, and every generated kernel class has a tested create-via-`ElementFactory` and `.gaphor` save/reload (parametrized over the whole stored-reference closure — 27 classes: the original 12-class minimal kernel plus Classifier/Class/Structure and FeatureTyping (added in M2 so the kernel can serve as the supermodel the SysML layer generalizes and carry the stored typing relation), Package and DataType (the nesting namespace and the AttributeDefinition supermodel root), and the expression roots BooleanExpression/Predicate with their self-contained closure Expression/Step/Function/Behavior (added for Phase E so the SysML constraint/requirement layer generalizes a real KerML super instead of dropping it), and the relationship roots AssociationStructure/Connector with their closure Association (added for Phase G so the SysML connection layer generalizes a real KerML super; Connector's end properties are derived and never persisted)). The five required kernel behaviours — namespace membership, type/feature relation, import resolution, delete-owner cascade, rename-updates-qualifiedName — are tested through a behaviour layer (`kerml_kernel.py`), along with delete-direction tests proving non-owning references do not cascade. These rows are `Create-API`+`Persist`; their Parse, text Import, scoped Validate, Export, Round-trip, Diagram, and UI-edit cells are `n/a` (not applicable by design — a structural kernel base has no textual concrete syntax), the final state decided in Phase H, not work pending a later milestone. Derived KerML features (owner, ownedElement, owningNamespace, member, qualifiedName, ...) are not persisted; they are computed in the behaviour layer. The closure also includes `Relationship`, `AnnotatingElement`, and `Comment` plus the `FeatureDirectionKind`/`VisibilityKind` enumerations; these are generated and persistence-tested but not called out as individual rows until a milestone gives them behaviour.
+M1b status (internal-only): the listed KerML kernel classes are generated from the normative MOF XMI through Gaphor's coder, and every generated kernel class has a tested create-via-`ElementFactory` and `.gaphor` save/reload (parametrized over the whole stored-reference closure — 28 classes: the original 12-class minimal kernel plus Classifier/Class/Structure and FeatureTyping (added in M2 so the kernel can serve as the supermodel the SysML layer generalizes and carry the stored typing relation), Package and DataType (the nesting namespace and the AttributeDefinition supermodel root), and the expression roots BooleanExpression/Predicate with their self-contained closure Expression/Step/Function/Behavior (added for Phase E so the SysML constraint/requirement layer generalizes a real KerML super instead of dropping it), the relationship roots AssociationStructure/Connector with their closure Association (added for Phase G so the SysML connection layer generalizes a real KerML super; Connector's end properties are derived and never persisted), and Conjugation (added for Phase 8a so the SysML port-conjugation layer generalizes a real KerML super; its originalType/conjugatedType reference Type and `conjugator` is derived, so it adds no new stored closure)). The five required kernel behaviours — namespace membership, type/feature relation, import resolution, delete-owner cascade, rename-updates-qualifiedName — are tested through a behaviour layer (`kerml_kernel.py`), along with delete-direction tests proving non-owning references do not cascade. These rows are `Create-API`+`Persist`; their Parse, text Import, scoped Validate, Export, Round-trip, Diagram, and UI-edit cells are `n/a` (not applicable by design — a structural kernel base has no textual concrete syntax), the final state decided in Phase H, not work pending a later milestone. Derived KerML features (owner, ownedElement, owningNamespace, member, qualifiedName, ...) are not persisted; they are computed in the behaviour layer. The closure also includes `Relationship`, `AnnotatingElement`, and `Comment` plus the `FeatureDirectionKind`/`VisibilityKind` enumerations; these are generated and persistence-tested but not called out as individual rows until a milestone gives them behaviour.
 
 | Construct | Parse | Import | Create-API | Persist | Validate | Export | Round-trip | Diagram | UI-edit | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -57,8 +57,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML ConstraintUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML RequirementDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML RequirementUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML PortDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML PortUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML PortDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
+| SysML PortUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML ConnectionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML ConnectionUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 
@@ -85,6 +85,7 @@ references, never ids or raw text). M2 establishes the harness
 | SysML RequirementUsage (typed) | yes | `test_roundtrip.py` |
 | SysML PortDefinition | yes | `test_roundtrip.py::test_port_definition_and_usage_round_trip` |
 | SysML PortUsage (typed) | yes | `test_roundtrip.py` |
+| SysML PortUsage (conjugated `~`) | yes | `test_port_conjugation.py::test_conjugated_port_round_trips` |
 | SysML ConnectionDefinition | yes | `test_roundtrip.py::test_connection_definition_and_usage_round_trip` |
 | SysML ConnectionUsage (typed) | yes | `test_roundtrip.py` |
 
@@ -130,21 +131,33 @@ proven; promotion waits until the constraint-expression surface is scheduled and
 built. This is the Phase-E constraint-expression gate decision, taken explicitly
 per the roadmap.
 
-PortDefinition and PortUsage (Phase F) have all nine cells implemented and
-focused-tested for the declaration-and-typing surface (`port def Fuel;
-port p : Fuel;`). PortDefinition generalizes Structure/OccurrenceDefinition and
-PortUsage generalizes OccurrenceUsage -> ... -> Feature, all already in the
-model, so Phase F needed no kernel growth. The diagram cell projects each as a
-subject-bound box (and the FeatureTyping line); the UI-edit cell adds toolbox
-create-and-project tools, declared-name editing, and a PortUsage type page typing
-by a PortDefinition. Both rows are deliberately held at `alpha`, NOT `supported`,
-on a named dependency: port conjugation (`~P`, via PortConjugation / KerML
-`Conjugation`, intentionally not pulled into the kernel as unused structure) and
-interface / flow-direction semantics are unmodeled. Only the declaration-and-
-typing surface for unconjugated ports typed by a PortDefinition is proven;
-promotion waits until the conjugation/interface surface is scheduled and built.
-This is the Phase-F port-conjugation gate decision, taken explicitly per the
-roadmap.
+PortDefinition and PortUsage are `supported` for the declaration-and-typing
+surface INCLUDING conjugation (`port def Fuel; port p : Fuel; port q : ~Fuel;`).
+Phase F first built the unconjugated surface (every cell implemented and
+focused-tested; PortDefinition generalizes Structure/OccurrenceDefinition and
+PortUsage generalizes OccurrenceUsage -> ... -> Feature, so no kernel growth was
+needed), and held both rows at `alpha` on a named dependency: port conjugation
+and interface / flow-direction semantics were unmodeled.
+
+Phase 8a delivered port conjugation faithfully and lifted the rows to
+`supported`. KerML `Conjugation` (kernel) and SysML `PortConjugation`,
+`ConjugatedPortDefinition`, `ConjugatedPortTyping` are generated from the pinned
+XMI; `port p : ~Fuel` types `p` by the original's implicit conjugate through a
+ConjugatedPortTyping (the conjugate + its PortConjugation are owned by the
+original, cascade on delete, and are invisible to name resolution, duplicate
+checks, and textual export). Every cell now covers conjugation: Parse/Import
+(`: ~<type>`, port-scoped), Create-API/Persist (`conjugation.set_conjugated_port_type`
++ `.gaphor` round-trip), Validate (non-port target -> mistyped; dangling
+conjugate -> `broken-conjugation`, model-derived), Export/Round-trip (re-emits
+`~Fuel`; the canonical form distinguishes `: Fuel` from `: ~Fuel`), Diagram (a
+conjugated port projects as a subject-bound PortUsageItem; the conjugate is never
+projectable), and UI-edit (the PortUsage type page's conjugation toggle).
+
+Still explicitly OUT of the promoted surface, scheduled as named follow-ups (not
+silently implied by `supported`): flow direction `in`/`out`/`inout` (Phase 8b)
+and InterfaceDefinition / InterfaceUsage semantics (Phase 8c). The `supported`
+claim covers declaration, typing, and conjugation only. This is the Phase-8a
+port-conjugation gate decision, taken explicitly per the roadmap.
 
 ConnectionDefinition and ConnectionUsage (Phase G) have all nine cells
 implemented and focused-tested for the declaration-and-typing surface

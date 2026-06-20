@@ -22,6 +22,7 @@ from gaphor.core.modeling.modelinglanguage import (
     MockModelingLanguage,
 )
 import gaphor.storage as storage
+from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2.export import export_namespace
@@ -123,7 +124,7 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                     (
                         "PortUsage",
                         kk.qualified_name(member),
-                        _usage_type_qualified_name(member) or "",
+                        _port_usage_type_qualified_name(member) or "",
                     )
                 )
 
@@ -138,6 +139,17 @@ def _usage_type_qualified_name(usage: sysml2.PartUsage) -> str | None:
             if definition is not None:
                 return kk.qualified_name(definition)
     return None
+
+
+def _port_usage_type_qualified_name(usage: sysml2.PortUsage) -> str | None:
+    """Like `_usage_type_qualified_name`, but renders a conjugated typing as
+    `~<original>` so `: Fuel` and `: ~Fuel` are distinct, stable fingerprints
+    (the conjugate itself is unnamed/implicit, so its qualified name is not used).
+    """
+    original = conjugation.conjugated_type_name(usage)
+    if original is not None:
+        return "~" + kk.qualified_name(original)
+    return _usage_type_qualified_name(usage)
 
 
 def _modeling_language() -> MockModelingLanguage:

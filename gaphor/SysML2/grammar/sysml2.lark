@@ -63,8 +63,13 @@ requirement_usage: "requirement" NAME (":" type_ref)? ";"
 // `port def <name> ;`
 port_definition: "port" "def" NAME ";"
 
-// `port <name> [ ":" <type> ] ;`  (unconjugated; conjugation is later work)
-port_usage: "port" NAME (":" type_ref)? ";"
+// `port <name> [ ":" ["~"] <type> ] ;`
+// `~<type>` types the port by the conjugate of the referenced PortDefinition
+// (Phase 8a). The `~` is port-scoped: it is a distinct rule, not folded into the
+// shared `type_ref`, so conjugation cannot leak onto non-port usages.
+port_usage: "port" NAME (":" port_type_ref)? ";"
+port_type_ref: CONJUGATE? type_ref
+CONJUGATE: "~"
 
 // `connection def <name> ;`
 connection_definition: "connection" "def" NAME ";"

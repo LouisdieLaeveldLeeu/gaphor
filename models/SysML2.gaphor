@@ -40,6 +40,11 @@
 <owningPackage><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></owningPackage>
 <package><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></package>
 </UML:Class>
+<UML:Class id="cf9ed459-0e49-53e2-a25b-3bf8afb6f063">
+<name><val>Conjugation</val></name>
+<owningPackage><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></owningPackage>
+<package><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></package>
+</UML:Class>
 <UML:Class id="bbe3e7ff-b780-560c-abba-9c381d440d92">
 <name><val>Connector</val></name>
 <owningPackage><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></owningPackage>
@@ -52,6 +57,11 @@
 </UML:Class>
 <UML:Class id="0881ea28-4f58-593f-8ae6-bac84fc6c5fd">
 <name><val>Feature</val></name>
+<owningPackage><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></owningPackage>
+<package><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></package>
+</UML:Class>
+<UML:Class id="44560d1f-9a86-5d32-8cc7-02e57988f120">
+<name><val>FeatureTyping</val></name>
 <owningPackage><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></owningPackage>
 <package><ref refid="d542be19-154d-5f87-b863-0aa5cce14b95"/></package>
 </UML:Class>
@@ -130,6 +140,28 @@
 </reflist></ownedAttribute>
 <generalization><reflist>
 <ref refid="f173a2f2-f996-58a8-9e83-541d8c7493aa"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
+<UML:Class id="1d4cbc33-35a9-5f5d-86c8-4018051853b9">
+<name><val>ConjugatedPortDefinition</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="f58d38f6-7f32-55de-88ce-b5362785907f"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
+<UML:Class id="c39b41e0-63d6-5579-8613-97a55dd7a31f">
+<name><val>ConjugatedPortTyping</val></name>
+<ownedAttribute><reflist>
+<ref refid="5da09d6b-947b-5689-9632-3d1b34e4d253"/>
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="e7b5084e-1be1-59c6-be7a-a635542eb397"/>
 </reflist></generalization>
 <owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
 <package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
@@ -274,6 +306,17 @@
 <owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
 <package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
 </UML:Class>
+<UML:Class id="3e2be4b6-0e1f-58c5-ae9c-e2435ebb22de">
+<name><val>PortConjugation</val></name>
+<ownedAttribute><reflist>
+<ref refid="c6059def-a2ea-5681-be69-25cc68ce1654"/>
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="caea4fad-91b2-5194-90d0-35c347e48ce8"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
 <UML:Class id="d19e527c-3f86-5430-8e32-79e4f361c5f8">
 <name><val>PortDefinition</val></name>
 <ownedAttribute><reflist>
@@ -358,6 +401,14 @@
 <general><ref refid="8fe3b35a-fd8f-5694-b48c-13123e9ad33e"/></general>
 <specific><ref refid="923ef55f-3176-5717-a2e0-25352a07f8c8"/></specific>
 </UML:Generalization>
+<UML:Generalization id="f58d38f6-7f32-55de-88ce-b5362785907f">
+<general><ref refid="d19e527c-3f86-5430-8e32-79e4f361c5f8"/></general>
+<specific><ref refid="1d4cbc33-35a9-5f5d-86c8-4018051853b9"/></specific>
+</UML:Generalization>
+<UML:Generalization id="e7b5084e-1be1-59c6-be7a-a635542eb397">
+<general><ref refid="44560d1f-9a86-5d32-8cc7-02e57988f120"/></general>
+<specific><ref refid="c39b41e0-63d6-5579-8613-97a55dd7a31f"/></specific>
+</UML:Generalization>
 <UML:Generalization id="c3a1a007-3a27-5dd7-ace8-7d0fd2e2cc5e">
 <general><ref refid="2216fc5d-0a60-515c-837e-726875a4e1d9"/></general>
 <specific><ref refid="6c9fcc72-8346-5298-90fa-81b17bf66867"/></specific>
@@ -434,6 +485,10 @@
 <general><ref refid="d29bd730-6feb-5296-b2e7-29b77d9ca6b5"/></general>
 <specific><ref refid="bf8166f1-958e-59f8-9413-21001aed4cdd"/></specific>
 </UML:Generalization>
+<UML:Generalization id="caea4fad-91b2-5194-90d0-35c347e48ce8">
+<general><ref refid="cf9ed459-0e49-53e2-a25b-3bf8afb6f063"/></general>
+<specific><ref refid="3e2be4b6-0e1f-58c5-ae9c-e2435ebb22de"/></specific>
+</UML:Generalization>
 <UML:Generalization id="b3c1621f-3d40-57eb-8827-38032e473054">
 <general><ref refid="39c7820a-c5bf-51dd-8f2b-ac20c08a407e"/></general>
 <specific><ref refid="d19e527c-3f86-5430-8e32-79e4f361c5f8"/></specific>
@@ -458,6 +513,17 @@
 <general><ref refid="0881ea28-4f58-593f-8ae6-bac84fc6c5fd"/></general>
 <specific><ref refid="8fe3b35a-fd8f-5694-b48c-13123e9ad33e"/></specific>
 </UML:Generalization>
+<UML:Property id="5da09d6b-947b-5689-9632-3d1b34e4d253">
+<association><ref refid="6936789b-445e-5d75-a154-1804a0ca8ab3"/></association>
+<name><val>conjugatedPortDefinition</val></name>
+<structuredClassifier><ref refid="c39b41e0-63d6-5579-8613-97a55dd7a31f"/></structuredClassifier>
+<type><ref refid="1d4cbc33-35a9-5f5d-86c8-4018051853b9"/></type>
+</UML:Property>
+<UML:Property id="63e87f04-4bf9-5d17-88fc-a63ee94beec0">
+<name><val>ConjugatedPortTyping_conjugatedPortDefinition_of</val></name>
+<type><ref refid="c39b41e0-63d6-5579-8613-97a55dd7a31f"/></type>
+<owningAssociation><ref refid="6936789b-445e-5d75-a154-1804a0ca8ab3"/></owningAssociation>
+</UML:Property>
 <UML:Property id="4ba463a3-ffc8-5dd8-808c-d6415d136bee">
 <name><val>isSufficient</val></name>
 <structuredClassifier><ref refid="6c9fcc72-8346-5298-90fa-81b17bf66867"/></structuredClassifier>
@@ -483,6 +549,17 @@
 <structuredClassifier><ref refid="9bd38d4d-ffa0-52b5-b2f2-eb107a0fea9d"/></structuredClassifier>
 <type><ref refid="8287125c-ef15-5f3c-be37-8c9f22545cf1"/></type>
 </UML:Property>
+<UML:Property id="c6059def-a2ea-5681-be69-25cc68ce1654">
+<association><ref refid="286197a9-93a3-5ad1-8770-d2164ecf6199"/></association>
+<name><val>originalPortDefinition</val></name>
+<structuredClassifier><ref refid="3e2be4b6-0e1f-58c5-ae9c-e2435ebb22de"/></structuredClassifier>
+<type><ref refid="d19e527c-3f86-5430-8e32-79e4f361c5f8"/></type>
+</UML:Property>
+<UML:Property id="5ddb044c-2e57-5bd0-9d30-1e3fd8cdfd09">
+<name><val>PortConjugation_originalPortDefinition_of</val></name>
+<type><ref refid="3e2be4b6-0e1f-58c5-ae9c-e2435ebb22de"/></type>
+<owningAssociation><ref refid="286197a9-93a3-5ad1-8770-d2164ecf6199"/></owningAssociation>
+</UML:Property>
 <UML:Property id="01fd59f6-60ce-5b0c-8568-db9883bf80a3">
 <name><val>reqId</val></name>
 <structuredClassifier><ref refid="7bd3bb72-baa2-5fd9-a1fd-9db422b1a690"/></structuredClassifier>
@@ -498,5 +575,15 @@
 <structuredClassifier><ref refid="8fe3b35a-fd8f-5694-b48c-13123e9ad33e"/></structuredClassifier>
 <typeValue><val>bool</val></typeValue>
 </UML:Property>
+<UML:Association id="6936789b-445e-5d75-a154-1804a0ca8ab3">
+<memberEnd><reflist><ref refid="5da09d6b-947b-5689-9632-3d1b34e4d253"/><ref refid="63e87f04-4bf9-5d17-88fc-a63ee94beec0"/></reflist></memberEnd>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Association>
+<UML:Association id="286197a9-93a3-5ad1-8770-d2164ecf6199">
+<memberEnd><reflist><ref refid="c6059def-a2ea-5681-be69-25cc68ce1654"/><ref refid="5ddb044c-2e57-5bd0-9d30-1e3fd8cdfd09"/></reflist></memberEnd>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Association>
 </model>
 </gaphor>

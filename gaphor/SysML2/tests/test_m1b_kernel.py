@@ -58,16 +58,19 @@ def test_every_kernel_class_persists_and_reloads(cls, element_factory, saver, lo
 
 
 def test_kernel_has_expected_class_count():
-    # Following only STORED (non-derived) references, the kernel closure is 27
+    # Following only STORED (non-derived) references, the kernel closure is 28
     # classes: the original 12-class minimal kernel, plus Classifier/Class/
     # Structure (supermodel roots the SysML layer generalizes), FeatureTyping
     # (the stored type/feature relation), Package (the nesting namespace),
     # DataType (the supermodel root for AttributeDefinition), the expression
     # roots BooleanExpression/Predicate with their closure (Expression, Step,
-    # Function, Behavior) for the constraint/requirement layer, and the
-    # relationship roots AssociationStructure/Connector with their closure
-    # (Association) for the SysML connection layer.
-    assert len(_all_kernel_classes()) == 27
+    # Function, Behavior) for the constraint/requirement layer, the relationship
+    # roots AssociationStructure/Connector with their closure (Association) for
+    # the SysML connection layer, and Conjugation (the relationship root the
+    # SysML port-conjugation layer generalizes; its originalType/conjugatedType
+    # reference Type and `conjugator` is derived, so it adds no new closure) for
+    # Phase 8a port conjugation.
+    assert len(_all_kernel_classes()) == 28
 
 
 # --- required behaviour 1: namespace + membership round-trip -----------------

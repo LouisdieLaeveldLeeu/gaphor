@@ -24,9 +24,11 @@ from gaphor.SysML2.kerml import Behavior as _Behavior
 from gaphor.SysML2.kerml import BooleanExpression as _BooleanExpression
 from gaphor.SysML2.kerml import Class as _Class
 from gaphor.SysML2.kerml import Classifier as _Classifier
+from gaphor.SysML2.kerml import Conjugation as _Conjugation
 from gaphor.SysML2.kerml import Connector as _Connector
 from gaphor.SysML2.kerml import DataType as _DataType
 from gaphor.SysML2.kerml import Feature as _Feature
+from gaphor.SysML2.kerml import FeatureTyping as _FeatureTyping
 from gaphor.SysML2.kerml import Predicate as _Predicate
 from gaphor.SysML2.kerml import Step as _Step
 from gaphor.SysML2.kerml import Structure as _Structure
@@ -70,6 +72,18 @@ class AttributeUsage(Usage):
     pass
 
 
+class PortDefinition(OccurrenceDefinition, _Structure):
+    pass
+
+
+class ConjugatedPortDefinition(PortDefinition):
+    pass
+
+
+class ConjugatedPortTyping(_FeatureTyping):
+    conjugatedPortDefinition: relation_many[ConjugatedPortDefinition]
+
+
 class ItemDefinition(OccurrenceDefinition, _Structure):
     pass
 
@@ -106,8 +120,8 @@ class ConstraintUsage(OccurrenceUsage, _BooleanExpression):
     pass
 
 
-class PortDefinition(OccurrenceDefinition, _Structure):
-    pass
+class PortConjugation(_Conjugation):
+    originalPortDefinition: relation_many[PortDefinition]
 
 
 class PortUsage(OccurrenceUsage):
@@ -123,3 +137,5 @@ class RequirementUsage(ConstraintUsage):
 
 
 
+ConjugatedPortTyping.conjugatedPortDefinition = association("conjugatedPortDefinition", ConjugatedPortDefinition)
+PortConjugation.originalPortDefinition = association("originalPortDefinition", PortDefinition)

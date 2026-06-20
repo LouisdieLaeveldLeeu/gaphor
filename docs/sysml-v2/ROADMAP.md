@@ -32,9 +32,11 @@ tests.
 - SysML ConstraintDefinition/Usage and RequirementDefinition/Usage: `alpha` (all
   nine cells for the declaration-and-typing surface; capped on constraint
   expression bodies and requirement `subject`/`assume`/`require` parameters).
-- SysML PortDefinition, PortUsage: `alpha` (all nine cells for unconjugated ports
-  typed by PortDefinition; capped on PortConjugation/KerML Conjugation,
-  interface, and flow-direction semantics).
+- SysML PortDefinition, PortUsage: `supported` (all nine cells for the
+  declaration-and-typing surface INCLUDING conjugation -- `port p : ~Fuel` typed
+  by the faithful conjugate via PortConjugation/ConjugatedPortDefinition/
+  ConjugatedPortTyping over KerML Conjugation; Phase 8a). Flow-direction
+  (Phase 8b) and interface semantics (Phase 8c) remain follow-ups.
 - SysML ConnectionDefinition, ConnectionUsage: `supported` (binary, non-chain
   connector ends -- `connection c connect a to b;` -- resolved to features,
   validated, exported, round-tripped, and projected as a line bound to its ends;
@@ -369,16 +371,47 @@ claimed cells pass.
 
 ### Phase 8 -- Port Semantics
 
-Complete ports beyond the unconjugated declaration-and-typing slice:
+Phase 8 (ports beyond the unconjugated declaration-and-typing slice) is sliced
+into 8a/8b/8c so each is a complete, reviewable, individually-promotable surface
+(the same precedent as 3a-3d and 5a-5e). Port rows are promoted only for the
+surface a slice actually proves.
 
-- KerML `Conjugation` and SysML `PortConjugation` as required by the normative
-  model;
-- textual conjugation syntax such as `~P`;
-- interface and flow-direction semantics;
-- validation, export, round-trip, diagram, and UI-edit coverage.
+#### Phase 8a -- Port Conjugation -- DONE
 
-Exit: PortDefinition and PortUsage can be promoted from `alpha` when all claimed
-cells pass.
+Delivered the faithful port-conjugation surface for `port p : ~Fuel`:
+
+- the normative metamodel is generated from the pinned XMI -- KerML `Conjugation`
+  (kernel) and SysML `PortConjugation`, `ConjugatedPortDefinition`,
+  `ConjugatedPortTyping`;
+- grammar/parser gained the port-scoped `: ~<type>` form (`~` cannot leak onto
+  non-port usages);
+- the mapper materializes (and reuses) the original definition's implicit
+  conjugate and types the port through a `ConjugatedPortTyping`; the conjugate +
+  its `PortConjugation` are owned by the original (cascade on delete) and are
+  invisible to name resolution, duplicate-name checks, and textual export;
+- export re-emits `~Fuel` (never the conjugate as a `port def`); the round-trip
+  canonical form distinguishes `: Fuel` from `: ~Fuel`;
+- validation reports a non-port conjugation target (mistyped) and a broken
+  conjugation model-derived (`broken-conjugation`);
+- the diagram projects a conjugated port as a subject-bound `PortUsageItem`
+  (the conjugate is never projectable), and the PortUsage type page gained a
+  conjugation toggle (UI-edit).
+
+Exit (reached): PortDefinition and PortUsage are promoted from `alpha` to
+`supported` for the declaration-and-typing surface INCLUDING conjugation;
+flow-direction (8b) and interface (8c) remain explicit follow-ups.
+
+#### Phase 8b -- Flow Direction -- PLANNED
+
+Feature/port direction (`in` / `out` / `inout`) on ports and features:
+grammar, mapping (`FeatureDirectionKind`), validation, export, round-trip,
+diagram, and UI-edit.
+
+#### Phase 8c -- Interface Definition / Usage Semantics -- PLANNED
+
+`InterfaceDefinition` / `InterfaceUsage` (and the interface-end / flow
+semantics that build on conjugated ports): a new construct with its own support
+matrix rows, taken end to end.
 
 ### Phase 9 -- Connection End Semantics -- DONE
 

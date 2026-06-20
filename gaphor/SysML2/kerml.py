@@ -117,6 +117,11 @@ class Comment(AnnotatingElement):
     locale: _attribute[str] = _attribute("locale", str)
 
 
+class Conjugation(Relationship):
+    conjugatedType: relation_many[Type]
+    originalType: relation_many[Type]
+
+
 class Connector(Feature, Relationship):
     pass
 
@@ -175,6 +180,8 @@ Relationship.target = association("target", Element)
 Relationship.source = association("source", Element)
 Relationship.owningRelatedElement = association("owningRelatedElement", Element)
 Relationship.ownedRelatedElement = association("ownedRelatedElement", Element, composite=True)
+Conjugation.originalType = association("originalType", Type)
+Conjugation.conjugatedType = association("conjugatedType", Type)
 Specialization.general = association("general", Type)
 Specialization.specific = association("specific", Type)
 FeatureTyping.typedFeature = association("typedFeature", Feature)

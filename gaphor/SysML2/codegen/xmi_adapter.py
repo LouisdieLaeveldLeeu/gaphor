@@ -457,6 +457,12 @@ KERNEL_SEED = (
     # stored; the connector-end semantics remain a later behavior-layer dependency.
     "AssociationStructure",
     "Connector",
+    # Conjugation is the KerML relationship root the SysML port-conjugation layer
+    # generalizes (PortConjugation -> Conjugation). Seeded in Phase 8a so the
+    # KerML supermodel supplies it for `port p : ~Fuel`. Its ends (originalType,
+    # conjugatedType) reference Type (already seeded) and `conjugator`/
+    # `ownedConjugator` are derived, so it adds no new stored closure.
+    "Conjugation",
 )
 
 
@@ -931,12 +937,17 @@ SYSML_SEED = (
     "RequirementDefinition",
     "RequirementUsage",
     # PortDefinition/Usage for the declaration-and-typing surface. Their supers
-    # (Structure, OccurrenceDefinition, OccurrenceUsage) are already in the
-    # model, so no kernel growth is needed. Port conjugation (PortConjugation /
-    # KerML Conjugation) and interface/flow semantics are deliberately NOT pulled
-    # in -- that is a named later dependency, not unused structure added now.
+    # (Structure, OccurrenceDefinition, OccurrenceUsage) are already in the model.
+    # Phase 8a adds port conjugation faithfully: PortConjugation (-> KerML
+    # Conjugation, now in the kernel supermodel), ConjugatedPortDefinition (the
+    # implicit conjugate, -> PortDefinition) and ConjugatedPortTyping (the typing
+    # used for `: ~Fuel`, -> FeatureTyping). Interface/flow-direction semantics
+    # remain named later dependencies (Phase 8b/8c), not pulled in here.
     "PortDefinition",
     "PortUsage",
+    "PortConjugation",
+    "ConjugatedPortDefinition",
+    "ConjugatedPortTyping",
     # ConnectionDefinition/Usage for the declaration-and-typing surface, plus
     # ConnectorAsUsage (their connector super, pulled into the closure). Their
     # KerML supers AssociationStructure/Connector are now in the kernel. The

@@ -151,6 +151,22 @@ def test_parses_untyped_port_usage():
     assert pkg == ast.Package(members=(ast.PortUsage(name="p", type_name=None),))
 
 
+def test_parses_conjugated_port_usage():
+    pkg = parse("port p : ~Fuel;\nport q : Fuel;")
+    assert pkg.members == (
+        ast.PortUsage(name="p", type_name=("Fuel",), conjugated=True),
+        ast.PortUsage(name="q", type_name=("Fuel",), conjugated=False),
+    )
+
+
+def test_conjugation_is_port_scoped():
+    # `~` is only valid in a port type reference, not on other usages.
+    import pytest
+
+    with pytest.raises(SyntaxError):
+        parse("part p : ~Fuel;")
+
+
 def test_parses_connection_definition_and_usage():
     pkg = parse("connection def C;\nconnection c : C;")
     assert pkg.members == (

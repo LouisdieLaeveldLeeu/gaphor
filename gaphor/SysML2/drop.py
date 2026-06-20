@@ -117,6 +117,11 @@ def drop_requirement_usage(
 def drop_port_definition(
     element: sysml2.PortDefinition, diagram: Diagram, x: float, y: float
 ) -> Presentation | None:
+    # The implicit conjugate of a PortDefinition (a ConjugatedPortDefinition) has
+    # no concrete syntax and is not a user-facing element; it surfaces only as
+    # `~Original` on a port usage, so it is never projected as its own box.
+    if isinstance(element, sysml2.ConjugatedPortDefinition):
+        return None
     return _project_element(element, diagram, x, y)
 
 

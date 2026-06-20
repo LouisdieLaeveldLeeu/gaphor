@@ -506,6 +506,45 @@ def test_connection_projection_persists_and_reloads(
     assert reloaded_item.subject is element_factory.lookup(element_id)
 
 
+def test_conjugated_port_projects_as_box_and_survives_reload(
+    element_factory, saver, loader
+):
+    from gaphor.SysML2 import conjugation
+
+    map_package(
+        parse("port def Fuel;\nport p : ~Fuel;"), element_factory
+    )
+    p = next(
+        u for u in element_factory.select(sysml2.PortUsage) if u.declaredName == "p"
+    )
+    diagram = element_factory.create(Diagram)
+
+    item = drop(p, diagram, 0, 0)
+
+    # A conjugated port projects as a subject-bound PortUsageItem (a view onto the
+    # port, including its conjugated typing) -- the conjugation is semantic state.
+    assert type(item) is PortUsageItem
+    assert item.subject is p
+    item_id, p_id = item.id, p.id
+
+    loader(saver())
+
+    reloaded_p = element_factory.lookup(p_id)
+    assert type(element_factory.lookup(item_id)) is PortUsageItem
+    assert conjugation.conjugated_typing(reloaded_p) is not None
+
+
+def test_conjugate_is_not_projectable(element_factory):
+    map_package(
+        parse("port def Fuel;\nport p : ~Fuel;"), element_factory
+    )
+    conjugate = next(iter(element_factory.select(sysml2.ConjugatedPortDefinition)))
+    diagram = element_factory.create(Diagram)
+
+    # The implicit conjugate has no concrete syntax and is never a user-facing box.
+    assert drop(conjugate, diagram, 0, 0) is None
+
+
 def _connect_a_to_b(element_factory):
     from gaphor.SysML2.grammar.parser import parse
     from gaphor.SysML2.mapping import map_package

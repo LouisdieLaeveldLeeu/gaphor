@@ -688,3 +688,55 @@ and diagrammable; ConnectionDefinition/ConnectionUsage are promoted to
 - **Scope.** Binary, non-chain endpoints only. Feature-chain endpoints
   (`connect a.b to c.d`) depend on Phase 5e; n-ary/unnamed connection forms are
   later work.
+
+### Completion Phase 8a: Port Conjugation (verified 2026-06-20)
+
+`port p : ~Fuel` types a port by the *conjugate* of a PortDefinition. Modeled
+faithfully on the normative metamodel (the user's decision over an ad-hoc flag),
+which promotes PortDefinition/PortUsage from `alpha` to `supported` for the
+declaration-and-typing surface including conjugation. Flow direction (8b) and
+interfaces (8c) remain follow-ups.
+
+- **Metamodel (generated, not hand-written).** KerML `Conjugation` is added to
+  the kernel seed and SysML `PortConjugation`, `ConjugatedPortDefinition`,
+  `ConjugatedPortTyping` to the SysML seed; `kerml.py`/`sysml2.py` and the
+  `models/*.gaphor` are regenerated from the pinned XMI through the existing
+  adapter+coder pipeline. Conjugation's ends (`originalType`/`conjugatedType`)
+  reference Type and `conjugator` is derived, so the kernel closure grows by
+  exactly one class (27 -> 28).
+- **Storage (faithful, navigable, cascade-correct).** Each PortDefinition has at
+  most one implicit conjugate: a `ConjugatedPortDefinition` owning a
+  `PortConjugation` whose `originalPortDefinition` is the original (and whose
+  KerML Conjugation ends are original -> conjugated). The conjugate is an UNNAMED
+  owned member of the original, so it cascades on the original's delete,
+  round-trips, and stays invisible to name resolution and the duplicate-name
+  rule (its name is the derived `~<original>`). A port usage typed `: ~Fuel` is
+  typed by that conjugate through a `ConjugatedPortTyping` (a FeatureTyping
+  subclass) owned by the usage; the conjugate is reused across all `~Fuel`
+  typings. This SysML behavior lives in `conjugation.py`, kept separate so
+  `kerml_kernel` stays KerML-pure.
+- **Grammar (port-scoped).** `port NAME (":" port_type_ref)? ";"` with
+  `port_type_ref: "~"? type_ref`. The `~` is a distinct port rule, NOT folded
+  into the shared `type_ref`, so conjugation cannot leak onto non-port usages
+  (`part p : ~X` is a syntax error). The AST `PortUsage` gains a `conjugated`
+  flag; the mapper threads it through the existing typed-usage phase-2 list.
+- **Typing kind.** A conjugated typing must resolve to a PortDefinition; its
+  conjugate is then a `ConjugatedPortDefinition` (a PortDefinition subclass), so
+  `type_matches_usage_kind` accepts a PortUsage typed by ANY PortDefinition
+  subclass (the only one is the conjugate) -- the exact-kind rule used elsewhere
+  would otherwise reject the conjugate. A `~` on a non-port resolves but is
+  recorded mistyped (`~Name`); an unresolved `~` name is recorded unresolved.
+- **Export / round-trip.** Export re-emits `~<original>` (re-resolvable, never
+  the unnamed conjugate), and never emits a `ConjugatedPortDefinition` as a
+  `port def`. The canonical form renders a conjugated typing as `~<original-qn>`
+  so `: Fuel` and `: ~Fuel` are distinct, stable fingerprints that survive
+  reload.
+- **Validation.** Model-derived `broken-conjugation`: a `ConjugatedPortTyping`
+  must point at a real `ConjugatedPortDefinition` that has a `PortConjugation`
+  naming the original -- catching a conjugation broken by the API or a deleted
+  original (where the textual mapper's checks no longer apply).
+- **Diagram / UI-edit.** A conjugated port projects as a subject-bound
+  `PortUsageItem` (the conjugate is never projectable -- guarded in `drop`); the
+  PortUsage type page gained a "Conjugated (~)" toggle that re-types the port via
+  the conjugate (preselecting the ORIGINAL definition and reflecting an existing
+  conjugation).

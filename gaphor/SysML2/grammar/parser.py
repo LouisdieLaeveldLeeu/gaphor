@@ -20,6 +20,10 @@ from gaphor.SysML2.grammar import ast
 # from an optional type_ref (both reduce to tuples otherwise).
 _Connect = namedtuple("_Connect", "source target")
 
+# Internal carrier for a port's `[~]<type>` reference: keeps the conjugation flag
+# alongside the (qualified) type name through the transform.
+_PortType = namedtuple("_PortType", "conjugated type_name")
+
 _GRAMMAR_PATH = Path(__file__).with_name("sysml2.lark")
 
 
@@ -82,10 +86,24 @@ class _ASTBuilder(Transformer):
         (name,) = items
         return ast.PortDefinition(name=str(name), line=name.line)
 
+    def port_type_ref(self, items):
+        # `["~"] type_ref` -> the carrier _PortType(conjugated, type_name). The
+        # CONJUGATE token is present only for `~<type>`.
+        conjugated = bool(items) and getattr(items[0], "type", None) == "CONJUGATE"
+        type_name = items[-1]
+        return _PortType(conjugated=conjugated, type_name=type_name)
+
     def port_usage(self, items):
         name = items[0]
-        type_name = items[1] if len(items) > 1 else None
-        return ast.PortUsage(name=str(name), type_name=type_name, line=name.line)
+        port_type = items[1] if len(items) > 1 else None
+        type_name = port_type.type_name if port_type is not None else None
+        conjugated = port_type.conjugated if port_type is not None else False
+        return ast.PortUsage(
+            name=str(name),
+            type_name=type_name,
+            conjugated=conjugated,
+            line=name.line,
+        )
 
     def connection_definition(self, items):
         (name,) = items

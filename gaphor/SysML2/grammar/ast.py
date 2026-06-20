@@ -112,10 +112,14 @@ class PortDefinition:
 
 @dataclass(frozen=True)
 class PortUsage:
-    """`port <name> [ : <type> ] ;` (unconjugated)."""
+    """`port <name> [ : [~]<type> ] ;`
+
+    `conjugated` is True for the `: ~<type>` form, which types the port by the
+    conjugate of the referenced PortDefinition (Phase 8a)."""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    conjugated: bool = False
     line: int | None = _line
 
 

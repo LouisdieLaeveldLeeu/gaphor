@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 
 from gaphor.core.modeling import ElementFactory
+from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2.grammar import ast
@@ -65,6 +66,11 @@ def type_matches_usage_kind(usage: kerml.Feature, target: kerml.Type) -> bool:
     """
     if isinstance(usage, sysml2.AttributeUsage):
         return isinstance(target, kerml.DataType)
+    if isinstance(usage, sysml2.PortUsage):
+        # A port may be typed by a PortDefinition or, for `: ~Fuel`, its
+        # conjugate (a ConjugatedPortDefinition IS a PortDefinition), so the
+        # match is by subclass here -- the only PortDefinition subclass.
+        return isinstance(target, sysml2.PortDefinition)
     required = USAGE_DEFINITION_KIND.get(type(usage))
     return required is not None and type(target) is required
 
@@ -186,11 +192,15 @@ def _resolve_typed_usages(
     otherwise it is recorded as unresolved. A name that resolves to the WRONG kind
     is recorded as mistyped. Only a kind match creates the FeatureTyping, so
     nothing is silently dropped and no cross-kind typing is ever stored.
+
+    A conjugated port typing (`port p : ~Fuel`) resolves its name like a normal
+    typing but must land on a PortDefinition; on a match it is typed by the
+    definition's conjugate via a ConjugatedPortTyping (see `conjugation`).
     """
     unresolved_types: dict[str, str] = {}
     mistyped: dict[str, tuple[str, str]] = {}
     relationship_sources: dict[str, str] = {}
-    for usage, namespace, type_name in typed_usages:
+    for usage, namespace, type_name, conjugated in typed_usages:
         target = _resolve_type(namespace, type_name)
         # Only fall back to the standard library when the name resolves to
         # NOTHING in the user model. A user name that resolves to a non-Type
@@ -198,8 +208,17 @@ def _resolve_typed_usages(
         # unresolved/wrong-kind -- the library never overrides user content.
         if target is None:
             target = _library_value_type(usage, type_name, root)
+        display_name = ("~" if conjugated else "") + "::".join(type_name)
         if not isinstance(target, kerml.Type):
-            unresolved_types[usage.id] = "::".join(type_name)
+            unresolved_types[usage.id] = display_name
+            continue
+        if conjugated:
+            # `~<type>` must reference a PortDefinition; its conjugate types p.
+            if isinstance(target, sysml2.PortDefinition):
+                typing = conjugation.set_conjugated_port_type(usage, target)
+                relationship_sources[typing.id] = usage.id
+            else:
+                mistyped[usage.id] = (display_name, type(target).__name__)
             continue
         if type_matches_usage_kind(usage, target):
             typing = _set_type(usage, target)
@@ -268,41 +287,43 @@ def _build_members(
         elif isinstance(member, ast.PartUsage):
             element = factory.create(sysml2.PartUsage)
             if member.type_name is not None:
-                typed_usages.append((element, namespace, member.type_name))
+                typed_usages.append((element, namespace, member.type_name, False))
         elif isinstance(member, ast.AttributeUsage):
             element = factory.create(sysml2.AttributeUsage)
             if member.type_name is not None:
-                typed_usages.append((element, namespace, member.type_name))
+                typed_usages.append((element, namespace, member.type_name, False))
         elif isinstance(member, ast.ActionDefinition):
             element = factory.create(sysml2.ActionDefinition)
         elif isinstance(member, ast.ActionUsage):
             element = factory.create(sysml2.ActionUsage)
             if member.type_name is not None:
-                typed_usages.append((element, namespace, member.type_name))
+                typed_usages.append((element, namespace, member.type_name, False))
         elif isinstance(member, ast.ConstraintDefinition):
             element = factory.create(sysml2.ConstraintDefinition)
         elif isinstance(member, ast.ConstraintUsage):
             element = factory.create(sysml2.ConstraintUsage)
             if member.type_name is not None:
-                typed_usages.append((element, namespace, member.type_name))
+                typed_usages.append((element, namespace, member.type_name, False))
         elif isinstance(member, ast.RequirementDefinition):
             element = factory.create(sysml2.RequirementDefinition)
         elif isinstance(member, ast.RequirementUsage):
             element = factory.create(sysml2.RequirementUsage)
             if member.type_name is not None:
-                typed_usages.append((element, namespace, member.type_name))
+                typed_usages.append((element, namespace, member.type_name, False))
         elif isinstance(member, ast.PortDefinition):
             element = factory.create(sysml2.PortDefinition)
         elif isinstance(member, ast.PortUsage):
             element = factory.create(sysml2.PortUsage)
             if member.type_name is not None:
-                typed_usages.append((element, namespace, member.type_name))
+                typed_usages.append(
+                    (element, namespace, member.type_name, member.conjugated)
+                )
         elif isinstance(member, ast.ConnectionDefinition):
             element = factory.create(sysml2.ConnectionDefinition)
         elif isinstance(member, ast.ConnectionUsage):
             element = factory.create(sysml2.ConnectionUsage)
             if member.type_name is not None:
-                typed_usages.append((element, namespace, member.type_name))
+                typed_usages.append((element, namespace, member.type_name, False))
             if member.source is not None and member.target is not None:
                 connection_ends.append(
                     (element, namespace, member.source, member.target)

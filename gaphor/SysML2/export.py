@@ -10,6 +10,7 @@ harness relies on.
 
 from __future__ import annotations
 
+from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 
@@ -23,6 +24,12 @@ def export_namespace(root: kerml.Namespace) -> str:
 
 def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) -> str:
     pad = _INDENT * depth
+    # A ConjugatedPortDefinition is the implicit conjugate of a PortDefinition; it
+    # has no concrete syntax of its own (it surfaces only as `~Original` on a port
+    # usage), so it is never emitted as a definition. It is also a PortDefinition,
+    # so it must be skipped BEFORE the PortDefinition branch below.
+    if isinstance(element, sysml2.ConjugatedPortDefinition):
+        return ""
     # Package check first: PartDefinition/PartUsage are also Namespaces, but a
     # Package is the only member rendered as a nesting container.
     if isinstance(element, kerml.Package):
@@ -118,6 +125,14 @@ def _usage_type_name(usage: kerml.Feature, root: kerml.Namespace) -> str | None:
     root is named (a named root must NOT prefix its own name; an unnamed root
     must NOT emit a leading `::`).
     """
+    # A conjugated port typing (`: ~Fuel`) is rendered as `~<original>`, never as
+    # the (unnamed, invisible) conjugate it actually points at.
+    original = conjugation.conjugated_type_name(usage)
+    if original is not None:
+        owning = kk.owning_namespace(usage)
+        if owning is not None and original in set(kk.members(owning)):
+            return "~" + kk.effective_name(original)
+        return "~" + _path_from_root(original, root)
     for relationship in usage.ownedRelationship:
         if isinstance(relationship, kerml.FeatureTyping):
             definition = kk._single(relationship.type)

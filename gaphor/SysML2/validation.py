@@ -22,6 +22,8 @@ severity per the conformance policy (decision sec 4):
                               low-level diagram connect / API can store one
 - incomplete connection    -> a binary connection has exactly one end set,
                               caught model-derived (no valid textual form)
+- broken conjugation       -> a conjugated port typing does not resolve to a real
+                              conjugate of a port definition (model-derived)
 
 Rules that need mapping context (unresolved-symbol, mapping-context kind
 mismatch) take it as an argument; the rest are recomputed from the stored model
@@ -38,6 +40,7 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 from gaphor.core.modeling import ElementFactory
+from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import sysml2
@@ -92,7 +95,37 @@ def validate(
     diagnostics.extend(_check_type_kind_mismatch(factory, mistyped or {}))
     diagnostics.extend(_check_connection_ends(factory, unresolved_ends or {}))
     diagnostics.extend(_check_connection_end_integrity(factory))
+    diagnostics.extend(_check_conjugated_typing(factory))
     return diagnostics
+
+
+def _check_conjugated_typing(factory: ElementFactory) -> Iterator[Diagnostic]:
+    """A conjugated port typing must resolve to a real conjugate of a port.
+
+    Model-derived (no mapping context): a `ConjugatedPortTyping` must point at a
+    `ConjugatedPortDefinition`, and that conjugate must have a `PortConjugation`
+    naming the original `PortDefinition`. This catches a conjugation broken by the
+    Python/kernel API or a hand-edited/persisted .gaphor (e.g. the original port
+    definition deleted), where the textual mapper's checks no longer apply.
+    """
+    for typing in factory.select(sysml2.ConjugatedPortTyping):
+        conjugate = kk._single(typing.conjugatedPortDefinition)
+        feature = kk._single(typing.typedFeature)
+        element_id = feature.id if feature is not None else typing.id
+        if not isinstance(conjugate, sysml2.ConjugatedPortDefinition):
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-conjugation",
+                "conjugated port typing has no conjugated port definition",
+                element_id,
+            )
+        elif conjugation.original_port_definition(conjugate) is None:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-conjugation",
+                "conjugated port definition has no original port definition",
+                element_id,
+            )
 
 
 def _check_connection_end_integrity(factory: ElementFactory) -> Iterator[Diagnostic]:

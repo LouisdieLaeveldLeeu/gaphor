@@ -14,6 +14,7 @@ from gaphor.diagram.propertypages import (
     new_resource_builder,
     unsubscribe_all_on_destroy,
 )
+from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import mapping
@@ -310,7 +311,14 @@ class ConstraintRequirementTypePropertyPage(PropertyPageBase):
 
 @PropertyPages.register(sysml2.PortUsage)
 class PortUsageTypePropertyPage(PropertyPageBase):
-    """Set the PortDefinition type for a PortUsage (unconjugated)."""
+    """Set the PortDefinition type for a PortUsage, optionally conjugated (`~`).
+
+    A conjugated port (`port p : ~Fuel`) is typed by the CONJUGATE of the chosen
+    PortDefinition through a ConjugatedPortTyping (see `conjugation`); unchecking
+    conjugation re-types the port by the definition directly. The dropdown lists
+    plain PortDefinitions only (the exact-kind filter excludes the implicit
+    conjugate), so a conjugated typing always names its original definition.
+    """
 
     order = 20
 
@@ -325,27 +333,48 @@ class PortUsageTypePropertyPage(PropertyPageBase):
         dropdown = builder.get_object("port-usage-type")
         model = list_of_definitions(self.subject.model, sysml2.PortDefinition)
         dropdown.set_model(model)
+        conjugate_toggle = builder.get_object("port-usage-conjugated")
 
-        if isinstance(type_ := kk.feature_type(self.subject), sysml2.PortDefinition):
+        # A conjugated typing names its ORIGINAL definition; a plain typing names
+        # the definition directly. Preselect by whichever applies.
+        is_conjugated = conjugation.conjugated_typing(self.subject) is not None
+        if is_conjugated:
+            current = conjugation.conjugated_type_name(self.subject)
+        else:
+            current = kk.feature_type(self.subject)
+            if not isinstance(current, sysml2.PortDefinition):
+                current = None
+
+        if current is not None:
             selected = next(
-                (n for n, lv in enumerate(model) if lv.value == type_.id),
+                (n for n, lv in enumerate(model) if lv.value == current.id),
                 None,
             )
             if selected is not None:
                 dropdown.set_selected(selected)
+        conjugate_toggle.set_active(is_conjugated)
 
-        dropdown.connect("notify::selected", self._on_type_changed)
+        # Connect AFTER setting the initial state so it does not self-trigger.
+        dropdown.connect("notify::selected", self._on_changed)
+        conjugate_toggle.connect("notify::active", self._on_changed)
+        self._dropdown = dropdown
+        self._conjugate_toggle = conjugate_toggle
 
         return builder.get_object("port-usage-type-editor")
 
-    def _on_type_changed(self, dropdown, _pspec):
-        selected = dropdown.get_selected_item()
+    def _on_changed(self, _widget, _pspec):
+        selected = self._dropdown.get_selected_item()
+        conjugated = self._conjugate_toggle.get_active()
         with Transaction(self.event_manager, context="editing"):
             if selected and selected.value:
                 type_ = self.subject.model.lookup(selected.value)
                 assert isinstance(type_, sysml2.PortDefinition)
-                kk.set_feature_type(self.subject, type_)
+                if conjugated:
+                    conjugation.set_conjugated_port_type(self.subject, type_)
+                else:
+                    kk.set_feature_type(self.subject, type_)
             else:
+                # No type selected -> no typing, conjugated or not.
                 kk.set_feature_type(self.subject, None)
 
 
