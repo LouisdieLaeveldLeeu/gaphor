@@ -51,7 +51,7 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     if isinstance(element, sysml2.PortDefinition):
         return f"{pad}port def {element.declaredName};\n"
     if isinstance(element, sysml2.ConnectionUsage):
-        return f"{pad}connection {_usage_decl(element, root)};\n"
+        return f"{pad}connection {_connection_decl(element, root)};\n"
     if isinstance(element, sysml2.PartUsage):
         return f"{pad}part {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.AttributeUsage):
@@ -65,6 +65,34 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     if isinstance(element, sysml2.PortUsage):
         return f"{pad}port {_usage_decl(element, root)};\n"
     return ""
+
+
+def _connection_decl(connection: kerml.Feature, root: kerml.Namespace) -> str:
+    """`<name> [: <type>] [connect <end> to <end>]` for a ConnectionUsage.
+
+    The connect clause is emitted only when both binary ends are present; each end
+    is rendered as a name that re-resolves under the import rules (bare when the
+    end feature is a member of the connection's own namespace, else the path from
+    the export root).
+    """
+    decl = _usage_decl(connection, root)
+    source = kk._single(connection.source)
+    target = kk._single(connection.target)
+    if source is not None and target is not None:
+        return (
+            f"{decl} connect {_end_name(connection, source, root)} "
+            f"to {_end_name(connection, target, root)}"
+        )
+    return decl
+
+
+def _end_name(
+    connection: kerml.Feature, end: kerml.Element, root: kerml.Namespace
+) -> str:
+    owning = kk.owning_namespace(connection)
+    if owning is not None and end in set(kk.members(owning)):
+        return kk.effective_name(end)
+    return _path_from_root(end, root)
 
 
 def _usage_decl(usage: kerml.Feature, root: kerml.Namespace) -> str:

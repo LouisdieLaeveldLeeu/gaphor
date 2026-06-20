@@ -35,8 +35,10 @@ tests.
 - SysML PortDefinition, PortUsage: `alpha` (all nine cells for unconjugated ports
   typed by PortDefinition; capped on PortConjugation/KerML Conjugation,
   interface, and flow-direction semantics).
-- SysML ConnectionDefinition, ConnectionUsage: `alpha` (all nine cells for the
-  declaration-and-typing surface; capped on connector-end semantics).
+- SysML ConnectionDefinition, ConnectionUsage: `supported` (binary, non-chain
+  connector ends -- `connection c connect a to b;` -- resolved to features,
+  validated, exported, round-tripped, and projected as a line bound to its ends;
+  Phase 9). Feature-chain endpoints (Phase 5e) and n-ary forms remain follow-ups.
 - Resolution scope so far: nearest-first lookup across enclosing namespaces
   (Phase 5) -- same-namespace, enclosing-package, relative-qualified, and
   root-qualified names, with inner scopes shadowing outer ones. Imports, aliases,
@@ -378,7 +380,18 @@ Complete ports beyond the unconjugated declaration-and-typing slice:
 Exit: PortDefinition and PortUsage can be promoted from `alpha` when all claimed
 cells pass.
 
-### Phase 9 -- Connection End Semantics
+### Phase 9 -- Connection End Semantics -- DONE
+
+Delivered for the binary, non-chain endpoint surface: the grammar gained
+`connection <name> [: <type>] connect <end> to <end>;`; the mapper resolves each
+endpoint nearest-first to a feature and stores it as the connector's
+`source`/`target` (broken/non-feature ends recorded and validated as
+`broken-connection-end`); export emits the connect clause and the round-trip
+canonical form carries the endpoint qualified names; and `ConnectionUsageItem` is
+now a `LinePresentation` bound to `source`/`target` (head/tail), with a connector
+that authors ends on connect while preserving the connection's own subject (no
+duplicate). ConnectionDefinition and ConnectionUsage are promoted to `supported`.
+Feature-chain endpoints (Phase 5e) and n-ary/unnamed forms remain follow-ups.
 
 Complete actual connector endpoints:
 
@@ -395,9 +408,8 @@ simple-name and qualified-name references resolvable by the Phase 5 resolver
 explicit extension scheduled with 5e, not part of this phase -- so Phase 9 does
 not need 5e to land first.
 
-Exit: ConnectionDefinition and ConnectionUsage can be promoted from `alpha` when
-all claimed cells pass for the non-chain endpoint surface (feature-chain
-endpoints follow with Phase 5e).
+Exit (reached): ConnectionDefinition and ConnectionUsage promoted from `alpha`
+for the non-chain endpoint surface (feature-chain endpoints follow with Phase 5e).
 
 ### Phase 10 -- General KPAR Export And Round-Trip
 

@@ -224,7 +224,9 @@ def test_connection_definition_and_usage_round_trip():
     assert result.preserved
     assert result.valid
     assert ("ConnectionDefinition", "Root::C") in result.source_form
-    assert ("ConnectionUsage", "Root::c", "Root::C") in result.source_form
+    # ConnectionUsage canonical entry carries (type, source, target); a
+    # declaration-only connection has empty endpoints.
+    assert ("ConnectionUsage", "Root::c", "Root::C", "", "") in result.source_form
 
 
 def test_connection_alongside_part_round_trips_without_mislabel():
@@ -235,7 +237,9 @@ def test_connection_alongside_part_round_trips_without_mislabel():
     assert result.preserved
     assert result.valid
     assert ("ConnectionDefinition", "Root::C") in result.source_form
-    assert ("ConnectionUsage", "Root::c", "Root::C") in result.source_form
+    # ConnectionUsage canonical entry carries (type, source, target); a
+    # declaration-only connection has empty endpoints.
+    assert ("ConnectionUsage", "Root::c", "Root::C", "", "") in result.source_form
     assert ("PartDefinition", "Root::PD") in result.source_form
     assert ("PartUsage", "Root::p", "Root::PD") in result.source_form
 

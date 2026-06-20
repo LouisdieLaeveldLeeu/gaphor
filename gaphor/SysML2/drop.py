@@ -138,7 +138,31 @@ def drop_connection_definition(
 def drop_connection_usage(
     element: sysml2.ConnectionUsage, diagram: Diagram, x: float, y: float
 ) -> Presentation | None:
-    return _project_element(element, diagram, x, y)
+    """Project a ConnectionUsage as a line bound to its connector ends.
+
+    The line is anchored to the source/target items when they are already on the
+    diagram (a view onto the existing ends). A connection with no ends, or whose
+    ends are not on the diagram, still projects as the line with its handles free.
+    `ConnectionUsageConnect` preserves the existing connection subject, so
+    anchoring the handles never creates a duplicate.
+    """
+    item = _project_element(element, diagram, x, y)
+    if item is None:
+        return None
+    metadata = get_diagram_item_metadata(type(item))
+    if metadata:
+        for handle, end in ((item.head, "head"), (item.tail, "tail")):
+            end_item = next(
+                (
+                    i
+                    for e in metadata[end].get(element)
+                    if (i := diagram_has_presentation(diagram, e))
+                ),
+                None,
+            )
+            if end_item is not None:
+                connect(item, handle, end_item)
+    return item
 
 
 @drop.register(kerml.FeatureTyping, Diagram)

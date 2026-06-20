@@ -227,17 +227,32 @@ class PortUsageItem(Named, ElementPresentation[sysml2.PortUsage]):
         self.shape = _name_box(self)
 
 
-@represents(sysml2.ConnectionUsage)
-class ConnectionUsageItem(Named, ElementPresentation[sysml2.ConnectionUsage]):
-    """A diagram view onto a SysML2 `ConnectionUsage`."""
+@represents(
+    sysml2.ConnectionUsage,
+    head=kerml.Relationship.source,  # connector end 1
+    tail=kerml.Relationship.target,  # connector end 2
+)
+class ConnectionUsageItem(LinePresentation):
+    """A diagram view onto a `ConnectionUsage`: a line bound to its binary
+    connector ends (head=source, tail=target), labelled with its name.
+
+    The line is a view onto the connector/end state: connecting a handle to a
+    feature item sets that end (source/target); the connection's own subject is
+    preserved (see `ConnectionUsageConnect`), so the diagram never invents or
+    duplicates a connection."""
 
     def __init__(self, diagram, id=None):
-        super().__init__(diagram, id=id)
-        self.watch("subject[Element].declaredName", self.update_shapes)
-        self.update_shapes()
-
-    def update_shapes(self, event=None):
-        self.shape = _name_box(self)
+        super().__init__(
+            diagram,
+            id=id,
+            shape_middle=Text(
+                text=lambda: (self.subject.declaredName if self.subject else "")
+                or ""
+            ),
+        )
+        self._handles[0].pos = (0, 0)
+        self._handles[1].pos = (40, 20)
+        self.watch("subject[Element].declaredName")
 
 
 @represents(

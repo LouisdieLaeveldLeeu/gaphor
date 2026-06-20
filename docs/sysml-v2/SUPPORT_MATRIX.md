@@ -59,8 +59,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML RequirementUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML PortDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML PortUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML ConnectionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML ConnectionUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML ConnectionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
+| SysML ConnectionUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 
 ## Round-Trip Coverage Metric
 
@@ -158,13 +158,19 @@ paths all treat the more-derived connection kind first: a connection renders as
 `connection`, projects as a ConnectionUsageItem (not the inherited part item),
 and its type page lists ConnectionDefinitions only -- the PartUsage type page
 defers for a connection so it never gets a second, wrong-kind dropdown. Both rows
-are deliberately held at `alpha`, NOT `supported`, on a named dependency: the
-connector ENDS that make a connection actually connect two things
-(relatedFeature/connectorEnd/association) are derived in the normative model and
-are NOT persisted or faked here -- modeling them needs a behavior-layer
-derivation phase. Only the declaration-and-typing surface is proven; promotion
-waits until the connector-end surface is scheduled and built. This is the Phase-G
-connector-end gate decision, taken explicitly per the roadmap.
+are `supported` (Phase 9) for the binary, non-chain connector-end surface. A
+`connection c connect a to b;` resolves each endpoint nearest-first to a feature
+and stores it as the connector's `source`/`target`; broken or non-feature
+endpoints are validated (`broken-connection-end`); the connection exports its
+connect clause and round-trips (the canonical form carries the endpoint qualified
+names); and it projects as a LINE whose head/tail bind to the source/target items
+(a view onto the connector ends -- anchoring or drawing authors the ends without
+duplicating the connection). See `test_connection_ends.py` and the connection
+line-binding tests in `test_diagram_projection.py`.
+
+Deferred (named follow-up): feature-chain endpoints (`connect a.b to c.d`) depend
+on Phase 5e, and n-ary/unnamed connection forms are later work -- both beyond the
+binary non-chain surface promoted here.
 
 AttributeUsage is `supported` (Phase 4). Every cell is implemented and
 focused-tested for untyped usages, usages typed by an in-model AttributeDefinition

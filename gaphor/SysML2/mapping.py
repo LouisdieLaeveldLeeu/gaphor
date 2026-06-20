@@ -84,6 +84,10 @@ class MappingResult:
     # creates from a source declaration (currently FeatureTyping from typed
     # usages). Importers can use this to inherit provenance from the declaration.
     relationship_sources: dict[str, str] = field(default_factory=dict)
+    # connection element id -> the declared connector-end references that did not
+    # resolve to a feature (broken or kind-mismatched endpoints), for the
+    # connection-end validation rule.
+    unresolved_ends: dict[str, list[str]] = field(default_factory=dict)
 
 
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
@@ -94,17 +98,22 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     # packages) so every name exists before any type is resolved. Records each
     # typed usage with its owning namespace for phase 2.
     typed_usages: list[tuple[kerml.Feature, kerml.Namespace, tuple[str, ...]]] = []
-    top_level = _build_members(pkg.members, root, factory, typed_usages)
+    connection_ends: list = []
+    top_level = _build_members(
+        pkg.members, root, factory, typed_usages, connection_ends
+    )
 
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
         root, typed_usages
     )
+    unresolved_ends = _resolve_connection_ends(connection_ends)
     return MappingResult(
         root=root,
         elements_by_name=top_level,
         unresolved_types=unresolved_types,
         mistyped=mistyped,
         relationship_sources=relationship_sources,
+        unresolved_ends=unresolved_ends,
     )
 
 
@@ -132,6 +141,7 @@ def map_project_members(named_packages, factory: ElementFactory):
     """
     root = factory.create(kerml.Namespace)
     typed_usages: list[tuple[kerml.Feature, kerml.Namespace, tuple[str, ...]]] = []
+    connection_ends: list = []
     top_level: dict[str, kerml.Element] = {}
     provenance: dict[str, tuple] = {}
     for label, pkg in named_packages:
@@ -140,12 +150,15 @@ def map_project_members(named_packages, factory: ElementFactory):
             provenance[element.id] = (_label, node)
 
         top_level.update(
-            _build_members(pkg.members, root, factory, typed_usages, record)
+            _build_members(
+                pkg.members, root, factory, typed_usages, connection_ends, record
+            )
         )
 
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
         root, typed_usages
     )
+    unresolved_ends = _resolve_connection_ends(connection_ends)
     for relationship_id, source_id in relationship_sources.items():
         if source_id in provenance:
             provenance[relationship_id] = provenance[source_id]
@@ -156,6 +169,7 @@ def map_project_members(named_packages, factory: ElementFactory):
             unresolved_types=unresolved_types,
             mistyped=mistyped,
             relationship_sources=relationship_sources,
+            unresolved_ends=unresolved_ends,
         ),
         provenance,
     )
@@ -196,19 +210,48 @@ def _resolve_typed_usages(
     return unresolved_types, mistyped, relationship_sources
 
 
+def _resolve_connection_ends(connection_ends: list) -> dict[str, list[str]]:
+    """Resolve binary connector endpoints to features (mapping phase 2).
+
+    Each endpoint name is resolved nearest-first from the connection's namespace.
+    An endpoint that resolves to a `Feature` (a usage) is set as the connection's
+    `source`/`target`; one that does not resolve, or resolves to a non-feature
+    (e.g. a package or a definition), is recorded as a broken/mismatched end. Each
+    end is independent: a resolved end is still set even if the other is broken.
+    """
+    unresolved_ends: dict[str, list[str]] = {}
+    for connection, namespace, source_name, target_name in connection_ends:
+        broken: list[str] = []
+        for name, setter in (
+            (source_name, "source"),
+            (target_name, "target"),
+        ):
+            target = _resolve_type(namespace, name)
+            if isinstance(target, kerml.Feature):
+                setattr(connection, setter, target)
+            else:
+                broken.append("::".join(name))
+        if broken:
+            unresolved_ends[connection.id] = broken
+    return unresolved_ends
+
+
 def _build_members(
     members: tuple,
     namespace: kerml.Namespace,
     factory: ElementFactory,
     typed_usages: list,
+    connection_ends: list,
     on_element=None,
 ) -> dict[str, kerml.Element]:
     """Create each AST member as an owned member of `namespace`, recursing into
     sub-packages. Returns this level's elements by name.
 
-    If `on_element` is given, it is called as `on_element(element, ast_node)` for
-    every created element (including nested ones), so callers can record
-    per-element provenance from the AST node (e.g. its source line)."""
+    Typed usages are recorded in `typed_usages` and connection endpoints in
+    `connection_ends` for phase-2 resolution. If `on_element` is given, it is
+    called as `on_element(element, ast_node)` for every created element (including
+    nested ones), so callers can record per-element provenance from the AST node
+    (e.g. its source line)."""
     by_name: dict[str, kerml.Element] = {}
     for member in members:
         if isinstance(member, ast.PartDefinition):
@@ -253,6 +296,10 @@ def _build_members(
             element = factory.create(sysml2.ConnectionUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name))
+            if member.source is not None and member.target is not None:
+                connection_ends.append(
+                    (element, namespace, member.source, member.target)
+                )
         elif isinstance(member, ast.PackageDefinition):
             element = factory.create(kerml.Package)
         else:  # pragma: no cover - AST node types are exhaustive
@@ -265,7 +312,12 @@ def _build_members(
             on_element(element, member)
         if isinstance(member, ast.PackageDefinition):
             _build_members(
-                member.members, element, factory, typed_usages, on_element
+                member.members,
+                element,
+                factory,
+                typed_usages,
+                connection_ends,
+                on_element,
             )
         by_name[member.name] = element
     return by_name

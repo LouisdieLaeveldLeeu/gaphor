@@ -31,7 +31,7 @@ from gaphas.connector import Connector as ConnectorAspect
 from gaphor.diagram.connectors import Connector, MetadataRelationConnect
 from gaphor.diagram.presentation import ElementPresentation
 from gaphor.SysML2 import kerml
-from gaphor.SysML2.diagramitems import FeatureTypingItem
+from gaphor.SysML2.diagramitems import ConnectionUsageItem, FeatureTypingItem
 
 
 @Connector.register(ElementPresentation, FeatureTypingItem)
@@ -103,4 +103,27 @@ class FeatureTypingConnect(MetadataRelationConnect):
         # Preserve the view's subject across a temporary disconnect (base would
         # `del self.line.subject`). The line keeps viewing the same typing while
         # a handle is detached, so a reconnect cannot fall into create-new.
+        pass
+
+
+@Connector.register(ElementPresentation, ConnectionUsageItem)
+class ConnectionUsageConnect(MetadataRelationConnect):
+    """Bind a ConnectionUsage line's handles to its connector ends.
+
+    Unlike the view-only FeatureTyping connector, a connection's ends are
+    authorable: connecting the head/tail to a feature item sets the connection's
+    source/target (via the head/tail metadata the base applies). But the
+    connection's OWN subject is preserved -- it is created by the toolbox or the
+    projection drop, never find-or-created here -- so neither drawing nor
+    reconnecting duplicates the connection.
+    """
+
+    def connect_subject(self, handle):
+        if self.line.subject is not None:
+            return True
+        return super().connect_subject(handle)
+
+    def disconnect_subject(self, handle):
+        # Keep the connection while a handle is temporarily detached; the base
+        # would delete the subject and a reconnect would create a new one.
         pass

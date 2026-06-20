@@ -129,11 +129,15 @@ class ConnectionDefinition:
 
 @dataclass(frozen=True)
 class ConnectionUsage:
-    """`connection <name> [ : <type> ] ;` (declaration only; connector ends are
-    later behavior-layer work)."""
+    """`connection <name> [ : <type> ] [ connect <end> to <end> ] ;`
+
+    `source`/`target` are the two binary connector-end references (qualified-name
+    segments), or both None for a declaration-only connection."""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    source: tuple[str, ...] | None = None  # endpoint 1, or None
+    target: tuple[str, ...] | None = None  # endpoint 2, or None
     line: int | None = _line
 
 

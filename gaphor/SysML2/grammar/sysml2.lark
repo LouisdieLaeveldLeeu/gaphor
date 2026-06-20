@@ -69,8 +69,12 @@ port_usage: "port" NAME (":" type_ref)? ";"
 // `connection def <name> ;`
 connection_definition: "connection" "def" NAME ";"
 
-// `connection <name> [ ":" <type> ] ;`  (declaration only; connector ends later)
-connection_usage: "connection" NAME (":" type_ref)? ";"
+// `connection <name> [ ":" <type> ] [ "connect" <end> "to" <end> ] ;`
+// Binary connector ends, non-chain references; n-ary/unnamed forms are later.
+connection_usage: "connection" NAME (":" type_ref)? connect_clause? ";"
+
+connect_clause: "connect" connection_end "to" connection_end
+connection_end: qualified_name
 
 // `package <name> { <members> }` (nestable) or `package <name> ;` (empty).
 package_definition: "package" NAME "{" package_body "}"  -> package_definition

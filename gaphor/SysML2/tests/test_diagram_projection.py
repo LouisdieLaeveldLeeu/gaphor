@@ -506,6 +506,55 @@ def test_connection_projection_persists_and_reloads(
     assert reloaded_item.subject is element_factory.lookup(element_id)
 
 
+def _connect_a_to_b(element_factory):
+    from gaphor.SysML2.grammar.parser import parse
+    from gaphor.SysML2.mapping import map_package
+
+    map_package(
+        parse("part a;\npart b;\nconnection c connect a to b;"), element_factory
+    )
+    a = next(
+        u for u in element_factory.select(sysml2.PartUsage) if u.declaredName == "a"
+    )
+    b = next(
+        u for u in element_factory.select(sysml2.PartUsage) if u.declaredName == "b"
+    )
+    c = next(iter(element_factory.select(sysml2.ConnectionUsage)))
+    return a, b, c
+
+
+def test_connection_line_binds_to_endpoint_items(element_factory):
+    # A connection with resolved ends projects as a line whose handles are
+    # anchored to the source/target items (a view onto the connector ends).
+    a, b, c = _connect_a_to_b(element_factory)
+    diagram = element_factory.create(Diagram)
+    a_item = drop(a, diagram, 0, 0)
+    b_item = drop(b, diagram, 100, 0)
+
+    c_item = drop(c, diagram, 50, 0)
+
+    assert isinstance(c_item, ConnectionUsageItem)
+    head = diagram.connections.get_connection(c_item.head)
+    tail = diagram.connections.get_connection(c_item.tail)
+    assert head is not None and head.connected is a_item
+    assert tail is not None and tail.connected is b_item
+    # Anchoring the line must not duplicate the connection or change its ends.
+    assert len(list(element_factory.select(sysml2.ConnectionUsage))) == 1
+    assert list(c.source) == [a] and list(c.target) == [b]
+
+
+def test_connection_with_unprojected_ends_projects_as_free_line(element_factory):
+    # If the endpoint items are not on the diagram, the connection still projects
+    # as the line, with its handles unanchored.
+    _a, _b, c = _connect_a_to_b(element_factory)
+    diagram = element_factory.create(Diagram)
+
+    c_item = drop(c, diagram, 0, 0)
+
+    assert isinstance(c_item, ConnectionUsageItem)
+    assert diagram.connections.get_connection(c_item.head) is None
+
+
 @pytest.mark.parametrize(
     "element_cls", [sysml2.ConnectionDefinition, sysml2.ConnectionUsage]
 )

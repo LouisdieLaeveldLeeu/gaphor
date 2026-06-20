@@ -619,3 +619,38 @@ remaining `::` segments as members from that match.
   later phase wires TypeFeaturing and a consumer needs it.
 - **No support-matrix cell moves**: this deepens resolution for already-`supported`
   constructs; no new claim is made.
+
+### Completion Phase 9: Connection End Semantics (verified 2026-06-20)
+
+Binary, non-chain connector endpoints. `connection c connect a to b;` (optionally
+`: <type>`) is now parseable, mappable, validatable, exportable, round-trippable,
+and diagrammable; ConnectionDefinition/ConnectionUsage are promoted to
+`supported`.
+
+- **Endpoint model.** A ConnectionUsage IS a KerML Connector (a Relationship), so
+  the two binary ends are stored as the connector's existing `source`/`target`
+  references -- no new end modeling. The mapper resolves each endpoint nearest-first
+  (Phase 5) to a `Feature`; a name that resolves to a non-feature (a package or a
+  definition) or not at all is a broken/mismatched end, recorded in
+  `MappingResult.unresolved_ends` and reported by the `broken-connection-end`
+  validation rule (each end is independent -- a resolved end is still set).
+- **Grammar.** `connection NAME (":" type_ref)? connect_clause? ";"`, where
+  `connect_clause: "connect" connection_end "to" connection_end`. `connect`/`to`
+  become reserved words (LALR keyword terminals), consistent with the other
+  keywords; the parser carries the connect clause via a tagged `_Connect` so it is
+  distinguishable from an optional type_ref.
+- **Export / round-trip.** Export emits the connect clause with each end rendered
+  as a re-resolvable name (bare for a same-namespace end, else the path from the
+  export root); the canonical form's ConnectionUsage entry gained the source/target
+  qualified names so endpoints participate in round-trip equivalence.
+- **Diagram (line bound to ends).** `ConnectionUsageItem` is now a
+  `LinePresentation` registered with `@represents(head=Relationship.source,
+  tail=Relationship.target)` and a name label, so a connection projects as a line
+  whose handles bind to the source/target items. `ConnectionUsageConnect` authors
+  the ends on connect (head->source, tail->target via the head/tail metadata) but
+  preserves the connection's own subject (never find-or-creates), so neither
+  drawing nor anchoring duplicates the connection. `drop` anchors the line to the
+  endpoint items when present, else projects a free line.
+- **Scope.** Binary, non-chain endpoints only. Feature-chain endpoints
+  (`connect a.b to c.d`) depend on Phase 5e; n-ary/unnamed connection forms are
+  later work.

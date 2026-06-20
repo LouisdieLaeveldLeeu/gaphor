@@ -7,6 +7,7 @@ with the offending location, so callers never get a partially-built AST.
 
 from __future__ import annotations
 
+from collections import namedtuple
 from functools import lru_cache
 from pathlib import Path
 
@@ -14,6 +15,10 @@ from lark import Lark, Transformer
 from lark.exceptions import LarkError
 
 from gaphor.SysML2.grammar import ast
+
+# Internal carrier so connection_usage can tell an optional connect-clause apart
+# from an optional type_ref (both reduce to tuples otherwise).
+_Connect = namedtuple("_Connect", "source target")
 
 _GRAMMAR_PATH = Path(__file__).with_name("sysml2.lark")
 
@@ -86,10 +91,28 @@ class _ASTBuilder(Transformer):
         (name,) = items
         return ast.ConnectionDefinition(name=str(name), line=name.line)
 
+    def connection_end(self, items):
+        return items[0]  # qualified_name tuple
+
+    def connect_clause(self, items):
+        return _Connect(items[0], items[1])
+
     def connection_usage(self, items):
         name = items[0]
-        type_name = items[1] if len(items) > 1 else None
-        return ast.ConnectionUsage(name=str(name), type_name=type_name, line=name.line)
+        type_name = None
+        source = target = None
+        for extra in items[1:]:
+            if isinstance(extra, _Connect):
+                source, target = extra.source, extra.target
+            else:
+                type_name = extra
+        return ast.ConnectionUsage(
+            name=str(name),
+            type_name=type_name,
+            source=source,
+            target=target,
+            line=name.line,
+        )
 
     def package_definition(self, items):
         name = items[0]

@@ -235,7 +235,7 @@ def import_user_kpar(
     # lands in a fresh root namespace, so detecting a collision against
     # pre-existing model content is part of the deferred duplicate/re-import
     # handling, not this gate.
-    all_diagnostics = validate(factory, result.unresolved_types, result.mistyped)
+    all_diagnostics = validate(factory, result.unresolved_types, result.mistyped, result.unresolved_ends)
     validation_diagnostics = tuple(
         d for d in all_diagnostics if d not in preexisting_set
     )

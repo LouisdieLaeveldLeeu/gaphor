@@ -54,6 +54,7 @@ def validate(
     factory: ElementFactory,
     unresolved_types: dict[str, str] | None = None,
     mistyped: dict[str, tuple[str, str]] | None = None,
+    unresolved_ends: dict[str, list[str]] | None = None,
 ) -> list[Diagnostic]:
     """Run the scoped M2 validation rules over all elements in `factory`.
 
@@ -67,6 +68,10 @@ def validate(
     `part p : AttributeDefinition`). These also produce no FeatureTyping; the
     type-kind-mismatch rule reports them. Like unresolved types, this needs
     mapping context, so a reloaded model has none to report.
+
+    `unresolved_ends` maps a connection element id -> the declared connector-end
+    references that did not resolve to a feature (broken or kind-mismatched
+    endpoints). The connection-end rule reports them; mapping context only.
     """
     diagnostics: list[Diagnostic] = []
     diagnostics.extend(_check_missing_owner(factory))
@@ -77,7 +82,28 @@ def validate(
         _check_usage_without_valid_type(factory, unresolved_types or {})
     )
     diagnostics.extend(_check_type_kind_mismatch(factory, mistyped or {}))
+    diagnostics.extend(_check_connection_ends(factory, unresolved_ends or {}))
     return diagnostics
+
+
+def _check_connection_ends(
+    factory: ElementFactory, unresolved_ends: dict[str, list[str]]
+) -> Iterator[Diagnostic]:
+    """A connection whose declared connector end did not resolve to a feature is
+    a broken/mismatched endpoint (the mapper records these)."""
+    for connection_id, ends in unresolved_ends.items():
+        element = factory.lookup(connection_id)
+        name = element.declaredName if element is not None else None
+        for end in ends:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-connection-end",
+                f"connection {name!r} declares endpoint {end!r} which does not "
+                f"resolve to a feature"
+                if name
+                else f"connection endpoint {end!r} does not resolve to a feature",
+                connection_id,
+            )
 
 
 def has_errors(diagnostics: Iterable[Diagnostic]) -> bool:

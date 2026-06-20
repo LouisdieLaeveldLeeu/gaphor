@@ -53,11 +53,15 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
             elif isinstance(member, sysml2.ConnectionDefinition):
                 entries.add(("ConnectionDefinition", kk.qualified_name(member)))
             elif isinstance(member, sysml2.ConnectionUsage):
+                source = kk._single(member.source)
+                target = kk._single(member.target)
                 entries.add(
                     (
                         "ConnectionUsage",
                         kk.qualified_name(member),
                         _usage_type_qualified_name(member) or "",
+                        kk.qualified_name(source) if source is not None else "",
+                        kk.qualified_name(target) if target is not None else "",
                     )
                 )
             elif isinstance(member, sysml2.PartDefinition):
@@ -179,7 +183,9 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
     # Full diagnostics use mapping context (e.g. an unresolvable declared type
     # name, which is only known at mapping time). The model-derived subset is
     # what can be recomputed from a persisted model with no mapping context.
-    source_diagnostics = validate(factory, result.unresolved_types, result.mistyped)
+    source_diagnostics = validate(
+        factory, result.unresolved_types, result.mistyped, result.unresolved_ends
+    )
     source_model_diagnostics = validate(factory)
     root_id = result.root.id
 
