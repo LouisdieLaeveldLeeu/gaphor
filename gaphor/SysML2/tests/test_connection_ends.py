@@ -104,9 +104,42 @@ def test_complete_and_endless_connections_are_not_flagged():
     factory, _ = _map(
         "part a;\npart b;\nconnection c connect a to b;\nconnection d;"
     )
-    assert not any(
-        d.rule == "incomplete-connection" for d in validate(factory)
-    )
+    diagnostics = validate(factory)
+    assert not any(d.rule == "incomplete-connection" for d in diagnostics)
+    assert not any(d.rule == "non-feature-connection-end" for d in diagnostics)
+
+
+def test_non_feature_end_is_reported_model_derived():
+    # A non-feature end (here a definition wired in via the kernel API, as a
+    # low-level diagram connect or a hand-edited .gaphor could) is caught
+    # model-derived, with no mapping context -- not only at UI hover.
+    factory, _ = _map("part def D;\npart a;\nconnection c;")
+    connection = _conn(factory)
+    definition = next(iter(factory.select(sysml2.PartDefinition)))
+    part_a = next(p for p in factory.select(sysml2.PartUsage) if p.declaredName == "a")
+    connection.source = definition  # not a Feature
+    connection.target = part_a
+
+    diagnostics = validate(factory)
+
+    assert any(d.rule == "non-feature-connection-end" for d in diagnostics)
+    assert has_errors(diagnostics)
+
+
+def test_non_feature_end_is_not_exported_as_a_connect_clause():
+    # An invalid (non-feature) end must not be emitted as a connect clause the
+    # mapper would reject on re-import; the bare declaration is exported instead.
+    factory, result = _map("part def D;\npart a;\nconnection c;")
+    connection = _conn(factory)
+    definition = next(iter(factory.select(sysml2.PartDefinition)))
+    part_a = next(p for p in factory.select(sysml2.PartUsage) if p.declaredName == "a")
+    connection.source = definition
+    connection.target = part_a
+
+    text = export_namespace(result.root)
+
+    assert "connection c;" in text
+    assert "connect" not in text.replace("connection", "")
 
 
 def test_connection_exports_with_endpoints():

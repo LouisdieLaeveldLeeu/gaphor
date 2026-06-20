@@ -122,14 +122,25 @@ class ConnectionUsageConnect(MetadataRelationConnect):
     - A connector end must be a `Feature` (a usage). The item metadata types
       source/target as the generic `Element`, so the base `allow` would let a
       handle land on a `ConnectionDefinitionItem` even though the text mapper
-      rejects definitions as ends. `allow` is narrowed to refuse a non-feature
-      endpoint, keeping the diagram consistent with the textual semantics.
+      rejects definitions as ends. `allow` refuses a non-feature endpoint at the
+      UI layer; because Gaphor's low-level `connect()` does NOT consult `allow`,
+      `connect_subject` independently refuses to author a non-feature end (and
+      `validation` catches one that reached the model by any other route). So the
+      "ends are features" invariant holds at hover, at connect, and at the model.
     - For an EXISTING connection (toolbox/projection) `connect_subject` authors
       the ends onto that subject itself rather than returning early (which would
       leave `source`/`target` None) or find-or-creating (which would duplicate
       the connection). source/target are multi-valued, so each end is cleared
       before being set, making a reconnect replace rather than accumulate ends.
     """
+
+    def _feature_subject(self, item):
+        # Only a Feature may be a connector end. A non-feature item (e.g. a
+        # ConnectionDefinitionItem) yields no end, so the diagram path never
+        # writes a non-feature source/target even when the low-level connect
+        # bypassed allow().
+        subject = item.subject if item is not None else None
+        return subject if isinstance(subject, kerml.Feature) else None
 
     def _is_feature_end(self, item) -> bool:
         # An unconnected handle (item is None) or one whose item has no subject
@@ -165,8 +176,11 @@ class ConnectionUsageConnect(MetadataRelationConnect):
             return super().connect_subject(handle)
         head_item = self.get_connected(line.head)
         tail_item = self.get_connected(line.tail)
-        self._set_end(metadata["head"], head_item.subject if head_item else None)
-        self._set_end(metadata["tail"], tail_item.subject if tail_item else None)
+        # Only a Feature is authored as an end; a non-feature connected item
+        # leaves that end unset (and so an incomplete connection that validation
+        # reports), never a stored non-feature end.
+        self._set_end(metadata["head"], self._feature_subject(head_item))
+        self._set_end(metadata["tail"], self._feature_subject(tail_item))
         return True
 
     def disconnect_subject(self, handle):

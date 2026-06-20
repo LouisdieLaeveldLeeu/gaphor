@@ -17,6 +17,9 @@ severity per the conformance policy (decision sec 4):
                               text or was injected via the API / a reloaded model
 - broken connection end    -> a connector endpoint did not resolve to a feature
                               (mapping context)
+- non-feature connection   -> a connector source/target is set to a non-feature
+                              (e.g. a definition); caught model-derived, since the
+                              low-level diagram connect / API can store one
 - incomplete connection    -> a binary connection has exactly one end set,
                               caught model-derived (no valid textual form)
 
@@ -88,28 +91,49 @@ def validate(
     )
     diagnostics.extend(_check_type_kind_mismatch(factory, mistyped or {}))
     diagnostics.extend(_check_connection_ends(factory, unresolved_ends or {}))
-    diagnostics.extend(_check_incomplete_connection(factory))
+    diagnostics.extend(_check_connection_end_integrity(factory))
     return diagnostics
 
 
-def _check_incomplete_connection(factory: ElementFactory) -> Iterator[Diagnostic]:
-    """A binary connection must have both ends or neither -- never exactly one.
+def _check_connection_end_integrity(factory: ElementFactory) -> Iterator[Diagnostic]:
+    """A binary connection's ends must be features, and must come as a pair.
 
-    Model-derived (needs no mapping context), so it catches a one-ended
-    connection that reached the model outside the textual path -- via the
-    Python/kernel API or a hand-edited/persisted .gaphor. The textual mapper
-    already keeps ends atomic (a broken end materialises none), and a one-ended
-    binary connection has no valid textual form, so it would otherwise be dropped
-    silently on export; flagging it here keeps that loss from being silent.
+    Model-derived (needs no mapping context), so it guards ends that reached the
+    model OUTSIDE the textual path -- a low-level diagram connect (Gaphor's
+    `connect()` does not consult the connector's `allow`), the Python/kernel API,
+    or a hand-edited/persisted .gaphor:
+
+    - non-feature end: a source/target set to a non-`Feature` (e.g. a connection
+      wired to a definition). The textual mapper rejects these; such an end has no
+      valid textual form, so it must be reported here rather than exported as a
+      clause the mapper would reject on re-import.
+    - incomplete connection: exactly one of source/target is set. A one-ended
+      binary connection likewise has no valid textual form and would otherwise be
+      dropped silently on export.
+
+    The textual mapper already keeps ends atomic and feature-typed, so a model
+    built from text never trips this; it is the safety net for the other routes.
     """
     for connection in factory.select(sysml2.ConnectionUsage):
         source = kk._single(connection.source)
         target = kk._single(connection.target)
+        name = connection.declaredName
+        for end, role in ((source, "source"), (target, "target")):
+            if end is not None and not isinstance(end, kerml.Feature):
+                yield Diagnostic(
+                    Severity.ERROR,
+                    "non-feature-connection-end",
+                    f"connection {name!r} has a {role} end that is not a feature "
+                    f"(a {type(end).__name__})"
+                    if name
+                    else f"connection {role} end is not a feature "
+                    f"(a {type(end).__name__})",
+                    connection.id,
+                )
         if (source is None) != (target is None):
             present, missing = (
                 ("source", "target") if source is not None else ("target", "source")
             )
-            name = connection.declaredName
             yield Diagnostic(
                 Severity.ERROR,
                 "incomplete-connection",

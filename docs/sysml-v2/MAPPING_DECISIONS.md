@@ -645,6 +645,17 @@ and diagrammable; ConnectionDefinition/ConnectionUsage are promoted to
   reaches the model by another route (the Python/kernel API, a hand-edited
   `.gaphor`) is caught model-derived by the `incomplete-connection` rule -- the
   Connector counterpart to `broken-typing`.
+- **Feature ends enforced at every layer (revised 2026-06-20).** "A connector end
+  is a `Feature`" must hold at the model, not just at UI hover. Gaphor's low-level
+  `connect()` does NOT consult a connector's `allow`, so the `allow` narrowing
+  alone left non-feature ends reachable via a direct connect or an API mutation
+  (and they passed validation and exported a clause the mapper would reject). Now:
+  `connect_subject` only authors a `Feature` subject (a non-feature connected item
+  yields no end), a model-derived `non-feature-connection-end` rule reports any
+  source/target that is not a feature (covering the API and reloaded-model
+  routes), and export emits the connect clause only when BOTH ends are features
+  (an invalid end exports as the bare declaration, never as a non-round-trippable
+  `connect D to a`). `allow` stays as the first, hover-level line of defence.
 - **Grammar.** `connection NAME (":" type_ref)? connect_clause? ";"`, where
   `connect_clause: "connect" connection_end "to" connection_end`. `connect`/`to`
   become reserved words (LALR keyword terminals), consistent with the other

@@ -631,6 +631,36 @@ def test_connection_handle_refuses_non_feature_endpoint(element_factory):
     assert not _allows(c_item, c_item.head, d_item)
 
 
+def test_low_level_connect_does_not_store_a_non_feature_end(element_factory):
+    # Gaphor's low-level connect() does NOT consult allow(), so the model-level
+    # guard lives in connect_subject: a handle dropped on a definition item must
+    # never store a non-feature end (and validation must stay clean).
+    from gaphor.SysML2.validation import validate
+
+    map_package(
+        parse("connection def D;\npart a;\nconnection c;"), element_factory
+    )
+    d = next(iter(element_factory.select(sysml2.ConnectionDefinition)))
+    a = next(iter(element_factory.select(sysml2.PartUsage)))
+    c = next(iter(element_factory.select(sysml2.ConnectionUsage)))
+    diagram = element_factory.create(Diagram)
+    d_item = drop(d, diagram, 0, 0)
+    a_item = drop(a, diagram, 100, 0)
+    c_item = drop(c, diagram, 50, 0)
+
+    connect(c_item, c_item.head, d_item)
+    connect(c_item, c_item.tail, a_item)
+
+    # connect_subject ran (the feature tail was authored) but the definition head
+    # was refused -- so the model never holds a non-feature end.
+    assert list(c.target) == [a]
+    assert list(c.source) == []
+    assert d not in list(c.source) and d not in list(c.target)
+    assert not any(
+        diag.rule == "non-feature-connection-end" for diag in validate(element_factory)
+    )
+
+
 @pytest.mark.parametrize(
     "element_cls", [sysml2.ConnectionDefinition, sysml2.ConnectionUsage]
 )

@@ -70,15 +70,19 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
 def _connection_decl(connection: kerml.Feature, root: kerml.Namespace) -> str:
     """`<name> [: <type>] [connect <end> to <end>]` for a ConnectionUsage.
 
-    The connect clause is emitted only when both binary ends are present; each end
-    is rendered as a name that re-resolves under the import rules (bare when the
-    end feature is a member of the connection's own namespace, else the path from
-    the export root).
+    The connect clause is emitted only when both binary ends are present AND both
+    are features -- the only ends with a valid textual form. A connection with a
+    missing or non-feature end is an invalid model (reported by validation's
+    `incomplete-connection` / `non-feature-connection-end` rules); rather than
+    emit a clause the mapper would reject on re-import, the bare declaration is
+    exported. Each end is rendered as a name that re-resolves under the import
+    rules (bare when the end feature is a member of the connection's own
+    namespace, else the path from the export root).
     """
     decl = _usage_decl(connection, root)
     source = kk._single(connection.source)
     target = kk._single(connection.target)
-    if source is not None and target is not None:
+    if isinstance(source, kerml.Feature) and isinstance(target, kerml.Feature):
         return (
             f"{decl} connect {_end_name(connection, source, root)} "
             f"to {_end_name(connection, target, root)}"
