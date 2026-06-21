@@ -57,6 +57,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML ConstraintUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML RequirementDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML RequirementUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML ConcernDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML ConcernUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML PortDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML PortUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML ConnectionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
@@ -85,6 +87,8 @@ references, never ids or raw text). M2 establishes the harness
 | SysML ConstraintUsage (typed) | yes | `test_roundtrip.py` |
 | SysML RequirementDefinition | yes | `test_roundtrip.py::test_requirement_definition_and_usage_round_trip` |
 | SysML RequirementUsage (typed) | yes | `test_roundtrip.py` |
+| SysML ConcernDefinition / ConcernUsage | yes | `test_concern_and_frame.py::test_concern_and_frame_round_trip` |
+| SysML requirement framed concern (`frame concern`) | yes | `test_concern_and_frame.py::test_concern_and_frame_round_trip` |
 | SysML PortDefinition | yes | `test_roundtrip.py::test_port_definition_and_usage_round_trip` |
 | SysML PortUsage (typed) | yes | `test_roundtrip.py` |
 | SysML PortUsage (conjugated `~`) | yes | `test_port_conjugation.py::test_conjugated_port_round_trips` |
@@ -188,6 +192,25 @@ greedy body terminal -- was fixed by building constraint bodies from literal
 braces + a `BODY_TEXT` terminal so the parser disambiguates body context (opaque
 bodies stay verbatim). See `test_requirement_reqid_actor_stakeholder.py`. This is
 the Phase-6c requirement-parameter gate decision, taken explicitly per the roadmap.
+
+Phase 6d-1 adds the Concern construct and the framed-concern DECLARE form.
+ConcernDefinition/ConcernUsage are generated from the pinned XMI (ConcernDefinition
+-> RequirementDefinition, ConcernUsage -> RequirementUsage; SysML-layer, so the
+kernel count stays 31) and -- because a Concern IS a Requirement -- REUSE the
+requirement body (subject/assume/require/actor/stakeholder/frame). `concern def`/
+`concern` parse, map, validate (ConcernUsage kind-checked to a ConcernDefinition via
+the shared typed-usage path), export, round-trip, persist, project to a diagram
+item (`ConcernDefinitionItem`/`ConcernUsageItem`), and get the reqId + definition-
+type editors -- new ConcernDefinition/ConcernUsage rows at `alpha`. A requirement's
+`frame concern <name> [: <C>]` owns a ConcernUsage via a FramedConcernMembership
+(IS a RequirementConstraintMembership with `kind` fixed to `requirement`; the mapper
+sets it explicitly since the coder emits the inherited `assumption` default). The
+`require`-constraint reader and validator EXCLUDE FramedConcernMembership, so a
+framed concern is never read or reported as a `require` constraint; validation
+requires exactly one ConcernUsage member and kind=requirement. The framed-concern
+REFERENCE form (`frame <existing>`, needing kernel subsetting) is Phase 6d-2, so the
+Requirement/Concern rows STAY `alpha`. See `test_concern_and_frame.py`. This is the
+Phase-6d-1 gate decision, taken explicitly per the roadmap.
 
 PortDefinition and PortUsage are `supported` for the declaration-and-typing
 surface INCLUDING conjugation (`port def Fuel; port p : Fuel; port q : ~Fuel;`).

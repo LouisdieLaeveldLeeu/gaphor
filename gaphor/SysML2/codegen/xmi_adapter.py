@@ -1032,6 +1032,15 @@ SYSML_SEED = (
     # stored closure.
     "ActorMembership",
     "StakeholderMembership",
+    # The Concern construct and a requirement's framed concern (Phase 6d-1).
+    # ConcernDefinition -> RequirementDefinition and ConcernUsage -> RequirementUsage
+    # (so a concern reuses the requirement-body machinery and adds only derived
+    # accessors). FramedConcernMembership -> RequirementConstraintMembership with
+    # `kind` fixed to `requirement` and its owned member a ConcernUsage; it pulls no
+    # new stored closure beyond the inherited kind.
+    "ConcernDefinition",
+    "ConcernUsage",
+    "FramedConcernMembership",
 )
 
 # KerML classes that the generated SysML kernel must already provide as a

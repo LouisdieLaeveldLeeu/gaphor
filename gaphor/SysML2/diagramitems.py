@@ -151,6 +151,23 @@ class RequirementDefinitionItem(
         self.shape = _name_box(self)
 
 
+@represents(sysml2.ConcernDefinition)
+class ConcernDefinitionItem(Named, ElementPresentation[sysml2.ConcernDefinition]):
+    """A diagram view onto a SysML2 `ConcernDefinition` (Phase 6d).
+
+    A ConcernDefinition IS a RequirementDefinition; the diagram registry is
+    exact-type, so it needs its own item to project as itself."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id)
+        self.watch("subject[Element].declaredName", self.update_shapes)
+        self.watch("subject[Feature].direction", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _name_box(self)
+
+
 @represents(sysml2.PortDefinition)
 class PortDefinitionItem(Named, ElementPresentation[sysml2.PortDefinition]):
     """A diagram view onto a SysML2 `PortDefinition`."""
@@ -258,6 +275,23 @@ class RequirementUsageItem(Named, ElementPresentation[sysml2.RequirementUsage]):
         self.watch("subject[Element].declaredName", self.update_shapes)
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
+        self.update_shapes()
+
+    def update_shapes(self, event=None):
+        self.shape = _name_box(self)
+
+
+@represents(sysml2.ConcernUsage)
+class ConcernUsageItem(Named, ElementPresentation[sysml2.ConcernUsage]):
+    """A diagram view onto a SysML2 `ConcernUsage` (Phase 6d).
+
+    A ConcernUsage IS a RequirementUsage; the diagram registry is exact-type, so
+    it needs its own item to project as itself."""
+
+    def __init__(self, diagram, id=None):
+        super().__init__(diagram, id=id)
+        self.watch("subject[Element].declaredName", self.update_shapes)
         self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 

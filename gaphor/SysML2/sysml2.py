@@ -83,6 +83,30 @@ class AttributeUsage(Usage):
     pass
 
 
+class ConstraintDefinition(OccurrenceDefinition, _Predicate):
+    pass
+
+
+class RequirementDefinition(ConstraintDefinition):
+    reqId: _attribute[str] = _attribute("reqId", str)
+
+
+class ConcernDefinition(RequirementDefinition):
+    pass
+
+
+class ConstraintUsage(OccurrenceUsage, _BooleanExpression):
+    pass
+
+
+class RequirementUsage(ConstraintUsage):
+    reqId: _attribute[str] = _attribute("reqId", str)
+
+
+class ConcernUsage(RequirementUsage):
+    pass
+
+
 class PortDefinition(OccurrenceDefinition, _Structure):
     pass
 
@@ -123,12 +147,12 @@ class ConnectionUsage(ConnectorAsUsage, PartUsage):
     pass
 
 
-class ConstraintDefinition(OccurrenceDefinition, _Predicate):
-    pass
+class RequirementConstraintMembership(_FeatureMembership):
+    kind = _enumeration("kind", RequirementConstraintKind, RequirementConstraintKind.assumption)
 
 
-class ConstraintUsage(OccurrenceUsage, _BooleanExpression):
-    pass
+class FramedConcernMembership(RequirementConstraintMembership):
+    kind = _enumeration("kind", RequirementConstraintKind, RequirementConstraintKind.assumption)
 
 
 class InterfaceDefinition(ConnectionDefinition):
@@ -145,18 +169,6 @@ class PortConjugation(_Conjugation):
 
 class PortUsage(OccurrenceUsage):
     pass
-
-
-class RequirementConstraintMembership(_FeatureMembership):
-    kind = _enumeration("kind", RequirementConstraintKind, RequirementConstraintKind.assumption)
-
-
-class RequirementDefinition(ConstraintDefinition):
-    reqId: _attribute[str] = _attribute("reqId", str)
-
-
-class RequirementUsage(ConstraintUsage):
-    reqId: _attribute[str] = _attribute("reqId", str)
 
 
 class StakeholderMembership(_ParameterMembership):

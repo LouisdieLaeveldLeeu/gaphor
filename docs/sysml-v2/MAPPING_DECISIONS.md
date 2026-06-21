@@ -990,3 +990,48 @@ Two review findings on the 6c work, both fixed.
   error, never silent corruption. The parser decodes and the exporter encodes
   through this one module (the ad hoc `re` in `export.py` is gone). The reqId UI
   setter needs no boundary rejection now -- every value is representable.
+
+### Completion Phase 6d-1: Concern Construct + Framed-Concern Declare (verified 2026-06-21)
+
+The Concern construct and a requirement's framed concern (DECLARE form). Sliced
+from 6d by metamodel footprint: this slice is SysML-layer only; the reference form
+(`frame <existing>`, needing kernel subsetting) is 6d-2. The user chose the
+heavyweight scope (Concern reuses the full requirement body; `frame` will support
+both declare and reference). Rows stay `alpha`.
+
+- **Metamodel (generated).** Seeded ConcernDefinition (-> RequirementDefinition),
+  ConcernUsage (-> RequirementUsage), and FramedConcernMembership (->
+  RequirementConstraintMembership) from the pinned XMI. All are SysML-layer with
+  no new stored closure, so the KERNEL count stays 31. NOTE: the XMI fixes
+  FramedConcernMembership.kind's default to `requirement`, but Gaphor's coder does
+  not capture a redefined default -- it emits the inherited `assumption`. So the
+  mapper/behavior set `kind = requirement` EXPLICITLY (a `_enumeration` default is
+  not authority here).
+- **Concern reuses the requirement body.** A ConcernDefinition IS a
+  RequirementDefinition and a ConcernUsage IS a RequirementUsage, so `concern def`/
+  `concern` reuse `requirement_body` in the grammar and `_build_requirement_body`
+  in the mapper; the AST ConcernDefinition/ConcernUsage mirror the requirement
+  nodes (reqId/subject/assume/require/actors/stakeholders/framedConcerns). The
+  parser's `_req_body_kwargs` is the shared body builder for all four node kinds.
+  isinstance ordering puts Concern before Requirement in export/round-trip/mapping
+  (a Concern IS a Requirement).
+- **Framed concern (declare).** `frame concern <name> [: <C>]` builds a
+  `sysml2.ConcernUsage` owned via a `FramedConcernMembership` (kind=requirement);
+  its declared type is kind-checked (ConcernUsage -> ConcernDefinition) through the
+  SHARED `typed_usages` path. COLLISION GUARD: a FramedConcernMembership IS a
+  RequirementConstraintMembership (kind=requirement) owning a ConcernUsage (which
+  IS a ConstraintUsage), so the `require`-constraint reader (`requirement_constraints`)
+  and the constraint-membership validator EXCLUDE FramedConcernMembership -- a
+  framed concern is read via `framed_concerns`, never as a `require`.
+- **Validation.** Model-derived `broken-requirement-parameter` extended: a
+  FramedConcernMembership must own exactly one ConcernUsage AND carry
+  kind=requirement. ConcernUsage typing is the usual `type-kind-mismatch`/
+  `usage-without-valid-type` (ConcernUsage -> ConcernDefinition, exact kind).
+- **Diagram / UI.** The diagram registry is exact-type, so ConcernDefinition/
+  ConcernUsage get their own items (`ConcernDefinitionItem`/`ConcernUsageItem`,
+  mirroring the requirement items) + drop registrations. The shared
+  ConstraintRequirement type page picks ConcernDefinition for a ConcernUsage
+  (most-derived first); the reqId editor applies to concerns by isinstance.
+- **Export / round-trip.** `concern def`/`concern` and the `frame concern ...`
+  clause re-emit; the canonical form adds ConcernDefinition/ConcernUsage base
+  entries and order-sensitive `RequirementFrame` entries (name + type).

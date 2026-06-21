@@ -1,7 +1,7 @@
-"""Requirement parameter behavior (Phase 6b/6c).
+"""Requirement parameter behavior (Phase 6b/6c/6d).
 
-A requirement body's `subject`, `assume`/`require`, `actor`, and `stakeholder`
-parts are modeled faithfully on the normative memberships:
+A requirement body's `subject`, `assume`/`require`, `actor`, `stakeholder`, and
+`frame` parts are modeled faithfully on the normative memberships:
 
 - `subject` is a parameter feature related to the requirement by a
   `SubjectMembership` (a KerML ParameterMembership);
@@ -12,14 +12,17 @@ parts are modeled faithfully on the normative memberships:
   / `StakeholderMembership` respectively (both KerML ParameterMemberships; the
   pinned XMI types their owned parameter as a PartUsage), kept in declaration
   order (Phase 6c);
+- `frame` owns a `ConcernUsage` through a `FramedConcernMembership` (a
+  RequirementConstraintMembership with `kind` fixed to `requirement`), kept in
+  declaration order (Phase 6d). Because FramedConcernMembership IS a
+  RequirementConstraintMembership, the `require`-constraint reader excludes it;
 - `reqId` is the requirement's `declaredShortName` (Phase 6c): a plain KerML
   short-name attribute, not a membership.
 
-The constraints/subject/actor/stakeholder are owned through these memberships
-(which ARE OwningMemberships), so they persist, cascade on delete, and
-round-trip. The framed-concern parameter is still out of scope, and the
-constraint bodies remain opaque (no expression semantics) -- the requirement
-rows stay `alpha`.
+The constraints/subject/actor/stakeholder/concern are owned through these
+memberships (which ARE OwningMemberships), so they persist, cascade on delete, and
+round-trip. The constraint bodies remain opaque (no expression semantics) -- the
+requirement rows stay `alpha`.
 """
 
 from __future__ import annotations
@@ -139,10 +142,16 @@ def requirement_constraints(
     kind: sysml2.RequirementConstraintKind,
 ) -> Iterator[sysml2.ConstraintUsage]:
     """The assumed (kind=assumption) or required (kind=requirement) constraints,
-    in declaration order."""
+    in declaration order.
+
+    A `FramedConcernMembership` IS a `RequirementConstraintMembership` (with
+    kind=requirement, owning a ConcernUsage), so it is EXCLUDED here -- a framed
+    concern is read via `framed_concerns`, not as a `require` constraint.
+    """
     for relationship in requirement.ownedRelationship:
         if (
             isinstance(relationship, sysml2.RequirementConstraintMembership)
+            and not isinstance(relationship, sysml2.FramedConcernMembership)
             and relationship.kind == kind
         ):
             member = kk._single(relationship.memberElement)
@@ -160,4 +169,30 @@ def add_requirement_constraint(
     membership = requirement.model.create(sysml2.RequirementConstraintMembership)
     membership.kind = kind
     kk.add_owned_member(requirement, constraint, membership)
+    return membership
+
+
+def framed_concerns(
+    requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+) -> Iterator[sysml2.ConcernUsage]:
+    """The requirement's framed-concern ConcernUsages, in declaration order
+    (Phase 6d)."""
+    for relationship in requirement.ownedRelationship:
+        if isinstance(relationship, sysml2.FramedConcernMembership):
+            member = kk._single(relationship.memberElement)
+            if isinstance(member, sysml2.ConcernUsage):
+                yield member
+
+
+def add_framed_concern(
+    requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+    concern: sysml2.ConcernUsage,
+) -> sysml2.FramedConcernMembership:
+    """Own `concern` as a framed concern via a FramedConcernMembership.
+
+    The XMI fixes a FramedConcernMembership's `kind` to `requirement`, so it is set
+    explicitly (the generated default is the inherited `assumption`)."""
+    membership = requirement.model.create(sysml2.FramedConcernMembership)
+    membership.kind = Requirement
+    kk.add_owned_member(requirement, concern, membership)
     return membership

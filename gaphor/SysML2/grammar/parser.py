@@ -60,35 +60,45 @@ _ReqBody = namedtuple("_ReqBody", "clauses")
 _ShortName = namedtuple("_ShortName", "value")
 
 
-def _split_req_body(body):
-    """Split a `_ReqBody` into (subject, assume, require, actors, stakeholders).
+def _req_body_kwargs(body):
+    """Return the requirement-body AST kwargs, shared by requirement AND concern
+    nodes (a ConcernDefinition/Usage reuses the requirement body, Phase 6d).
 
     A requirement has a SINGLE subject (KerML `subjectParameter` is [0..1]), so a
     second `subject` clause is rejected rather than silently overwriting the first
-    (no silent loss). `actor`/`stakeholder` are ordered, so all are kept. A missing
-    body yields no subject and empty tuples.
+    (no silent loss). `actor`/`stakeholder`/`frame` are ordered, so all are kept. A
+    missing body yields no subject and empty tuples.
     """
-    if body is None:
-        return None, (), (), (), ()
     subject = None
     assume: list[str] = []
     require: list[str] = []
     actors: list = []
     stakeholders: list = []
-    for clause in body.clauses:
-        if isinstance(clause, ast.SubjectClause):
-            if subject is not None:
-                raise SyntaxError("a requirement may declare at most one subject")
-            subject = clause
-        elif isinstance(clause, ast.ActorClause):
-            actors.append(clause)
-        elif isinstance(clause, ast.StakeholderClause):
-            stakeholders.append(clause)
-        elif isinstance(clause, _Assume):
-            assume.append(clause.body)
-        elif isinstance(clause, _Require):
-            require.append(clause.body)
-    return subject, tuple(assume), tuple(require), tuple(actors), tuple(stakeholders)
+    framed: list = []
+    if body is not None:
+        for clause in body.clauses:
+            if isinstance(clause, ast.SubjectClause):
+                if subject is not None:
+                    raise SyntaxError("a requirement may declare at most one subject")
+                subject = clause
+            elif isinstance(clause, ast.ActorClause):
+                actors.append(clause)
+            elif isinstance(clause, ast.StakeholderClause):
+                stakeholders.append(clause)
+            elif isinstance(clause, ast.FrameClause):
+                framed.append(clause)
+            elif isinstance(clause, _Assume):
+                assume.append(clause.body)
+            elif isinstance(clause, _Require):
+                require.append(clause.body)
+    return {
+        "subject": subject,
+        "assume": tuple(assume),
+        "require": tuple(require),
+        "actors": tuple(actors),
+        "stakeholders": tuple(stakeholders),
+        "framedConcerns": tuple(framed),
+    }
 
 _GRAMMAR_PATH = Path(__file__).with_name("sysml2.lark")
 
@@ -198,6 +208,11 @@ class _ASTBuilder(Transformer):
         type_name = items[1] if len(items) > 1 else None
         return ast.StakeholderClause(name=str(name), type_name=type_name)
 
+    def frame_clause(self, items):
+        name = items[0]
+        type_name = items[1] if len(items) > 1 else None
+        return ast.FrameClause(name=str(name), type_name=type_name)
+
     def assume_clause(self, items):
         return _Assume(items[0].text)
 
@@ -214,16 +229,8 @@ class _ASTBuilder(Transformer):
         req_id, items = _split_short_name(items)
         name = items[0]
         body = items[1] if len(items) > 1 else None
-        subject, assume, require, actors, stakeholders = _split_req_body(body)
         return ast.RequirementDefinition(
-            name=str(name),
-            reqId=req_id,
-            subject=subject,
-            assume=assume,
-            require=require,
-            actors=actors,
-            stakeholders=stakeholders,
-            line=name.line,
+            name=str(name), reqId=req_id, line=name.line, **_req_body_kwargs(body)
         )
 
     def requirement_usage(self, items):
@@ -237,18 +244,41 @@ class _ASTBuilder(Transformer):
                 body = extra
             else:
                 type_name = extra
-        subject, assume, require, actors, stakeholders = _split_req_body(body)
         return ast.RequirementUsage(
             name=str(name),
             type_name=type_name,
             direction=direction,
             reqId=req_id,
-            subject=subject,
-            assume=assume,
-            require=require,
-            actors=actors,
-            stakeholders=stakeholders,
             line=name.line,
+            **_req_body_kwargs(body),
+        )
+
+    def concern_definition(self, items):
+        req_id, items = _split_short_name(items)
+        name = items[0]
+        body = items[1] if len(items) > 1 else None
+        return ast.ConcernDefinition(
+            name=str(name), reqId=req_id, line=name.line, **_req_body_kwargs(body)
+        )
+
+    def concern_usage(self, items):
+        direction, items = _split_direction(items)
+        req_id, items = _split_short_name(items)
+        name = items[0]
+        type_name = None
+        body = None
+        for extra in items[1:]:
+            if isinstance(extra, _ReqBody):
+                body = extra
+            else:
+                type_name = extra
+        return ast.ConcernUsage(
+            name=str(name),
+            type_name=type_name,
+            direction=direction,
+            reqId=req_id,
+            line=name.line,
+            **_req_body_kwargs(body),
         )
 
     def port_definition(self, items):

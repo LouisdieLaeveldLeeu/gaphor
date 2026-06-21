@@ -111,12 +111,22 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                         _usage_type_qualified_name(member) or "",
                     )
                 )
-            # RequirementDefinition is a ConstraintDefinition (and the usage
-            # likewise), so the more specific class is matched first.
+            # ConcernDefinition is a RequirementDefinition is a ConstraintDefinition
+            # (and the usages likewise), so the more specific class is matched first.
+            elif isinstance(member, sysml2.ConcernDefinition):
+                entries.add(("ConcernDefinition", kk.qualified_name(member)))
             elif isinstance(member, sysml2.RequirementDefinition):
                 entries.add(("RequirementDefinition", kk.qualified_name(member)))
             elif isinstance(member, sysml2.ConstraintDefinition):
                 entries.add(("ConstraintDefinition", kk.qualified_name(member)))
+            elif isinstance(member, sysml2.ConcernUsage):
+                entries.add(
+                    (
+                        "ConcernUsage",
+                        kk.qualified_name(member),
+                        _usage_type_qualified_name(member) or "",
+                    )
+                )
             elif isinstance(member, sysml2.RequirementUsage):
                 entries.add(
                     (
@@ -181,6 +191,7 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                 for tag, features in (
                     ("RequirementActor", requirements.actors(member)),
                     ("RequirementStakeholder", requirements.stakeholders(member)),
+                    ("RequirementFrame", requirements.framed_concerns(member)),
                 ):
                     for i, feature in enumerate(features):
                         entries.add(

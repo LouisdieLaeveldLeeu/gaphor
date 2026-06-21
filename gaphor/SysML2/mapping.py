@@ -43,6 +43,7 @@ USAGE_DEFINITION_KIND: dict[type, type] = {
     sysml2.ActionUsage: sysml2.ActionDefinition,
     sysml2.ConstraintUsage: sysml2.ConstraintDefinition,
     sysml2.RequirementUsage: sysml2.RequirementDefinition,
+    sysml2.ConcernUsage: sysml2.ConcernDefinition,
     sysml2.PortUsage: sysml2.PortDefinition,
     sysml2.ConnectionUsage: sysml2.ConnectionDefinition,
     sysml2.InterfaceUsage: sysml2.InterfaceDefinition,
@@ -321,6 +322,17 @@ def _build_requirement_body(
             if clause.type_name is not None:
                 typed_usages.append((usage, namespace, clause.type_name, False))
 
+    # `frame concern <name> [: <ConcernDef>]` -- a ConcernUsage owned via a
+    # FramedConcernMembership; its type is kind-checked (ConcernUsage ->
+    # ConcernDefinition) through the shared typed-usage path (Phase 6d).
+    for clause in member.framedConcerns:
+        concern = factory.create(sysml2.ConcernUsage)
+        concern.declaredName = clause.name
+        requirements.add_framed_concern(requirement, concern)
+        record(concern)
+        if clause.type_name is not None:
+            typed_usages.append((concern, namespace, clause.type_name, False))
+
     for kind, bodies in (
         (requirements.Assumption, member.assume),
         (requirements.Requirement, member.require),
@@ -402,6 +414,20 @@ def _build_members(
             )
         elif isinstance(member, ast.RequirementUsage):
             element = factory.create(sysml2.RequirementUsage)
+            if member.type_name is not None:
+                typed_usages.append((element, namespace, member.type_name, False))
+            _build_requirement_body(
+                element, member, namespace, factory, typed_usages, subject_typings,
+                on_element,
+            )
+        elif isinstance(member, ast.ConcernDefinition):
+            element = factory.create(sysml2.ConcernDefinition)
+            _build_requirement_body(
+                element, member, namespace, factory, typed_usages, subject_typings,
+                on_element,
+            )
+        elif isinstance(member, ast.ConcernUsage):
+            element = factory.create(sysml2.ConcernUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name, False))
             _build_requirement_body(

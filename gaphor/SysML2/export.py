@@ -42,6 +42,7 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
             return f"{pad}package {element.declaredName} {{\n{inner}{pad}}}\n"
         return f"{pad}package {element.declaredName} {{ }}\n"
     # Definitions before usages, and the most-derived class before its bases:
+    # ConcernDefinition is a RequirementDefinition (-> `concern def`),
     # RequirementDefinition is a ConstraintDefinition (-> `requirement def`),
     # ConnectionDefinition is a PartDefinition (-> `connection def`), and
     # InterfaceDefinition is a ConnectionDefinition (-> `interface def`), so the
@@ -56,6 +57,11 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         return f"{pad}attribute def {element.declaredName};\n"
     if isinstance(element, sysml2.ActionDefinition):
         return f"{pad}action def {element.declaredName};\n"
+    if isinstance(element, sysml2.ConcernDefinition):
+        return (
+            f"{pad}concern def {_short_name_prefix(element)}{element.declaredName}"
+            f"{_requirement_tail(element, root)}\n"
+        )
     if isinstance(element, sysml2.RequirementDefinition):
         return (
             f"{pad}requirement def {_short_name_prefix(element)}{element.declaredName}"
@@ -81,6 +87,13 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     if isinstance(element, sysml2.ActionUsage):
         dir_ = _direction_prefix(element)
         return f"{pad}{dir_}action {_usage_decl(element, root)};\n"
+    if isinstance(element, sysml2.ConcernUsage):
+        dir_ = _direction_prefix(element)
+        return (
+            f"{pad}{dir_}concern {_short_name_prefix(element)}"
+            f"{_usage_decl(element, root)}"
+            f"{_requirement_tail(element, root)}\n"
+        )
     if isinstance(element, sysml2.RequirementUsage):
         dir_ = _direction_prefix(element)
         return (
@@ -115,12 +128,14 @@ def _short_name_prefix(req: kerml.Element) -> str:
 
 
 def _requirement_tail(req: kerml.Element, root: kerml.Namespace) -> str:
-    """` { subject ...; actor ...; stakeholder ...; assume constraint {...}
-    require constraint {...} }` for a requirement with parts, else `;`
-    (Phase 6b/6c).
+    """` { subject ...; actor ...; stakeholder ...; frame concern ...;
+    assume constraint {...} require constraint {...} }` for a requirement (or
+    concern) with parts, else `;` (Phase 6b/6c/6d).
 
-    The subject/actor/stakeholder types and the assumed/required constraint bodies
-    are re-emitted so the body re-parses to the same structure on round-trip.
+    The subject/actor/stakeholder/frame types and the assumed/required constraint
+    bodies are re-emitted so the body re-parses to the same structure on
+    round-trip. Shared by requirements AND concerns (a ConcernDefinition/Usage IS a
+    RequirementDefinition/Usage).
     """
     parts: list[str] = []
     subj = requirements.subject(req)
@@ -132,6 +147,8 @@ def _requirement_tail(req: kerml.Element, root: kerml.Namespace) -> str:
     ):
         for feature in features:
             parts.append(f"{keyword} {_parameter_decl(feature, root)};")
+    for concern in requirements.framed_concerns(req):
+        parts.append(f"frame concern {_parameter_decl(concern, root)};")
     for keyword, kind in (
         ("assume", requirements.Assumption),
         ("require", requirements.Requirement),

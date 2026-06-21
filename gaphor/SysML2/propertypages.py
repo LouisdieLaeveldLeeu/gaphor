@@ -321,14 +321,15 @@ class ActionUsageTypePropertyPage(PropertyPageBase):
 
 @PropertyPages.register(sysml2.ConstraintUsage)
 class ConstraintRequirementTypePropertyPage(PropertyPageBase):
-    """Set the definition type for a Constraint or Requirement usage.
+    """Set the definition type for a Constraint, Requirement, or Concern usage.
 
-    RequirementUsage is a ConstraintUsage subclass, so a single page (registered
-    on ConstraintUsage, matched for both by isinstance) handles both -- it would
-    be wrong to register two pages and show a RequirementUsage two dropdowns. The
-    definition kind is chosen from the subject's own type: a RequirementUsage is
-    typed by a RequirementDefinition, any other ConstraintUsage by a
-    ConstraintDefinition.
+    RequirementUsage is a ConstraintUsage subclass and ConcernUsage is a
+    RequirementUsage subclass, so a single page (registered on ConstraintUsage,
+    matched for all three by isinstance) handles them -- it would be wrong to
+    register several pages and show a usage multiple dropdowns. The definition kind
+    is chosen from the subject's own kind, most-derived first: a ConcernUsage is
+    typed by a ConcernDefinition, any other RequirementUsage by a
+    RequirementDefinition, any other ConstraintUsage by a ConstraintDefinition.
     """
 
     order = 20
@@ -338,12 +339,16 @@ class ConstraintRequirementTypePropertyPage(PropertyPageBase):
         self.subject = subject
         self.event_manager = event_manager
         self._definition_type: type[
-            sysml2.ConstraintDefinition | sysml2.RequirementDefinition
-        ] = (
-            sysml2.RequirementDefinition
-            if isinstance(subject, sysml2.RequirementUsage)
-            else sysml2.ConstraintDefinition
-        )
+            sysml2.ConstraintDefinition
+            | sysml2.RequirementDefinition
+            | sysml2.ConcernDefinition
+        ]
+        if isinstance(subject, sysml2.ConcernUsage):
+            self._definition_type = sysml2.ConcernDefinition
+        elif isinstance(subject, sysml2.RequirementUsage):
+            self._definition_type = sysml2.RequirementDefinition
+        else:
+            self._definition_type = sysml2.ConstraintDefinition
 
     def construct(self):
         builder = new_builder("constraint-usage-type-editor")
@@ -351,9 +356,11 @@ class ConstraintRequirementTypePropertyPage(PropertyPageBase):
         dropdown = builder.get_object("constraint-usage-type")
         label = builder.get_object("constraint-usage-type-label")
         label.set_text(
-            gettext("Requirement Definition Type")
-            if self._definition_type is sysml2.RequirementDefinition
-            else gettext("Constraint Definition Type")
+            {
+                sysml2.ConcernDefinition: gettext("Concern Definition Type"),
+                sysml2.RequirementDefinition: gettext("Requirement Definition Type"),
+                sysml2.ConstraintDefinition: gettext("Constraint Definition Type"),
+            }[self._definition_type]
         )
         model = list_of_definitions(self.subject.model, self._definition_type)
         dropdown.set_model(model)
@@ -654,6 +661,7 @@ def list_of_definitions(
         | sysml2.ActionDefinition
         | sysml2.ConstraintDefinition
         | sysml2.RequirementDefinition
+        | sysml2.ConcernDefinition
         | sysml2.PortDefinition
         | sysml2.ConnectionDefinition
     ],

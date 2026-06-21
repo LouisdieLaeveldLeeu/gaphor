@@ -468,26 +468,48 @@ Exit: `reqId`, `actor`, and `stakeholder` are implemented and tested end to end;
 Requirement rows stay `alpha` (framedConcern, structured requirement-parameter
 UI-edit, and constraint expression semantics remain).
 
-#### Phase 6d -- Framed Concern And the Concern Construct -- PLANNED
+#### Phase 6d -- Framed Concern And the Concern Construct
 
-The heavyweight remaining requirement surface, isolated because it introduces a
-new construct:
+The heavyweight remaining requirement surface, introducing a new construct
+(Concern). Sliced by metamodel footprint: 6d-1 is SysML-layer only; 6d-2 adds
+kernel classes (subsetting) for the framed-concern reference form.
 
-- `framedConcern` -- a requirement's framed concern, carried by the normative
-  FramedConcernMembership (a RequirementConstraintMembership, already in the
-  metamodel) whose owned member is a `ConcernUsage`;
-- the Concern construct itself -- ConcernDefinition/ConcernUsage -- generated from
-  the pinned XMI, with its own support-matrix rows taken to their honest status.
+##### Phase 6d-1 -- Concern Construct + Framed-Concern DECLARE form -- DONE
 
-Use faithful normative membership/parameter representation, not local marker
-fields. Validate scoped references where supported, report unresolved or
-wrong-kind references explicitly, and cover the claimed cells.
+- the Concern construct -- ConcernDefinition/ConcernUsage generated from the
+  pinned XMI (ConcernDefinition -> RequirementDefinition, ConcernUsage ->
+  RequirementUsage; SysML-layer, so the kernel stays 31). Because a Concern IS a
+  Requirement, both REUSE the requirement body (subject/assume/require/actor/
+  stakeholder/frame); `concern def`/`concern` parse, map, validate (ConcernUsage
+  is kind-checked to a ConcernDefinition through the shared typed-usage path),
+  export, round-trip, persist, project to a diagram item, and get the reqId +
+  type editors. New support-matrix rows at `alpha`;
+- `framedConcern` (DECLARE form) -- `frame concern <name> [: <C>]` owns a new
+  ConcernUsage via a FramedConcernMembership. FramedConcernMembership IS a
+  RequirementConstraintMembership with `kind` fixed to `requirement` (the coder
+  emits the inherited `assumption` default, so the mapper sets `requirement`
+  explicitly); the `require`-constraint reader/validator EXCLUDE it so a framed
+  concern is never read as a `require` constraint. Validation: exactly one
+  ConcernUsage member and kind=requirement.
 
-Exit: all currently named requirement surfaces (`subject`, `assume`, `require`,
-`reqId`, `actor`, `stakeholder`, and `framedConcern`) plus the Concern construct
-are implemented and tested. At this point RequirementDefinition and
-RequirementUsage can be considered for promotion out of `alpha`, subject to the
-normal nine-cell support rule and the remaining expression-semantics limits.
+Exit: the Concern construct and the framed-concern declare form are implemented
+and tested end to end; Requirement/Concern rows stay `alpha`.
+
+##### Phase 6d-2 -- Framed-Concern REFERENCE form -- PLANNED
+
+- `frame <existing>` -- reference an already-declared concern (rather than declare
+  a new ConcernUsage). Faithfully this owns an anonymous ConcernUsage that
+  subsets the referenced concern, so it needs `ReferenceSubsetting`
+  (-> Subsetting -> Specialization) added to the kernel from the pinned XMI -- the
+  one new KERNEL footprint, isolated here for review. Grammar/mapping/validation/
+  export/round-trip for the reference form.
+
+Exit: all named requirement surfaces (`subject`, `assume`, `require`, `reqId`,
+`actor`, `stakeholder`, and `framedConcern` in both declare and reference forms)
+plus the Concern construct are implemented and tested. At this point
+RequirementDefinition and RequirementUsage can be considered for promotion out of
+`alpha`, subject to the normal nine-cell support rule and the remaining
+expression-semantics limits.
 
 ### Phase 7 -- Action Semantics
 
@@ -697,7 +719,7 @@ counted here.
 14. Phase 6a -- Constraint Expression Bodies -- DONE
 15. Phase 6b -- Requirement Parameters -- DONE
 16. Phase 6c -- Lightweight Requirement Parameters (`reqId`, `actor`, `stakeholder`) -- DONE
-17. Phase 6d -- Framed Concern And the Concern Construct -- PLANNED
+17. Phase 6d -- Framed Concern And the Concern Construct (6d-1 DONE; 6d-2 PLANNED)
 18. Phase 7 -- Action Semantics -- PLANNED
 19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- PLANNED
 20. Phase 5b -- Aliases -- PLANNED

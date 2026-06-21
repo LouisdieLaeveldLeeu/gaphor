@@ -108,20 +108,21 @@ def validate(
 
 
 def _check_requirement_parameters(factory: ElementFactory) -> Iterator[Diagnostic]:
-    """A requirement's subject/actor/stakeholder/assume/require memberships must
-    own EXACTLY ONE member of the right kind.
+    """A requirement's subject/actor/stakeholder/assume/require/frame memberships
+    must own EXACTLY ONE member of the right kind.
 
     Model-derived (no mapping context): a `SubjectMembership` must own exactly one
     `Feature` (the subject parameter); an `ActorMembership` and `StakeholderMembership`
     must each own exactly one `PartUsage` (the pinned XMI types the actor/stakeholder
-    parameter as a PartUsage, so a bare Feature is NOT sufficient); and a
+    parameter as a PartUsage, so a bare Feature is NOT sufficient); a
     `RequirementConstraintMembership` must own exactly one `ConstraintUsage` (the
-    assumed/required constraint). `memberElement` is relation-many at runtime, so
-    `_sole` is used (not first-value `_single`): a membership with zero, multiple
-    (appended), or a wrong-kind member is reported. The textual mapper always builds
-    these correctly; this is the safety net for a hand-edited/persisted .gaphor or
-    an API mutation. The parameter's declared TYPE is validated by the usual
-    unresolved-type rule (recorded during mapping).
+    assumed/required constraint); and a `FramedConcernMembership` must own exactly
+    one `ConcernUsage` AND carry kind=requirement (Phase 6d). `memberElement` is
+    relation-many at runtime, so `_sole` is used (not first-value `_single`): a
+    membership with zero, multiple (appended), or a wrong-kind member is reported.
+    The textual mapper always builds these correctly; this is the safety net for a
+    hand-edited/persisted .gaphor or an API mutation. The parameter's declared TYPE
+    is validated by the usual unresolved-type rule (recorded during mapping).
     """
     for membership_type, label, member_kind, kind_name in (
         (sysml2.SubjectMembership, "subject", kerml.Feature, "feature"),
@@ -136,7 +137,26 @@ def _check_requirement_parameters(factory: ElementFactory) -> Iterator[Diagnosti
                     f"requirement {label} is not exactly one {kind_name}",
                     membership.id,
                 )
+    # A FramedConcernMembership IS a RequirementConstraintMembership, so it is
+    # handled separately and EXCLUDED from the constraint loop below.
+    for membership in factory.select(sysml2.FramedConcernMembership):
+        if not isinstance(_sole(membership.memberElement), sysml2.ConcernUsage):
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-requirement-parameter",
+                "requirement framed concern is not exactly one concern usage",
+                membership.id,
+            )
+        if membership.kind != sysml2.RequirementConstraintKind.requirement:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-requirement-parameter",
+                "framed concern kind must be 'requirement'",
+                membership.id,
+            )
     for membership in factory.select(sysml2.RequirementConstraintMembership):
+        if isinstance(membership, sysml2.FramedConcernMembership):
+            continue
         if not isinstance(_sole(membership.memberElement), sysml2.ConstraintUsage):
             yield Diagnostic(
                 Severity.ERROR,

@@ -125,12 +125,25 @@ class StakeholderClause:
 
 
 @dataclass(frozen=True)
+class FrameClause:
+    """`frame concern <name> [ : <type> ]` inside a requirement body (Phase 6d).
+
+    The DECLARE form: it owns a new ConcernUsage `name` (typed by the concern
+    definition `type_name`, if any) via a FramedConcernMembership. The reference
+    form (`frame <existing>`) is Phase 6d-2."""
+
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
 class RequirementDefinition:
     """`requirement def [<reqId>] <name> ( ; | { <clauses> } )`
 
     `reqId` is the requirement short name (Phase 6c); `subject`/`assume`/`require`
-    (Phase 6b) and `actors`/`stakeholders` (Phase 6c) come from the body;
-    `assume`/`require` are opaque constraint body texts (reusing 6a)."""
+    (Phase 6b), `actors`/`stakeholders` (Phase 6c), and `framedConcerns` (Phase 6d)
+    come from the body; `assume`/`require` are opaque constraint body texts
+    (reusing 6a)."""
 
     name: str
     reqId: str | None = None  # the requirement short name, or None
@@ -139,6 +152,7 @@ class RequirementDefinition:
     require: tuple[str, ...] = ()  # required-constraint body texts
     actors: tuple[ActorClause, ...] = ()
     stakeholders: tuple[StakeholderClause, ...] = ()
+    framedConcerns: tuple[FrameClause, ...] = ()
     line: int | None = _line
 
 
@@ -155,6 +169,44 @@ class RequirementUsage:
     require: tuple[str, ...] = ()
     actors: tuple[ActorClause, ...] = ()
     stakeholders: tuple[StakeholderClause, ...] = ()
+    framedConcerns: tuple[FrameClause, ...] = ()
+    line: int | None = _line
+
+
+@dataclass(frozen=True)
+class ConcernDefinition:
+    """`concern def [<reqId>] <name> ( ; | { <clauses> } )` (Phase 6d).
+
+    A ConcernDefinition IS a RequirementDefinition, so it carries the same body
+    parts (reqId/subject/assume/require/actors/stakeholders/framedConcerns)."""
+
+    name: str
+    reqId: str | None = None
+    subject: SubjectClause | None = None
+    assume: tuple[str, ...] = ()
+    require: tuple[str, ...] = ()
+    actors: tuple[ActorClause, ...] = ()
+    stakeholders: tuple[StakeholderClause, ...] = ()
+    framedConcerns: tuple[FrameClause, ...] = ()
+    line: int | None = _line
+
+
+@dataclass(frozen=True)
+class ConcernUsage:
+    """`[<dir>] concern [<reqId>] <name> [ : <type> ] ( ; | { <clauses> } )` (Phase 6d).
+
+    A ConcernUsage IS a RequirementUsage, so it carries the same body parts."""
+
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    reqId: str | None = None
+    subject: SubjectClause | None = None
+    assume: tuple[str, ...] = ()
+    require: tuple[str, ...] = ()
+    actors: tuple[ActorClause, ...] = ()
+    stakeholders: tuple[StakeholderClause, ...] = ()
+    framedConcerns: tuple[FrameClause, ...] = ()
     line: int | None = _line
 
 
@@ -240,7 +292,8 @@ class PackageDefinition:
 Member = (
     "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage "
     "| ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage "
-    "| RequirementDefinition | RequirementUsage | PortDefinition | PortUsage "
+    "| RequirementDefinition | RequirementUsage | ConcernDefinition | ConcernUsage "
+    "| PortDefinition | PortUsage "
     "| ConnectionDefinition | ConnectionUsage | InterfaceDefinition "
     "| InterfaceUsage | PackageDefinition"
 )
@@ -253,7 +306,8 @@ class Package:
     members: tuple[
         "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage"
         " | ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage"
-        " | RequirementDefinition | RequirementUsage | PortDefinition | PortUsage"
+        " | RequirementDefinition | RequirementUsage | ConcernDefinition | ConcernUsage"
+        " | PortDefinition | PortUsage"
         " | ConnectionDefinition | ConnectionUsage | InterfaceDefinition"
         " | InterfaceUsage | PackageDefinition",
         ...,

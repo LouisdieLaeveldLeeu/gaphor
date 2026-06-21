@@ -113,6 +113,20 @@ def drop_requirement_usage(
     return _project_element(element, diagram, x, y)
 
 
+@drop.register(sysml2.ConcernDefinition, Diagram)
+def drop_concern_definition(
+    element: sysml2.ConcernDefinition, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
+@drop.register(sysml2.ConcernUsage, Diagram)
+def drop_concern_usage(
+    element: sysml2.ConcernUsage, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
 @drop.register(sysml2.PortDefinition, Diagram)
 def drop_port_definition(
     element: sysml2.PortDefinition, diagram: Diagram, x: float, y: float
