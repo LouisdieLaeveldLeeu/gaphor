@@ -90,10 +90,11 @@ class _ASTBuilder(Transformer):
         )
 
     def constraint_body(self, items):
-        # CONSTRAINT_BODY includes the outer braces; preserve the inner text,
-        # trimmed of surrounding whitespace (round-trip compares this normalized
-        # form, not raw bytes).
-        return _Body(str(items[0])[1:-1].strip())
+        # CONSTRAINT_BODY includes the outer braces; preserve the inner text
+        # VERBATIM (opaque, lossless). Whitespace is significant and kept; only
+        # the empty-check (on set / in validation) treats a whitespace-only body
+        # as empty.
+        return _Body(str(items[0])[1:-1])
 
     def constraint_definition(self, items):
         name = items[0]

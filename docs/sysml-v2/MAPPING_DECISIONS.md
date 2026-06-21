@@ -839,10 +839,12 @@ stay `alpha`.
   single `CONSTRAINT_BODY` terminal matching balanced braces (tolerant to a couple
   of nesting levels, so `{ ... { ... } ... }` is captured). Unbalanced braces are
   a parse error -- that IS the delimiter validation. The body is captured opaque
-  (the inner text, trimmed); it is never tokenized as SysML. Only the constraint
+  and VERBATIM (the inner text between the braces, whitespace included -- not
+  trimmed or normalized); it is never tokenized as SysML. Only the constraint
   rules get bodies; requirement bodies are Phase 6b.
 - **Map / export / round-trip.** The mapper stores the body via
-  `constraints.set_body_text`; export re-emits `{ <body> }` verbatim (so it
+  `constraints.set_body_text`; export re-injects `{<body>}` verbatim with no added
+  padding (so it
   re-parses identically); the round-trip canonical form records the body as a
   SEPARATE `("ConstraintBody", qn, text)` entry, so a constraint with a body is a
   distinct fingerprint without changing the base constraint tuple.

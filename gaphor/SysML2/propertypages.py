@@ -544,9 +544,11 @@ class ConstraintBodyPropertyPage(PropertyPageBase):
 
     def _on_body_changed(self, entry):
         with Transaction(self.event_manager, context="editing"):
-            # An empty field clears the body (None) rather than storing an empty
-            # `{ }`; a non-empty field preserves the text verbatim.
-            constraints.set_body_text(self.subject, entry.get_text().strip() or None)
+            # The body is preserved VERBATIM (whitespace kept); only a
+            # whitespace-only field clears it (None) rather than storing an empty
+            # body.
+            text = entry.get_text()
+            constraints.set_body_text(self.subject, text if text.strip() else None)
 
 
 @PropertyPages.register(sysml2.InterfaceUsage)

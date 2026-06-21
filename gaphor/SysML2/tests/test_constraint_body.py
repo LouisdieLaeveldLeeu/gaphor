@@ -48,7 +48,7 @@ def _usage(factory, name):
 
 def test_parse_constraint_bodies():
     pkg = parse(
-        "constraint def C { x > 0 }\nconstraint c : C { mass <= maxMass }\n"
+        "constraint def C {x > 0}\nconstraint c : C {mass <= maxMass}\n"
         "constraint d;"
     )
     assert pkg.members == (
@@ -56,6 +56,13 @@ def test_parse_constraint_bodies():
         ast.ConstraintUsage(name="c", type_name=("C",), body="mass <= maxMass"),
         ast.ConstraintUsage(name="d"),
     )
+
+
+def test_body_is_preserved_verbatim_including_whitespace():
+    # The body is opaque and lossless: inner whitespace (edge and internal) is
+    # kept exactly, never trimmed or normalized.
+    (member,) = parse("constraint c {  x   >   0  }").members
+    assert member.body == "  x   >   0  "
 
 
 def test_unbalanced_body_is_a_syntax_error():
@@ -73,7 +80,7 @@ def test_requirement_body_is_not_parsed_in_6a():
 
 
 def test_body_is_stored_as_a_sysml_textual_representation():
-    factory, _ = _map("constraint c { mass > 0 }")
+    factory, _ = _map("constraint c {mass > 0}")
     c = _usage(factory, "c")
     rep = constraints.body_representation(c)
     assert isinstance(rep, kerml.TextualRepresentation)
@@ -92,7 +99,7 @@ def test_no_body_stores_no_representation():
 
 
 def test_complex_body_with_nested_braces_is_preserved():
-    factory, _ = _map("constraint c { f(a, b) >= g(c) and h({1, 2}) }")
+    factory, _ = _map("constraint c {f(a, b) >= g(c) and h({1, 2})}")
     assert constraints.body_text(_usage(factory, "c")) == "f(a, b) >= g(c) and h({1, 2})"
 
 
@@ -118,6 +125,14 @@ def test_constraint_body_round_trips():
     assert result.valid
 
 
+def test_body_whitespace_round_trips_verbatim():
+    # Export re-injects the exact inner text (no added/removed padding), so even
+    # significant whitespace round-trips.
+    result = round_trip("constraint c {  x  >  0  }")
+    assert result.preserved
+    assert result.valid
+
+
 def test_body_vs_no_body_are_distinct_fingerprints():
     assert round_trip("constraint c;").source_form != round_trip(
         "constraint c { x }"
@@ -134,7 +149,7 @@ def test_different_bodies_are_distinct_fingerprints():
 
 
 def test_body_survives_save_reload(element_factory, saver, loader):
-    map_package(parse("constraint c { mass > 0 }"), element_factory)
+    map_package(parse("constraint c {mass > 0}"), element_factory)
     c_id = _usage(element_factory, "c").id
 
     loader(saver())
@@ -167,7 +182,7 @@ def test_non_empty_body_has_no_warning():
 def test_constraint_with_body_projects_and_survives_reload(
     element_factory, saver, loader
 ):
-    map_package(parse("constraint c { x > 0 }"), element_factory)
+    map_package(parse("constraint c {x > 0}"), element_factory)
     c = _usage(element_factory, "c")
     diagram = element_factory.create(Diagram)
 

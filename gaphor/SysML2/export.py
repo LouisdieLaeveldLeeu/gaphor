@@ -93,13 +93,14 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
 
 
 def _constraint_tail(constraint: kerml.Element) -> str:
-    """` { <body> }` for a constraint with a preserved body, else `;` (Phase 6a).
+    """` {<body>}` for a constraint with a preserved body, else `;` (Phase 6a).
 
-    The body is emitted verbatim (it was preserved as opaque text), so it
-    re-parses to the same body on round-trip.
+    The inner body is re-injected VERBATIM between the braces, with NO added
+    padding, so the exact preserved text (whitespace included) re-parses to the
+    same body on round-trip.
     """
     body = constraints.body_text(constraint)
-    return f" {{ {body} }}" if body is not None else ";"
+    return f" {{{body}}}" if body is not None else ";"
 
 
 def _direction_prefix(usage: kerml.Feature) -> str:
