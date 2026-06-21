@@ -101,10 +101,13 @@ actor_clause: "actor" NAME (":" type_ref)? ";"
 stakeholder_clause: "stakeholder" NAME (":" type_ref)? ";"
 assume_clause: "assume" "constraint" constraint_body
 require_clause: "require" "constraint" constraint_body
-// A framed concern (Phase 6d). The DECLARE form `frame concern <name> [: <C>]`
-// owns a new ConcernUsage via a FramedConcernMembership (kind = requirement); the
-// reference form (`frame <existing>`) is Phase 6d-2.
-frame_clause: "frame" "concern" NAME (":" type_ref)? ";"
+// A framed concern (Phase 6d), owned via a FramedConcernMembership (kind =
+// requirement). Two forms, disambiguated by the `concern` keyword:
+//   DECLARE (6d-1): `frame concern <name> [: <C>]` owns a NEW ConcernUsage;
+//   REFERENCE (6d-2): `frame <existing>` owns an anonymous ConcernUsage that
+//   REFERENCES the existing concern via a ReferenceSubsetting.
+frame_clause: "frame" "concern" NAME (":" type_ref)? ";"  -> frame_declare
+            | "frame" qualified_name ";"                  -> frame_reference
 
 // The Concern construct (Phase 6d): a ConcernDefinition IS a RequirementDefinition
 // and a ConcernUsage IS a RequirementUsage, so both reuse the requirement body

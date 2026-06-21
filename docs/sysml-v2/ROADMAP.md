@@ -495,14 +495,21 @@ kernel classes (subsetting) for the framed-concern reference form.
 Exit: the Concern construct and the framed-concern declare form are implemented
 and tested end to end; Requirement/Concern rows stay `alpha`.
 
-##### Phase 6d-2 -- Framed-Concern REFERENCE form -- PLANNED
+##### Phase 6d-2 -- Framed-Concern REFERENCE form -- DONE
 
-- `frame <existing>` -- reference an already-declared concern (rather than declare
-  a new ConcernUsage). Faithfully this owns an anonymous ConcernUsage that
-  subsets the referenced concern, so it needs `ReferenceSubsetting`
-  (-> Subsetting -> Specialization) added to the kernel from the pinned XMI -- the
-  one new KERNEL footprint, isolated here for review. Grammar/mapping/validation/
-  export/round-trip for the reference form.
+- `frame <existing>` references an already-declared concern (rather than declaring
+  a new ConcernUsage). Faithfully it owns an anonymous ConcernUsage that SUBSETS
+  the referenced concern via a `ReferenceSubsetting`; `ReferenceSubsetting ->
+  Subsetting -> Specialization` were added to the kernel from the pinned XMI (the
+  one new KERNEL footprint; kernel 31 -> 33). The grammar disambiguates by the
+  `concern` keyword (declare: `frame concern ...`; reference: `frame <name>`); the
+  mapper resolves the reference nearest-first to a ConcernUsage and links it with a
+  ReferenceSubsetting (`kerml_kernel.add_reference_subsetting`), recording a name
+  that does not resolve to a ConcernUsage (missing or wrong-kind) for the
+  `broken-frame-reference` rule; export re-emits `frame <name>;`, the round-trip
+  canonical form distinguishes the two forms by the referenced qualified name, and
+  an unresolved reference is reported (not re-emitted as invalid text, mirroring an
+  unresolved usage type / connect clause).
 
 Exit: all named requirement surfaces (`subject`, `assume`, `require`, `reqId`,
 `actor`, `stakeholder`, and `framedConcern` in both declare and reference forms)
@@ -719,7 +726,7 @@ counted here.
 14. Phase 6a -- Constraint Expression Bodies -- DONE
 15. Phase 6b -- Requirement Parameters -- DONE
 16. Phase 6c -- Lightweight Requirement Parameters (`reqId`, `actor`, `stakeholder`) -- DONE
-17. Phase 6d -- Framed Concern And the Concern Construct (6d-1 DONE; 6d-2 PLANNED)
+17. Phase 6d -- Framed Concern And the Concern Construct -- DONE (6d-1 + 6d-2)
 18. Phase 7 -- Action Semantics -- PLANNED
 19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- PLANNED
 20. Phase 5b -- Aliases -- PLANNED

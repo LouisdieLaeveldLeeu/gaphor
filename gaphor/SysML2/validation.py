@@ -72,6 +72,7 @@ def validate(
     unresolved_types: dict[str, str] | None = None,
     mistyped: dict[str, tuple[str, str]] | None = None,
     unresolved_ends: dict[str, list[str]] | None = None,
+    unresolved_frame_refs: dict[str, str] | None = None,
 ) -> list[Diagnostic]:
     """Run the scoped M2 validation rules over all elements in `factory`.
 
@@ -89,6 +90,10 @@ def validate(
     `unresolved_ends` maps a connection element id -> the declared connector-end
     references that did not resolve to a feature (broken or kind-mismatched
     endpoints). The connection-end rule reports them; mapping context only.
+
+    `unresolved_frame_refs` maps a framed-concern ConcernUsage id -> the
+    `frame <ref>` name that did not resolve to a ConcernUsage (Phase 6d-2). The
+    framed-concern-reference rule reports them; mapping context only.
     """
     diagnostics: list[Diagnostic] = []
     diagnostics.extend(_check_missing_owner(factory))
@@ -104,6 +109,9 @@ def validate(
     diagnostics.extend(_check_conjugated_typing(factory))
     diagnostics.extend(_check_constraint_body(factory))
     diagnostics.extend(_check_requirement_parameters(factory))
+    diagnostics.extend(
+        _check_frame_references(factory, unresolved_frame_refs or {})
+    )
     return diagnostics
 
 
@@ -164,6 +172,28 @@ def _check_requirement_parameters(factory: ElementFactory) -> Iterator[Diagnosti
                 f"requirement {membership.kind} is not exactly one constraint",
                 membership.id,
             )
+
+
+def _check_frame_references(
+    factory: ElementFactory, unresolved_frame_refs: dict[str, str]
+) -> Iterator[Diagnostic]:
+    """A framed-concern REFERENCE (`frame <existing>`) must resolve to a
+    ConcernUsage (Phase 6d-2).
+
+    Mapping context: the mapper resolves `frame <ref>` nearest-first and records
+    the names that did NOT resolve to a ConcernUsage (missing, or a wrong-kind
+    target such as a ConcernDefinition or a part). Each is reported here; like the
+    other reference rules (unresolved types, connection ends) this needs mapping
+    context, so a reloaded model has none to report.
+    """
+    for concern_id, name in unresolved_frame_refs.items():
+        yield Diagnostic(
+            Severity.ERROR,
+            "broken-frame-reference",
+            f"framed concern references {name!r}, which does not resolve to a "
+            "concern usage",
+            concern_id,
+        )
 
 
 def _check_constraint_body(factory: ElementFactory) -> Iterator[Diagnostic]:

@@ -98,6 +98,9 @@ class MappingResult:
     # resolve to a feature (broken or kind-mismatched endpoints), for the
     # connection-end validation rule.
     unresolved_ends: dict[str, list[str]] = field(default_factory=dict)
+    # framed-concern ConcernUsage id -> the `frame <ref>` name that did not resolve
+    # to a ConcernUsage, for the framed-concern-reference validation rule (6d-2).
+    unresolved_frame_refs: dict[str, str] = field(default_factory=dict)
 
 
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
@@ -110,8 +113,15 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     typed_usages: list[tuple[kerml.Feature, kerml.Namespace, tuple[str, ...]]] = []
     connection_ends: list = []
     subject_typings: list = []
+    frame_references: list = []
     top_level = _build_members(
-        pkg.members, root, factory, typed_usages, connection_ends, subject_typings
+        pkg.members,
+        root,
+        factory,
+        typed_usages,
+        connection_ends,
+        subject_typings,
+        frame_references,
     )
 
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
@@ -119,6 +129,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     )
     unresolved_ends = _resolve_connection_ends(connection_ends)
     unresolved_types.update(_resolve_subject_types(subject_typings))
+    unresolved_frame_refs = _resolve_frame_references(frame_references)
     return MappingResult(
         root=root,
         elements_by_name=top_level,
@@ -126,6 +137,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
         mistyped=mistyped,
         relationship_sources=relationship_sources,
         unresolved_ends=unresolved_ends,
+        unresolved_frame_refs=unresolved_frame_refs,
     )
 
 
@@ -155,6 +167,7 @@ def map_project_members(named_packages, factory: ElementFactory):
     typed_usages: list[tuple[kerml.Feature, kerml.Namespace, tuple[str, ...]]] = []
     connection_ends: list = []
     subject_typings: list = []
+    frame_references: list = []
     top_level: dict[str, kerml.Element] = {}
     provenance: dict[str, tuple] = {}
     for label, pkg in named_packages:
@@ -170,6 +183,7 @@ def map_project_members(named_packages, factory: ElementFactory):
                 typed_usages,
                 connection_ends,
                 subject_typings,
+                frame_references,
                 record,
             )
         )
@@ -179,6 +193,7 @@ def map_project_members(named_packages, factory: ElementFactory):
     )
     unresolved_ends = _resolve_connection_ends(connection_ends)
     unresolved_types.update(_resolve_subject_types(subject_typings))
+    unresolved_frame_refs = _resolve_frame_references(frame_references)
     for relationship_id, source_id in relationship_sources.items():
         if source_id in provenance:
             provenance[relationship_id] = provenance[source_id]
@@ -190,6 +205,7 @@ def map_project_members(named_packages, factory: ElementFactory):
             mistyped=mistyped,
             relationship_sources=relationship_sources,
             unresolved_ends=unresolved_ends,
+            unresolved_frame_refs=unresolved_frame_refs,
         ),
         provenance,
     )
@@ -276,8 +292,35 @@ def _resolve_connection_ends(connection_ends: list) -> dict[str, list[str]]:
     return unresolved_ends
 
 
+def _resolve_frame_references(frame_references: list) -> dict[str, str]:
+    """Resolve each framed-concern REFERENCE to an existing ConcernUsage (phase 2).
+
+    `frame <ref>` owns an anonymous ConcernUsage that REFERENCES an existing
+    concern. The name is resolved nearest-first from the requirement's namespace; a
+    name that resolves to a ConcernUsage gets a ReferenceSubsetting linking the
+    anonymous usage to it, otherwise it is recorded unresolved (a name resolving to
+    a non-ConcernUsage -- e.g. a ConcernDefinition or a part -- is wrong-kind and
+    also recorded, never silently dropped).
+    """
+    unresolved: dict[str, str] = {}
+    for concern, namespace, target in frame_references:
+        referenced = _resolve_type(namespace, target)
+        if isinstance(referenced, sysml2.ConcernUsage):
+            kk.add_reference_subsetting(concern, referenced)
+        else:
+            unresolved[concern.id] = "::".join(target)
+    return unresolved
+
+
 def _build_requirement_body(
-    requirement, member, namespace, factory, typed_usages, subject_typings, on_element
+    requirement,
+    member,
+    namespace,
+    factory,
+    typed_usages,
+    subject_typings,
+    frame_references,
+    on_element,
 ):
     """Build a requirement's subject/assume/require/actor/stakeholder parts and
     its reqId (Phase 6b/6c).
@@ -322,16 +365,24 @@ def _build_requirement_body(
             if clause.type_name is not None:
                 typed_usages.append((usage, namespace, clause.type_name, False))
 
-    # `frame concern <name> [: <ConcernDef>]` -- a ConcernUsage owned via a
-    # FramedConcernMembership; its type is kind-checked (ConcernUsage ->
-    # ConcernDefinition) through the shared typed-usage path (Phase 6d).
+    # A framed concern is a ConcernUsage owned via a FramedConcernMembership (Phase
+    # 6d). Two forms: DECLARE (`frame concern <name> [: <C>]`, 6d-1) builds a named
+    # usage whose type is kind-checked (ConcernUsage -> ConcernDefinition) through
+    # the shared typed-usage path; REFERENCE (`frame <existing>`, 6d-2) builds an
+    # anonymous usage and resolves `target` in phase 2 to an existing ConcernUsage,
+    # linking them with a ReferenceSubsetting.
     for clause in member.framedConcerns:
         concern = factory.create(sysml2.ConcernUsage)
-        concern.declaredName = clause.name
-        requirements.add_framed_concern(requirement, concern)
-        record(concern)
-        if clause.type_name is not None:
-            typed_usages.append((concern, namespace, clause.type_name, False))
+        if isinstance(clause, ast.FrameReference):
+            requirements.add_framed_concern(requirement, concern)
+            record(concern)
+            frame_references.append((concern, namespace, clause.target))
+        else:
+            concern.declaredName = clause.name
+            requirements.add_framed_concern(requirement, concern)
+            record(concern)
+            if clause.type_name is not None:
+                typed_usages.append((concern, namespace, clause.type_name, False))
 
     for kind, bodies in (
         (requirements.Assumption, member.assume),
@@ -369,17 +420,19 @@ def _build_members(
     typed_usages: list,
     connection_ends: list,
     subject_typings: list,
+    frame_references: list,
     on_element=None,
 ) -> dict[str, kerml.Element]:
     """Create each AST member as an owned member of `namespace`, recursing into
     sub-packages. Returns this level's elements by name.
 
     Typed usages (including requirement actor/stakeholder PartUsages) are recorded
-    in `typed_usages`, connection endpoints in `connection_ends`, and requirement
-    SUBJECT types in `subject_typings` for phase-2 resolution. If `on_element` is given, it is called as
-    `on_element(element, ast_node)` for every created element (including nested
-    ones), so callers can record per-element provenance from the AST node (e.g. its
-    source line)."""
+    in `typed_usages`, connection endpoints in `connection_ends`, requirement
+    SUBJECT types in `subject_typings`, and framed-concern references in
+    `frame_references` for phase-2 resolution. If `on_element` is given, it is
+    called as `on_element(element, ast_node)` for every created element (including
+    nested ones), so callers can record per-element provenance from the AST node
+    (e.g. its source line)."""
     by_name: dict[str, kerml.Element] = {}
     for member in members:
         if isinstance(member, ast.PartDefinition):
@@ -410,7 +463,7 @@ def _build_members(
             element = factory.create(sysml2.RequirementDefinition)
             _build_requirement_body(
                 element, member, namespace, factory, typed_usages, subject_typings,
-                on_element,
+                frame_references, on_element,
             )
         elif isinstance(member, ast.RequirementUsage):
             element = factory.create(sysml2.RequirementUsage)
@@ -418,13 +471,13 @@ def _build_members(
                 typed_usages.append((element, namespace, member.type_name, False))
             _build_requirement_body(
                 element, member, namespace, factory, typed_usages, subject_typings,
-                on_element,
+                frame_references, on_element,
             )
         elif isinstance(member, ast.ConcernDefinition):
             element = factory.create(sysml2.ConcernDefinition)
             _build_requirement_body(
                 element, member, namespace, factory, typed_usages, subject_typings,
-                on_element,
+                frame_references, on_element,
             )
         elif isinstance(member, ast.ConcernUsage):
             element = factory.create(sysml2.ConcernUsage)
@@ -432,7 +485,7 @@ def _build_members(
                 typed_usages.append((element, namespace, member.type_name, False))
             _build_requirement_body(
                 element, member, namespace, factory, typed_usages, subject_typings,
-                on_element,
+                frame_references, on_element,
             )
         elif isinstance(member, ast.PortDefinition):
             element = factory.create(sysml2.PortDefinition)
@@ -493,6 +546,7 @@ def _build_members(
                 typed_usages,
                 connection_ends,
                 subject_typings,
+                frame_references,
                 on_element,
             )
         by_name[member.name] = element

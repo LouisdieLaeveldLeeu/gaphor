@@ -191,7 +191,6 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                 for tag, features in (
                     ("RequirementActor", requirements.actors(member)),
                     ("RequirementStakeholder", requirements.stakeholders(member)),
-                    ("RequirementFrame", requirements.framed_concerns(member)),
                 ):
                     for i, feature in enumerate(features):
                         entries.add(
@@ -203,6 +202,22 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                                 _usage_type_qualified_name(feature) or "",
                             )
                         )
+                # A framed concern is a declared usage (name + optional type) OR a
+                # reference to an existing concern; the referenced qualified name
+                # distinguishes the two forms (Phase 6d).
+                for i, concern in enumerate(requirements.framed_concerns(member)):
+                    referenced = requirements.framed_concern_reference(concern)
+                    entries.add(
+                        (
+                            "RequirementFrame",
+                            req_qn,
+                            i,
+                            concern.declaredName or "",
+                            _usage_type_qualified_name(concern) or "",
+                            kk.qualified_name(referenced) if referenced is not None
+                            else "",
+                        )
+                    )
                 for tag, kind in (
                     ("RequirementAssume", requirements.Assumption),
                     ("RequirementRequire", requirements.Requirement),
@@ -280,7 +295,11 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
     # name, which is only known at mapping time). The model-derived subset is
     # what can be recomputed from a persisted model with no mapping context.
     source_diagnostics = validate(
-        factory, result.unresolved_types, result.mistyped, result.unresolved_ends
+        factory,
+        result.unresolved_types,
+        result.mistyped,
+        result.unresolved_ends,
+        result.unresolved_frame_refs,
     )
     source_model_diagnostics = validate(factory)
     root_id = result.root.id

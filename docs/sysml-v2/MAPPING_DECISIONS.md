@@ -1035,3 +1035,45 @@ both declare and reference). Rows stay `alpha`.
 - **Export / round-trip.** `concern def`/`concern` and the `frame concern ...`
   clause re-emit; the canonical form adds ConcernDefinition/ConcernUsage base
   entries and order-sensitive `RequirementFrame` entries (name + type).
+
+### Completion Phase 6d-2: Framed-Concern Reference Form (verified 2026-06-21)
+
+The framed-concern REFERENCE form `frame <existing>` (vs the 6d-1 DECLARE form
+`frame concern <name> [: <C>]`). The user chose to support referencing an existing
+concern, which the pilot models as an owned anonymous ConcernUsage that SUBSETS the
+referenced concern -- so this slice adds the kernel subsetting relationships.
+
+- **Metamodel (generated; kernel 31 -> 33).** Seeded Subsetting and
+  ReferenceSubsetting from the pinned XMI (`Subsetting -> Specialization`;
+  `ReferenceSubsetting -> Subsetting`). They add the stored subsetted/subsetting
+  (referenced/referencing) feature ends. This is the one new KERNEL footprint of
+  Phase 6d, isolated into its own slice for review; the kernel class-count test is
+  updated 31 -> 33.
+- **Representation (faithful).** `frame <existing>` owns an ANONYMOUS ConcernUsage
+  (no declaredName) via a FramedConcernMembership (kind=requirement, as 6d-1), and
+  that usage REFERENCES the existing concern through a ReferenceSubsetting
+  (`kerml_kernel.add_reference_subsetting`: the referencing usage owns the
+  subsetting; the referencedFeature is a non-owning reference). This mirrors
+  `set_feature_type` (own the relationship; the target is a non-owning reference).
+- **Grammar disambiguation.** `frame_clause` has two aliased alternatives:
+  `frame_declare` (`"frame" "concern" NAME (":" type_ref)? ";"`) and
+  `frame_reference` (`"frame" qualified_name ";"`). The `concern` keyword (a
+  higher-priority literal than NAME) makes the choice LALR(1)-decidable: `frame
+  concern X` declares, `frame X` references.
+- **Resolution (phase 2, scoped).** A new `frame_references` list is resolved
+  nearest-first (like connection ends): a name that resolves to a `ConcernUsage`
+  gets a ReferenceSubsetting; a name that does not resolve, or resolves to a
+  non-ConcernUsage (a ConcernDefinition is a Type, not a Feature; a part is the
+  wrong kind), is recorded in `MappingResult.unresolved_frame_refs` -- never
+  silently dropped.
+- **Validation.** `broken-frame-reference` (mapping context, threaded through
+  `validate` / cli / round-trip like `unresolved_ends`) reports each unresolved /
+  wrong-kind reference. Consistent with unresolved usage types, this needs mapping
+  context, so a reloaded model has none to recompute.
+- **Export / round-trip.** A framed concern with a ReferenceSubsetting exports as
+  `frame <name>` (the referenced name re-resolved via `_end_name`); a declared one
+  as `frame concern <name> [: <C>]`; an anonymous one with no resolved reference
+  (an unresolved import) is NOT re-emitted as invalid text (mirroring a broken
+  connect clause / unresolved usage type) and is reported by validation. The
+  canonical `RequirementFrame` entry carries the referenced qualified name, so the
+  declare and reference forms have distinct fingerprints.

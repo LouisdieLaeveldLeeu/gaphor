@@ -33,7 +33,7 @@ vocabulary. Evidence for these rows: generated from the pinned OMG XMI, created
 via `ElementFactory`, persist/reload, and behaviour tests for ownership,
 membership, typing, imports, delete cascade, and qualified names.
 
-M1b status (internal-only): the listed KerML kernel classes are generated from the normative MOF XMI through Gaphor's coder, and every generated kernel class has a tested create-via-`ElementFactory` and `.gaphor` save/reload (parametrized over the whole stored-reference closure — 31 classes: the original 12-class minimal kernel plus Classifier/Class/Structure and FeatureTyping (added in M2 so the kernel can serve as the supermodel the SysML layer generalizes and carry the stored typing relation), Package and DataType (the nesting namespace and the AttributeDefinition supermodel root), and the expression roots BooleanExpression/Predicate with their self-contained closure Expression/Step/Function/Behavior (added for Phase E so the SysML constraint/requirement layer generalizes a real KerML super instead of dropping it), the relationship roots AssociationStructure/Connector with their closure Association (added for Phase G so the SysML connection layer generalizes a real KerML super; Connector's end properties are derived and never persisted), Conjugation (added for Phase 8a so the SysML port-conjugation layer generalizes a real KerML super; its originalType/conjugatedType reference Type and `conjugator` is derived, so it adds no new stored closure), TextualRepresentation (added for Phase 6a as the honest carrier for a preserved opaque constraint body; an AnnotatingElement whose body/language are Strings, so it adds no new stored closure), and FeatureMembership/ParameterMembership (added for Phase 6b as the membership roots the SysML requirement-parameter memberships generalize; FeatureMembership -> OwningMembership and ParameterMembership -> FeatureMembership, adding no new stored closure)). The five required kernel behaviours — namespace membership, type/feature relation, import resolution, delete-owner cascade, rename-updates-qualifiedName — are tested through a behaviour layer (`kerml_kernel.py`), along with delete-direction tests proving non-owning references do not cascade. These rows are `Create-API`+`Persist`; their Parse, text Import, scoped Validate, Export, Round-trip, Diagram, and UI-edit cells are `n/a` (not applicable by design — a structural kernel base has no textual concrete syntax), the final state decided in Phase H, not work pending a later milestone. Derived KerML features (owner, ownedElement, owningNamespace, member, qualifiedName, ...) are not persisted; they are computed in the behaviour layer. The closure also includes `Relationship`, `AnnotatingElement`, and `Comment` plus the `FeatureDirectionKind`/`VisibilityKind` enumerations; these are generated and persistence-tested but not called out as individual rows until a milestone gives them behaviour.
+M1b status (internal-only): the listed KerML kernel classes are generated from the normative MOF XMI through Gaphor's coder, and every generated kernel class has a tested create-via-`ElementFactory` and `.gaphor` save/reload (parametrized over the whole stored-reference closure — 33 classes: the original 12-class minimal kernel plus Classifier/Class/Structure and FeatureTyping (added in M2 so the kernel can serve as the supermodel the SysML layer generalizes and carry the stored typing relation), Package and DataType (the nesting namespace and the AttributeDefinition supermodel root), and the expression roots BooleanExpression/Predicate with their self-contained closure Expression/Step/Function/Behavior (added for Phase E so the SysML constraint/requirement layer generalizes a real KerML super instead of dropping it), the relationship roots AssociationStructure/Connector with their closure Association (added for Phase G so the SysML connection layer generalizes a real KerML super; Connector's end properties are derived and never persisted), Conjugation (added for Phase 8a so the SysML port-conjugation layer generalizes a real KerML super; its originalType/conjugatedType reference Type and `conjugator` is derived, so it adds no new stored closure), TextualRepresentation (added for Phase 6a as the honest carrier for a preserved opaque constraint body; an AnnotatingElement whose body/language are Strings, so it adds no new stored closure), FeatureMembership/ParameterMembership (added for Phase 6b as the membership roots the SysML requirement-parameter memberships generalize; FeatureMembership -> OwningMembership and ParameterMembership -> FeatureMembership, adding no new stored closure), and Subsetting/ReferenceSubsetting (added for Phase 6d-2 as the feature-specialization roots the framed-concern reference form generalizes; both -> Specialization, adding the stored subsetted/subsetting feature ends)). The five required kernel behaviours — namespace membership, type/feature relation, import resolution, delete-owner cascade, rename-updates-qualifiedName — are tested through a behaviour layer (`kerml_kernel.py`), along with delete-direction tests proving non-owning references do not cascade. These rows are `Create-API`+`Persist`; their Parse, text Import, scoped Validate, Export, Round-trip, Diagram, and UI-edit cells are `n/a` (not applicable by design — a structural kernel base has no textual concrete syntax), the final state decided in Phase H, not work pending a later milestone. Derived KerML features (owner, ownedElement, owningNamespace, member, qualifiedName, ...) are not persisted; they are computed in the behaviour layer. The closure also includes `Relationship`, `AnnotatingElement`, and `Comment` plus the `FeatureDirectionKind`/`VisibilityKind` enumerations; these are generated and persistence-tested but not called out as individual rows until a milestone gives them behaviour.
 
 | Construct | Parse | Import | Create-API | Persist | Validate | Export | Round-trip | Diagram | UI-edit | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ references, never ids or raw text). M2 establishes the harness
 | SysML RequirementDefinition | yes | `test_roundtrip.py::test_requirement_definition_and_usage_round_trip` |
 | SysML RequirementUsage (typed) | yes | `test_roundtrip.py` |
 | SysML ConcernDefinition / ConcernUsage | yes | `test_concern_and_frame.py::test_concern_and_frame_round_trip` |
-| SysML requirement framed concern (`frame concern`) | yes | `test_concern_and_frame.py::test_concern_and_frame_round_trip` |
+| SysML requirement framed concern (`frame concern` declare + `frame <ref>`) | yes | `test_concern_and_frame.py::test_concern_and_frame_round_trip`, `::test_frame_reference_round_trips` |
 | SysML PortDefinition | yes | `test_roundtrip.py::test_port_definition_and_usage_round_trip` |
 | SysML PortUsage (typed) | yes | `test_roundtrip.py` |
 | SysML PortUsage (conjugated `~`) | yes | `test_port_conjugation.py::test_conjugated_port_round_trips` |
@@ -178,7 +178,7 @@ encode/decode authority). `actor`/`stakeholder` are `PartUsage`
 parameters (the pinned XMI types ActorMembership/StakeholderMembership's owned
 parameter as a PartUsage) carried by the normative ActorMembership/
 StakeholderMembership (KerML ParameterMembership, generated from the pinned XMI --
-SysML-layer classes, so the kernel count stays 31), kept in declaration order and
+SysML-layer classes, adding no kernel classes), kept in declaration order and
 type-checked through the shared PartUsage->PartDefinition path. `requirement [def] [<reqId>] r [: R] { subject ...; actor n
 [: T]; stakeholder n [: T]; ... }` parses, maps, validates (parameter types via
 the unresolved-type rule; the exact-one `broken-requirement-parameter` rule
@@ -196,7 +196,7 @@ the Phase-6c requirement-parameter gate decision, taken explicitly per the roadm
 Phase 6d-1 adds the Concern construct and the framed-concern DECLARE form.
 ConcernDefinition/ConcernUsage are generated from the pinned XMI (ConcernDefinition
 -> RequirementDefinition, ConcernUsage -> RequirementUsage; SysML-layer, so the
-kernel count stays 31) and -- because a Concern IS a Requirement -- REUSE the
+adding no kernel classes) and -- because a Concern IS a Requirement -- REUSE the
 requirement body (subject/assume/require/actor/stakeholder/frame). `concern def`/
 `concern` parse, map, validate (ConcernUsage kind-checked to a ConcernDefinition via
 the shared typed-usage path), export, round-trip, persist, project to a diagram
@@ -211,6 +211,24 @@ requires exactly one ConcernUsage member and kind=requirement. The framed-concer
 REFERENCE form (`frame <existing>`, needing kernel subsetting) is Phase 6d-2, so the
 Requirement/Concern rows STAY `alpha`. See `test_concern_and_frame.py`. This is the
 Phase-6d-1 gate decision, taken explicitly per the roadmap.
+
+Phase 6d-2 adds the framed-concern REFERENCE form. `frame <existing>` references an
+already-declared concern: it owns an anonymous ConcernUsage that SUBSETS the
+referenced concern via a `ReferenceSubsetting`. `ReferenceSubsetting -> Subsetting
+-> Specialization` were generated into the kernel from the pinned XMI (the one new
+KERNEL footprint; the kernel closure is now 33). The grammar disambiguates the two
+`frame` forms by the `concern` keyword (declare: `frame concern <name> [: <C>]`;
+reference: `frame <name>`); the mapper resolves the reference nearest-first and
+links the anonymous usage to the existing ConcernUsage with a ReferenceSubsetting
+(`kerml_kernel.add_reference_subsetting`), recording a name that does NOT resolve
+to a ConcernUsage (missing, or a wrong-kind target such as a ConcernDefinition or a
+part) for the model-context `broken-frame-reference` rule. Export re-emits
+`frame <name>;`, the round-trip canonical form distinguishes declare vs reference by
+the referenced qualified name, and an unresolved reference is reported rather than
+re-emitted as invalid text (mirroring an unresolved usage type / connect clause).
+Requirement/Concern rows STAY `alpha` (constraint expression SEMANTICS and
+structured requirement-parameter UI-edit remain). See `test_concern_and_frame.py`.
+This is the Phase-6d-2 gate decision, taken explicitly per the roadmap.
 
 PortDefinition and PortUsage are `supported` for the declaration-and-typing
 surface INCLUDING conjugation (`port def Fuel; port p : Fuel; port q : ~Fuel;`).

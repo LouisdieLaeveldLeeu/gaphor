@@ -497,6 +497,14 @@ KERNEL_SEED = (
     # ...; assume ...; require ...; }`.
     "FeatureMembership",
     "ParameterMembership",
+    # Subsetting and ReferenceSubsetting are the KerML feature-specialization
+    # relationships the SysML framed-concern REFERENCE form generalizes (Phase
+    # 6d-2): `frame <existing>` owns an anonymous ConcernUsage that REFERENCES the
+    # existing concern via a ReferenceSubsetting. Both -> Specialization (already in
+    # the kernel); they add the stored subsetted/subsetting (referenced/referencing)
+    # feature ends.
+    "Subsetting",
+    "ReferenceSubsetting",
 )
 
 

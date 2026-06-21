@@ -181,6 +181,15 @@ class Predicate(Function):
     pass
 
 
+class Subsetting(Specialization):
+    subsettedFeature: relation_many[Feature]
+    subsettingFeature: relation_many[Feature]
+
+
+class ReferenceSubsetting(Subsetting):
+    referencedFeature: relation_many[Feature]
+
+
 class TextualRepresentation(AnnotatingElement):
     body: _attribute[str] = _attribute("body", str)
     language: _attribute[str] = _attribute("language", str)
@@ -200,3 +209,6 @@ Specialization.general = association("general", Type)
 Specialization.specific = association("specific", Type)
 FeatureTyping.typedFeature = association("typedFeature", Feature)
 FeatureTyping.type = association("type", Type)
+Subsetting.subsettedFeature = association("subsettedFeature", Feature)
+Subsetting.subsettingFeature = association("subsettingFeature", Feature)
+ReferenceSubsetting.referencedFeature = association("referencedFeature", Feature)

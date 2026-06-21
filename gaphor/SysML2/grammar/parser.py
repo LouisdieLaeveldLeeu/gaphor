@@ -85,7 +85,7 @@ def _req_body_kwargs(body):
                 actors.append(clause)
             elif isinstance(clause, ast.StakeholderClause):
                 stakeholders.append(clause)
-            elif isinstance(clause, ast.FrameClause):
+            elif isinstance(clause, (ast.FrameClause, ast.FrameReference)):
                 framed.append(clause)
             elif isinstance(clause, _Assume):
                 assume.append(clause.body)
@@ -208,10 +208,14 @@ class _ASTBuilder(Transformer):
         type_name = items[1] if len(items) > 1 else None
         return ast.StakeholderClause(name=str(name), type_name=type_name)
 
-    def frame_clause(self, items):
+    def frame_declare(self, items):
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
         return ast.FrameClause(name=str(name), type_name=type_name)
+
+    def frame_reference(self, items):
+        # `frame <qualified_name>` -> a reference to an existing concern.
+        return ast.FrameReference(target=items[0])
 
     def assume_clause(self, items):
         return _Assume(items[0].text)

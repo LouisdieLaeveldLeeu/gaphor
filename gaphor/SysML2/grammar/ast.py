@@ -126,14 +126,23 @@ class StakeholderClause:
 
 @dataclass(frozen=True)
 class FrameClause:
-    """`frame concern <name> [ : <type> ]` inside a requirement body (Phase 6d).
+    """`frame concern <name> [ : <type> ]` inside a requirement body (Phase 6d-1).
 
-    The DECLARE form: it owns a new ConcernUsage `name` (typed by the concern
-    definition `type_name`, if any) via a FramedConcernMembership. The reference
-    form (`frame <existing>`) is Phase 6d-2."""
+    The DECLARE form: it owns a NEW ConcernUsage `name` (typed by the concern
+    definition `type_name`, if any) via a FramedConcernMembership."""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
+class FrameReference:
+    """`frame <existing>` inside a requirement body (Phase 6d-2).
+
+    The REFERENCE form: it owns an anonymous ConcernUsage that REFERENCES the
+    existing concern `target` (a qualified name) via a ReferenceSubsetting."""
+
+    target: tuple[str, ...]  # qualified name segments of the referenced concern
 
 
 @dataclass(frozen=True)
@@ -152,7 +161,7 @@ class RequirementDefinition:
     require: tuple[str, ...] = ()  # required-constraint body texts
     actors: tuple[ActorClause, ...] = ()
     stakeholders: tuple[StakeholderClause, ...] = ()
-    framedConcerns: tuple[FrameClause, ...] = ()
+    framedConcerns: tuple[FrameClause | FrameReference, ...] = ()
     line: int | None = _line
 
 
@@ -169,7 +178,7 @@ class RequirementUsage:
     require: tuple[str, ...] = ()
     actors: tuple[ActorClause, ...] = ()
     stakeholders: tuple[StakeholderClause, ...] = ()
-    framedConcerns: tuple[FrameClause, ...] = ()
+    framedConcerns: tuple[FrameClause | FrameReference, ...] = ()
     line: int | None = _line
 
 
@@ -187,7 +196,7 @@ class ConcernDefinition:
     require: tuple[str, ...] = ()
     actors: tuple[ActorClause, ...] = ()
     stakeholders: tuple[StakeholderClause, ...] = ()
-    framedConcerns: tuple[FrameClause, ...] = ()
+    framedConcerns: tuple[FrameClause | FrameReference, ...] = ()
     line: int | None = _line
 
 
@@ -206,7 +215,7 @@ class ConcernUsage:
     require: tuple[str, ...] = ()
     actors: tuple[ActorClause, ...] = ()
     stakeholders: tuple[StakeholderClause, ...] = ()
-    framedConcerns: tuple[FrameClause, ...] = ()
+    framedConcerns: tuple[FrameClause | FrameReference, ...] = ()
     line: int | None = _line
 
 

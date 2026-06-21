@@ -196,3 +196,13 @@ def add_framed_concern(
     membership.kind = Requirement
     kk.add_owned_member(requirement, concern, membership)
     return membership
+
+
+def framed_concern_reference(concern: sysml2.ConcernUsage) -> kerml.Feature | None:
+    """The existing concern that `concern` REFERENCES via a ReferenceSubsetting
+    (the `frame <existing>` form, Phase 6d-2), or None for a declared framed
+    concern (`frame concern <name>`)."""
+    subsetting = kk.reference_subsetting(concern)
+    if subsetting is None:
+        return None
+    return kk._single(subsetting.referencedFeature)

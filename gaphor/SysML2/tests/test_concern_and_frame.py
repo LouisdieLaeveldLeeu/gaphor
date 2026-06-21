@@ -288,6 +288,150 @@ def test_concern_usage_type_page_lists_concern_definitions(
     assert "Safety" in labels
 
 
+# --- frame REFERENCE form (Phase 6d-2) ---------------------------------------
+
+
+def test_parse_frame_reference_vs_declare():
+    (member,) = parse(
+        "requirement def R { frame existing; frame concern decl : C; frame pkg::c; }"
+    ).members
+    assert member.framedConcerns == (
+        ast.FrameReference(target=("existing",)),
+        ast.FrameClause(name="decl", type_name=("C",)),
+        ast.FrameReference(target=("pkg", "c")),
+    )
+
+
+def test_frame_reference_builds_anonymous_usage_with_reference_subsetting():
+    factory, result = _map(
+        "concern def Safety;\nconcern globalSafety : Safety;\n"
+        "requirement def R { frame globalSafety; }"
+    )
+    assert not result.unresolved_frame_refs
+    R = _req_def(factory, "R")
+    (framed,) = list(requirements.framed_concerns(R))
+    assert isinstance(framed, sysml2.ConcernUsage)
+    assert not framed.declaredName  # anonymous (a reference, not a declaration)
+    referenced = requirements.framed_concern_reference(framed)
+    assert isinstance(referenced, sysml2.ConcernUsage)
+    assert referenced.declaredName == "globalSafety"
+
+
+def test_frame_reference_and_declare_keep_order():
+    factory, _ = _map(
+        "concern def Safety;\nconcern g : Safety;\n"
+        "requirement def R { frame g; frame concern localc : Safety; }"
+    )
+    R = _req_def(factory, "R")
+    framed = list(requirements.framed_concerns(R))
+    refs = [requirements.framed_concern_reference(c) for c in framed]
+    assert refs[0] is not None and refs[0].declaredName == "g"  # reference first
+    assert refs[1] is None and framed[1].declaredName == "localc"  # declare second
+
+
+def test_well_formed_frame_reference_validates_clean():
+    factory, result = _map(
+        "concern def Safety;\nconcern g : Safety;\nrequirement def R { frame g; }"
+    )
+    assert not has_errors(
+        validate(
+            factory,
+            result.unresolved_types,
+            result.mistyped,
+            result.unresolved_ends,
+            result.unresolved_frame_refs,
+        )
+    )
+
+
+def test_unresolved_frame_reference_is_reported():
+    factory, result = _map("requirement def R { frame missingConcern; }")
+    assert result.unresolved_frame_refs
+    diagnostics = validate(
+        factory,
+        result.unresolved_types,
+        result.mistyped,
+        result.unresolved_ends,
+        result.unresolved_frame_refs,
+    )
+    assert any(d.rule == "broken-frame-reference" for d in diagnostics)
+
+
+@pytest.mark.parametrize(
+    "src",
+    [
+        # resolves to a ConcernDefinition (a Type, not a usage) -> wrong kind
+        "concern def Safety;\nrequirement def R { frame Safety; }",
+        # resolves to a part usage (a Feature, but not a ConcernUsage) -> wrong kind
+        "part p;\nrequirement def R { frame p; }",
+    ],
+)
+def test_wrong_kind_frame_reference_is_reported(src):
+    factory, result = _map(src)
+    assert result.unresolved_frame_refs
+    diagnostics = validate(
+        factory,
+        result.unresolved_types,
+        result.mistyped,
+        result.unresolved_ends,
+        result.unresolved_frame_refs,
+    )
+    assert any(d.rule == "broken-frame-reference" for d in diagnostics)
+
+
+def test_export_emits_frame_reference():
+    _factory, result = _map(
+        "concern def Safety;\nconcern g : Safety;\nrequirement def R { frame g; }"
+    )
+    text = export_namespace(result.root)
+    assert "requirement def R { frame g; }" in text
+
+
+def test_frame_reference_round_trips():
+    result = round_trip(
+        "concern def Safety;\nconcern g : Safety;\n"
+        "requirement def R { frame g; frame concern localc : Safety; }"
+    )
+    assert result.preserved
+    assert result.valid
+
+
+def test_frame_reference_vs_declare_are_distinct_fingerprints():
+    assert round_trip(
+        "concern def C;\nconcern g : C;\nrequirement def R { frame g; }"
+    ).source_form != round_trip(
+        "concern def C;\nconcern g : C;\nrequirement def R { frame concern g : C; }"
+    ).source_form
+
+
+def test_frame_reference_survives_save_reload(element_factory, saver, loader):
+    map_package(
+        parse(
+            "concern def Safety;\nconcern g : Safety;\nrequirement def R { frame g; }"
+        ),
+        element_factory,
+    )
+    R_id = _req_def(element_factory, "R").id
+
+    loader(saver())
+
+    R = element_factory.lookup(R_id)
+    (framed,) = list(requirements.framed_concerns(R))
+    referenced = requirements.framed_concern_reference(framed)
+    assert isinstance(referenced, sysml2.ConcernUsage)
+    assert referenced.declaredName == "g"
+
+
+def test_add_reference_subsetting_helper(element_factory):
+    a = element_factory.create(sysml2.ConcernUsage)
+    b = element_factory.create(sysml2.ConcernUsage)
+    subsetting = kk.add_reference_subsetting(a, b)
+    assert kk.reference_subsetting(a) is subsetting
+    assert kk._single(subsetting.referencedFeature) is b
+    assert kk._single(subsetting.subsettingFeature) is a
+    assert subsetting in a.ownedRelationship  # owned by the referencing feature
+
+
 def test_reqid_page_applies_to_concern(element_factory, event_manager):
     cdef = element_factory.create(sysml2.ConcernDefinition)
     cdef.declaredName = "Safety"

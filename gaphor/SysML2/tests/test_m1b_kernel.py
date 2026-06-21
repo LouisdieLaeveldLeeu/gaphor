@@ -71,9 +71,12 @@ def test_kernel_has_expected_class_count():
     # reference Type and `conjugator` is derived, so it adds no new closure) for
     # Phase 8a port conjugation, TextualRepresentation (an AnnotatingElement
     # whose body/language are Strings; the honest carrier for an opaque constraint
-    # body) for Phase 6a, and FeatureMembership/ParameterMembership (the membership
-    # roots the SysML requirement-parameter memberships generalize) for Phase 6b.
-    assert len(_all_kernel_classes()) == 31
+    # body) for Phase 6a, FeatureMembership/ParameterMembership (the membership
+    # roots the SysML requirement-parameter memberships generalize) for Phase 6b,
+    # and Subsetting/ReferenceSubsetting (the feature-specialization roots the
+    # framed-concern REFERENCE form generalizes; both -> Specialization, adding the
+    # stored subsetted/subsetting feature ends) for Phase 6d-2.
+    assert len(_all_kernel_classes()) == 33
 
 
 # --- required behaviour 1: namespace + membership round-trip -----------------

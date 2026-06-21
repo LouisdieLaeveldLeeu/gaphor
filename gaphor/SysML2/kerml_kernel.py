@@ -29,6 +29,7 @@ from gaphor.SysML2.kerml import (
     Membership,
     Namespace,
     OwningMembership,
+    ReferenceSubsetting,
     Relationship,
     Type,
 )
@@ -112,6 +113,32 @@ def set_feature_type(feature: Feature, type_: Type | None) -> FeatureTyping | No
     feature.ownedRelationship = typing
     typing.owningRelatedElement = feature
     return typing
+
+
+def add_reference_subsetting(
+    referencing: Feature, referenced: Feature
+) -> ReferenceSubsetting:
+    """Make `referencing` REFERENCE `referenced` via an owned ReferenceSubsetting.
+
+    The ReferenceSubsetting is owned by the `referencing` feature (composite,
+    cascades), while `referenced` (the subsetted/referenced feature) is a
+    NON-owning reference. Mirrors `set_feature_type`: the owning feature is the
+    subsettingFeature; the referencedFeature is the target.
+    """
+    subsetting = referencing.model.create(ReferenceSubsetting)
+    subsetting.subsettingFeature = referencing
+    subsetting.referencedFeature = referenced
+    referencing.ownedRelationship = subsetting
+    subsetting.owningRelatedElement = referencing
+    return subsetting
+
+
+def reference_subsetting(feature: Feature) -> ReferenceSubsetting | None:
+    """The ReferenceSubsetting owned by `feature` (its reference target), if any."""
+    for relationship in feature.ownedRelationship:
+        if isinstance(relationship, ReferenceSubsetting):
+            return relationship
+    return None
 
 
 # --- derived surface (computed from stored structure) ------------------------
