@@ -41,8 +41,8 @@ tests.
   requirements also carry `subject`/`assume`/`require` via their normative
   memberships, Phase 6b). Capped on constraint expression SEMANTICS (a faithful
   KerML expression tree), structured requirement-parameter UI-edit, and the
-  remaining named requirement surfaces: `reqId` (Phase 6c) and
-  `actor`/`stakeholder`/`framedConcern` (Phase 6d).
+  remaining named requirement surfaces: `reqId`/`actor`/`stakeholder` (Phase 6c)
+  and `framedConcern` plus the Concern construct (Phase 6d).
 - SysML PortDefinition, PortUsage: `supported` (all nine cells for the
   declaration-and-typing surface INCLUDING conjugation -- `port p : ~Fuel` typed
   by the faithful conjugate via PortConjugation/ConjugatedPortDefinition/
@@ -429,41 +429,46 @@ Requirement rows stay `alpha` after 6b because `reqId` (6c) and the context
 parameters (6d) are still scheduled, and constraint expression SEMANTICS remain a
 later, multi-phase dependency.
 
-#### Phase 6c -- Requirement Identification (`reqId`) -- PLANNED
+#### Phase 6c -- Lightweight Requirement Parameters (`reqId`, `actor`, `stakeholder`) -- PLANNED
 
-Add requirement identification as its own requirement surface.
+The lightweight remaining requirement parameters, grouped because they share an
+implementation shape (a small attribute plus two `subject`-style parameter
+memberships) and none introduces a new construct:
 
-Work:
+- `reqId` -- a requirement identifier; `reqId` is ALREADY a generated SysML String
+  attribute on RequirementDefinition/Usage (no metamodel growth). Verify the
+  normative concrete syntax, then parse/map/persist/validate/export/round-trip and
+  a text-entry editor;
+- `actor` and `stakeholder` -- parameter features carried by the normative
+  ActorMembership/StakeholderMembership (KerML ParameterMembership), mirroring the
+  6b `subject` machinery: generate the memberships from the pinned XMI, build the
+  parameter features, resolve their declared types nearest-first (scoped
+  references, recorded unresolved otherwise), export and round-trip.
 
-- verify the normative source of `reqId` before choosing storage (generated
-  SysML property, library-defined convention, or another normative structure);
-- parse/map/create/persist/validate/export/round-trip requirement identifiers;
-- add diagram and UI-edit support where the existing requirement item/property
-  surface claims editability;
-- preserve import/KPAR diagnostics for unsupported or conflicting identifier
-  content.
+Exit: `reqId`, `actor`, and `stakeholder` are implemented and tested end to end;
+Requirement rows stay `alpha` (framedConcern, structured requirement-parameter
+UI-edit, and constraint expression semantics remain).
 
-Exit: `reqId` is implemented and tested end to end for RequirementDefinition and
-RequirementUsage where applicable. Requirement rows still stay `alpha` until 6d.
+#### Phase 6d -- Framed Concern And the Concern Construct -- PLANNED
 
-#### Phase 6d -- Requirement Context Parameters -- PLANNED
+The heavyweight remaining requirement surface, isolated because it introduces a
+new construct:
 
-Add the remaining named requirement context parameters:
-
-- `actor`;
-- `stakeholder`;
-- `framedConcern`.
+- `framedConcern` -- a requirement's framed concern, carried by the normative
+  FramedConcernMembership (a RequirementConstraintMembership, already in the
+  metamodel) whose owned member is a `ConcernUsage`;
+- the Concern construct itself -- ConcernDefinition/ConcernUsage -- generated from
+  the pinned XMI, with its own support-matrix rows taken to their honest status.
 
 Use faithful normative membership/parameter representation, not local marker
 fields. Validate scoped references where supported, report unresolved or
-wrong-kind references explicitly, and cover parse/map/create/persist/validate/
-export/round-trip/diagram/UI-edit for the claimed surface.
+wrong-kind references explicitly, and cover the claimed cells.
 
 Exit: all currently named requirement surfaces (`subject`, `assume`, `require`,
-`reqId`, `actor`, `stakeholder`, and `framedConcern`) are implemented and tested.
-At this point RequirementDefinition and RequirementUsage can be considered for
-promotion out of `alpha`, subject to the normal nine-cell support rule and the
-remaining expression-semantics limits.
+`reqId`, `actor`, `stakeholder`, and `framedConcern`) plus the Concern construct
+are implemented and tested. At this point RequirementDefinition and
+RequirementUsage can be considered for promotion out of `alpha`, subject to the
+normal nine-cell support rule and the remaining expression-semantics limits.
 
 ### Phase 7 -- Action Semantics
 
@@ -672,8 +677,8 @@ counted here.
 13. Phase 8c -- Interface Definition / Usage Semantics -- DONE
 14. Phase 6a -- Constraint Expression Bodies -- DONE
 15. Phase 6b -- Requirement Parameters -- DONE
-16. Phase 6c -- Requirement Identification (`reqId`) -- PLANNED
-17. Phase 6d -- Requirement Context Parameters -- PLANNED
+16. Phase 6c -- Lightweight Requirement Parameters (`reqId`, `actor`, `stakeholder`) -- PLANNED
+17. Phase 6d -- Framed Concern And the Concern Construct -- PLANNED
 18. Phase 7 -- Action Semantics -- PLANNED
 19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- PLANNED
 20. Phase 5b -- Aliases -- PLANNED
