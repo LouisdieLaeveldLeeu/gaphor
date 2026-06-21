@@ -1,19 +1,24 @@
-"""Requirement parameter behavior (Phase 6b).
+"""Requirement parameter behavior (Phase 6b/6c).
 
-A requirement body's `subject`, `assume`, and `require` parts are modeled
-faithfully on the normative memberships:
+A requirement body's `subject`, `assume`/`require`, `actor`, and `stakeholder`
+parts are modeled faithfully on the normative memberships:
 
 - `subject` is a parameter feature related to the requirement by a
   `SubjectMembership` (a KerML ParameterMembership);
 - `assume`/`require` each own a `ConstraintUsage` (whose body reuses the Phase 6a
   opaque-text mechanism) through a `RequirementConstraintMembership` whose `kind`
-  is `assumption` or `requirement`.
+  is `assumption` or `requirement`;
+- `actor`/`stakeholder` are parameter features related by an `ActorMembership` /
+  `StakeholderMembership` respectively (both KerML ParameterMemberships), kept in
+  declaration order (Phase 6c);
+- `reqId` is the requirement's `declaredShortName` (Phase 6c): a plain KerML
+  short-name attribute, not a membership.
 
-The constraints/subject are owned through these memberships (which ARE
-OwningMemberships), so they persist, cascade on delete, and round-trip. Only the
-named subject/assume/require parts are covered here; actor/stakeholder/framed-
-concern parameters and `reqId` are out of scope, and the constraint bodies remain
-opaque (no expression semantics) -- the requirement rows stay `alpha`.
+The constraints/subject/actor/stakeholder are owned through these memberships
+(which ARE OwningMemberships), so they persist, cascade on delete, and
+round-trip. The framed-concern parameter is still out of scope, and the
+constraint bodies remain opaque (no expression semantics) -- the requirement
+rows stay `alpha`.
 """
 
 from __future__ import annotations
@@ -54,6 +59,73 @@ def add_subject(
     membership = requirement.model.create(sysml2.SubjectMembership)
     kk.add_owned_member(requirement, feature, membership)
     return membership
+
+
+def reqId(
+    requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+) -> str | None:
+    """The requirement's `reqId` (its KerML `declaredShortName`), or None."""
+    value = requirement.declaredShortName
+    return value if value else None
+
+
+def set_reqId(
+    requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+    value: str | None,
+) -> None:
+    """Set the requirement's `reqId` into `declaredShortName` (None clears it)."""
+    requirement.declaredShortName = value or None
+
+
+def _parameter_features(
+    requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+    membership_type: type,
+) -> Iterator[kerml.Feature]:
+    for relationship in requirement.ownedRelationship:
+        if isinstance(relationship, membership_type):
+            member = kk._single(relationship.memberElement)
+            if isinstance(member, kerml.Feature):
+                yield member
+
+
+def _add_parameter_feature(
+    requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+    feature: kerml.Feature,
+    membership_type: type,
+):
+    membership = requirement.model.create(membership_type)
+    kk.add_owned_member(requirement, feature, membership)
+    return membership
+
+
+def actors(
+    requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+) -> Iterator[kerml.Feature]:
+    """The requirement's actor parameter features, in declaration order."""
+    return _parameter_features(requirement, sysml2.ActorMembership)
+
+
+def add_actor(
+    requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+    feature: kerml.Feature,
+) -> sysml2.ActorMembership:
+    """Relate `feature` as an actor of the requirement via an ActorMembership."""
+    return _add_parameter_feature(requirement, feature, sysml2.ActorMembership)
+
+
+def stakeholders(
+    requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+) -> Iterator[kerml.Feature]:
+    """The requirement's stakeholder parameter features, in declaration order."""
+    return _parameter_features(requirement, sysml2.StakeholderMembership)
+
+
+def add_stakeholder(
+    requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+    feature: kerml.Feature,
+) -> sysml2.StakeholderMembership:
+    """Relate `feature` as a stakeholder via a StakeholderMembership."""
+    return _add_parameter_feature(requirement, feature, sysml2.StakeholderMembership)
 
 
 def requirement_constraints(

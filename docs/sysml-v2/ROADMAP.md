@@ -39,10 +39,11 @@ tests.
   declaration-and-typing surface; constraints also preserve an opaque expression
   body -- `constraint c { <expr> }` stored as a TextualRepresentation, Phase 6a;
   requirements also carry `subject`/`assume`/`require` via their normative
-  memberships, Phase 6b). Capped on constraint expression SEMANTICS (a faithful
-  KerML expression tree), structured requirement-parameter UI-edit, and the
-  remaining named requirement surfaces: `reqId`/`actor`/`stakeholder` (Phase 6c)
-  and `framedConcern` plus the Concern construct (Phase 6d).
+  memberships, Phase 6b, plus `reqId` (as `declaredShortName`) and
+  `actor`/`stakeholder` parameter memberships, Phase 6c). Capped on constraint
+  expression SEMANTICS (a faithful KerML expression tree), structured
+  requirement-parameter UI-edit (only a `reqId` editor exists), and the remaining
+  named requirement surface: `framedConcern` plus the Concern construct (Phase 6d).
 - SysML PortDefinition, PortUsage: `supported` (all nine cells for the
   declaration-and-typing surface INCLUDING conjugation -- `port p : ~Fuel` typed
   by the faithful conjugate via PortConjugation/ConjugatedPortDefinition/
@@ -429,21 +430,35 @@ Requirement rows stay `alpha` after 6b because `reqId` (6c) and the context
 parameters (6d) are still scheduled, and constraint expression SEMANTICS remain a
 later, multi-phase dependency.
 
-#### Phase 6c -- Lightweight Requirement Parameters (`reqId`, `actor`, `stakeholder`) -- PLANNED
+#### Phase 6c -- Lightweight Requirement Parameters (`reqId`, `actor`, `stakeholder`) -- DONE
 
-The lightweight remaining requirement parameters, grouped because they share an
-implementation shape (a small attribute plus two `subject`-style parameter
-memberships) and none introduces a new construct:
+Delivered the lightweight remaining requirement parameters, grouped because they
+share an implementation shape (a small short-name attribute plus two
+`subject`-style parameter memberships) and none introduces a new construct:
 
-- `reqId` -- a requirement identifier; `reqId` is ALREADY a generated SysML String
-  attribute on RequirementDefinition/Usage (no metamodel growth). Verify the
-  normative concrete syntax, then parse/map/persist/validate/export/round-trip and
-  a text-entry editor;
+- `reqId` -- stored CANONICALLY as the requirement's KerML `declaredShortName`
+  (not the separately generated `reqId` String slot). The normative `reqId`
+  redefines `Element::declaredShortName`, but the coder emits redefinitions as
+  distinct slots, so writing both would double-store; `declaredShortName` is the
+  one true home (see MAPPING_DECISIONS 6c). Written `<id>` for a bare identifier
+  or `<'1.1.3'>` quoted for a dotted/special id; parse/map/persist/validate/
+  export/round-trip plus a text-entry editor (`RequirementReqIdPropertyPage`);
 - `actor` and `stakeholder` -- parameter features carried by the normative
-  ActorMembership/StakeholderMembership (KerML ParameterMembership), mirroring the
-  6b `subject` machinery: generate the memberships from the pinned XMI, build the
-  parameter features, resolve their declared types nearest-first (scoped
-  references, recorded unresolved otherwise), export and round-trip.
+  ActorMembership/StakeholderMembership (KerML ParameterMembership, generated from
+  the pinned XMI), mirroring the 6b `subject` machinery: the features are built
+  via their memberships in declaration order, their declared types resolved
+  nearest-first (scoped references, recorded unresolved otherwise), exported and
+  round-tripped (order-sensitive canonical entries). The model-derived exact-one
+  `broken-requirement-parameter` rule was extended to both memberships;
+- structured UI-edit for `actor`/`stakeholder` is deliberately deferred (only the
+  `reqId` text editor is added); the rows stay `alpha`.
+
+A latent grammar bug surfaced and was fixed: a requirement/constraint USAGE with
+a type AND a body (`requirement r : R { ... }`) mis-lexed the `{` as a greedy
+constraint-body terminal. Constraint bodies are now built from literal `{`/`}`
+plus a non-brace `BODY_TEXT` terminal, so every `{` lexes identically and the
+PARSER disambiguates body-vs-body by context; opaque bodies stay verbatim
+(whitespace and nesting preserved).
 
 Exit: `reqId`, `actor`, and `stakeholder` are implemented and tested end to end;
 Requirement rows stay `alpha` (framedConcern, structured requirement-parameter
@@ -677,7 +692,7 @@ counted here.
 13. Phase 8c -- Interface Definition / Usage Semantics -- DONE
 14. Phase 6a -- Constraint Expression Bodies -- DONE
 15. Phase 6b -- Requirement Parameters -- DONE
-16. Phase 6c -- Lightweight Requirement Parameters (`reqId`, `actor`, `stakeholder`) -- PLANNED
+16. Phase 6c -- Lightweight Requirement Parameters (`reqId`, `actor`, `stakeholder`) -- DONE
 17. Phase 6d -- Framed Concern And the Concern Construct -- PLANNED
 18. Phase 7 -- Action Semantics -- PLANNED
 19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- PLANNED

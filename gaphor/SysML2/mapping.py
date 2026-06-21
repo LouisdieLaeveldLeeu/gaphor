@@ -108,16 +108,16 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     # typed usage with its owning namespace for phase 2.
     typed_usages: list[tuple[kerml.Feature, kerml.Namespace, tuple[str, ...]]] = []
     connection_ends: list = []
-    subject_typings: list = []
+    parameter_typings: list = []
     top_level = _build_members(
-        pkg.members, root, factory, typed_usages, connection_ends, subject_typings
+        pkg.members, root, factory, typed_usages, connection_ends, parameter_typings
     )
 
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
         root, typed_usages
     )
     unresolved_ends = _resolve_connection_ends(connection_ends)
-    unresolved_types.update(_resolve_subject_types(subject_typings))
+    unresolved_types.update(_resolve_parameter_types(parameter_typings))
     return MappingResult(
         root=root,
         elements_by_name=top_level,
@@ -153,7 +153,7 @@ def map_project_members(named_packages, factory: ElementFactory):
     root = factory.create(kerml.Namespace)
     typed_usages: list[tuple[kerml.Feature, kerml.Namespace, tuple[str, ...]]] = []
     connection_ends: list = []
-    subject_typings: list = []
+    parameter_typings: list = []
     top_level: dict[str, kerml.Element] = {}
     provenance: dict[str, tuple] = {}
     for label, pkg in named_packages:
@@ -168,7 +168,7 @@ def map_project_members(named_packages, factory: ElementFactory):
                 factory,
                 typed_usages,
                 connection_ends,
-                subject_typings,
+                parameter_typings,
                 record,
             )
         )
@@ -177,7 +177,7 @@ def map_project_members(named_packages, factory: ElementFactory):
         root, typed_usages
     )
     unresolved_ends = _resolve_connection_ends(connection_ends)
-    unresolved_types.update(_resolve_subject_types(subject_typings))
+    unresolved_types.update(_resolve_parameter_types(parameter_typings))
     for relationship_id, source_id in relationship_sources.items():
         if source_id in provenance:
             provenance[relationship_id] = provenance[source_id]
@@ -276,19 +276,24 @@ def _resolve_connection_ends(connection_ends: list) -> dict[str, list[str]]:
 
 
 def _build_requirement_body(
-    requirement, member, namespace, factory, subject_typings, on_element
+    requirement, member, namespace, factory, parameter_typings, on_element
 ):
-    """Build a requirement's subject/assume/require parts (Phase 6b).
+    """Build a requirement's subject/assume/require/actor/stakeholder parts and
+    its reqId (Phase 6b/6c).
 
-    The subject becomes a parameter feature via a SubjectMembership (its type is
-    deferred to phase 2 in `subject_typings`); each assumed/required constraint
-    becomes a ConstraintUsage carrying an opaque 6a body, owned via a
-    RequirementConstraintMembership with the matching kind.
+    The subject/actor/stakeholder each become a parameter feature via the matching
+    membership (their types are deferred to phase 2 in `parameter_typings`, where
+    any Type resolves); each assumed/required constraint becomes a ConstraintUsage
+    carrying an opaque 6a body, owned via a RequirementConstraintMembership with
+    the matching kind. The reqId is stored as the requirement's declaredShortName.
     """
 
     def record(element):
         if on_element is not None:
             on_element(element, member)
+
+    if member.reqId is not None:
+        requirements.set_reqId(requirement, member.reqId)
 
     if member.subject is not None:
         subj = factory.create(kerml.Feature)
@@ -296,7 +301,19 @@ def _build_requirement_body(
         requirements.add_subject(requirement, subj)
         record(subj)
         if member.subject.type_name is not None:
-            subject_typings.append((subj, namespace, member.subject.type_name))
+            parameter_typings.append((subj, namespace, member.subject.type_name))
+
+    for clauses, add in (
+        (member.actors, requirements.add_actor),
+        (member.stakeholders, requirements.add_stakeholder),
+    ):
+        for clause in clauses:
+            feature = factory.create(kerml.Feature)
+            feature.declaredName = clause.name
+            add(requirement, feature)
+            record(feature)
+            if clause.type_name is not None:
+                parameter_typings.append((feature, namespace, clause.type_name))
 
     for kind, bodies in (
         (requirements.Assumption, member.assume),
@@ -309,15 +326,15 @@ def _build_requirement_body(
             record(constraint)
 
 
-def _resolve_subject_types(subject_typings: list) -> dict[str, str]:
-    """Resolve each requirement subject's declared type (mapping phase 2).
+def _resolve_parameter_types(parameter_typings: list) -> dict[str, str]:
+    """Resolve each requirement parameter's declared type (mapping phase 2).
 
-    A subject may be typed by ANY Type (it is a parameter, not a kind-specific
-    usage), so there is no kind check; a name that resolves to a Type sets the
-    FeatureTyping, otherwise it is recorded unresolved.
+    A subject/actor/stakeholder may be typed by ANY Type (it is a parameter, not a
+    kind-specific usage), so there is no kind check; a name that resolves to a Type
+    sets the FeatureTyping, otherwise it is recorded unresolved.
     """
     unresolved: dict[str, str] = {}
-    for feature, namespace, type_name in subject_typings:
+    for feature, namespace, type_name in parameter_typings:
         target = _resolve_type(namespace, type_name)
         if isinstance(target, kerml.Type):
             kk.set_feature_type(feature, target)
@@ -332,14 +349,14 @@ def _build_members(
     factory: ElementFactory,
     typed_usages: list,
     connection_ends: list,
-    subject_typings: list,
+    parameter_typings: list,
     on_element=None,
 ) -> dict[str, kerml.Element]:
     """Create each AST member as an owned member of `namespace`, recursing into
     sub-packages. Returns this level's elements by name.
 
     Typed usages are recorded in `typed_usages`, connection endpoints in
-    `connection_ends`, and requirement subject types in `subject_typings` for
+    `connection_ends`, and requirement parameter types in `parameter_typings` for
     phase-2 resolution. If `on_element` is given, it is called as
     `on_element(element, ast_node)` for every created element (including nested
     ones), so callers can record per-element provenance from the AST node (e.g. its
@@ -373,14 +390,14 @@ def _build_members(
         elif isinstance(member, ast.RequirementDefinition):
             element = factory.create(sysml2.RequirementDefinition)
             _build_requirement_body(
-                element, member, namespace, factory, subject_typings, on_element
+                element, member, namespace, factory, parameter_typings, on_element
             )
         elif isinstance(member, ast.RequirementUsage):
             element = factory.create(sysml2.RequirementUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name, False))
             _build_requirement_body(
-                element, member, namespace, factory, subject_typings, on_element
+                element, member, namespace, factory, parameter_typings, on_element
             )
         elif isinstance(member, ast.PortDefinition):
             element = factory.create(sysml2.PortDefinition)
@@ -440,7 +457,7 @@ def _build_members(
                 factory,
                 typed_usages,
                 connection_ends,
-                subject_typings,
+                parameter_typings,
                 on_element,
             )
         by_name[member.name] = element

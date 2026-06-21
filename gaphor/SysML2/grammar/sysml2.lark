@@ -63,24 +63,38 @@ constraint_definition: "constraint" "def" NAME (";" | constraint_body)
 constraint_usage: DIRECTION? "constraint" NAME (":" type_ref)? (";" | constraint_body)
 
 // A constraint body is opaque expression text in braces (Phase 6a): it is
-// preserved as text, NOT parsed into a KerML expression tree. The terminal
-// matches balanced braces (tolerant to nesting), so the body may itself contain
-// `{ }` groups; deeper nesting than this is not supported.
-constraint_body: CONSTRAINT_BODY
-CONSTRAINT_BODY: /\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}/
+// preserved verbatim, NOT parsed into a KerML expression tree. It is built from
+// literal `{` `}` plus a non-brace BODY_TEXT terminal (and arbitrarily nested
+// `{ }` groups), so the body's `{`/`}` are the SAME tokens as every other brace
+// in the grammar -- the PARSER decides "constraint body" vs "requirement body"
+// (or package body) by context, with no greedy body terminal to mis-grab a brace.
+// BODY_TEXT has a higher priority than WS so a whitespace-only body is preserved.
+constraint_body: "{" body_element* "}"
+body_element: BODY_TEXT | braced_text
+braced_text: "{" body_element* "}"
+BODY_TEXT.2: /[^{}]+/
 
-// `requirement def <name> ( ";" | "{" <clauses> "}" )`
-requirement_definition: "requirement" "def" NAME (";" | requirement_body)
+// `requirement def [<reqId>] <name> ( ";" | "{" <clauses> "}" )`
+requirement_definition: "requirement" "def" short_name? NAME (";" | requirement_body)
 
-// `[<dir>] requirement <name> [ ":" <type> ] ( ";" | "{" <clauses> "}" )`
-requirement_usage: DIRECTION? "requirement" NAME (":" type_ref)? (";" | requirement_body)
+// `[<dir>] requirement [<reqId>] <name> [ ":" <type> ] ( ";" | "{" <clauses> "}" )`
+requirement_usage: DIRECTION? "requirement" short_name? NAME (":" type_ref)? (";" | requirement_body)
 
-// A requirement body holds subject/assume/require clauses (Phase 6b). The
-// assumed/required constraints reuse the opaque 6a constraint body; the subject is
-// a (optionally typed) parameter feature.
+// A requirement's `reqId` is its declaredShortName (Phase 6c), written as a KerML
+// short name `<...>`: a quoted string `<'1.1.3'>` (for dotted/special ids) or a
+// bare identifier `<R1>`.
+short_name: "<" (QUOTED_NAME | NAME) ">"
+QUOTED_NAME: /'[^']*'/
+
+// A requirement body holds subject/assume/require (Phase 6b) and actor/stakeholder
+// (Phase 6c) clauses. The assumed/required constraints reuse the opaque 6a
+// constraint body; subject/actor/stakeholder are (optionally typed) parameters.
 requirement_body: "{" requirement_clause* "}"
 requirement_clause: subject_clause | assume_clause | require_clause
+                  | actor_clause | stakeholder_clause
 subject_clause: "subject" NAME (":" type_ref)? ";"
+actor_clause: "actor" NAME (":" type_ref)? ";"
+stakeholder_clause: "stakeholder" NAME (":" type_ref)? ";"
 assume_clause: "assume" "constraint" constraint_body
 require_clause: "require" "constraint" constraint_body
 

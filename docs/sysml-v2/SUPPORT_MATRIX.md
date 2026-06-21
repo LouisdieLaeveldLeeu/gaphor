@@ -163,6 +163,29 @@ actor/stakeholder/framedConcern (6d) remain scheduled, and constraint expression
 semantics remain a later dependency. See `test_requirement_parameters.py`. This is
 the Phase-6b requirement-parameter gate decision, taken explicitly per the roadmap.
 
+Phase 6c adds the lightweight requirement parameters `reqId`, `actor`, and
+`stakeholder`. `reqId` is stored CANONICALLY as the requirement's KerML
+`declaredShortName` (the normative `reqId` redefines `declaredShortName`, and the
+coder emits redefinitions as distinct slots, so `declaredShortName` is the single
+home -- see MAPPING_DECISIONS 6c); it is written `<id>` (bare) or `<'1.1.3'>`
+(quoted for a dotted/special id). `actor`/`stakeholder` are parameter features
+carried by the normative ActorMembership/StakeholderMembership (KerML
+ParameterMembership, generated from the pinned XMI -- SysML-layer classes, so the
+kernel count stays 31), mirroring the 6b `subject` machinery and kept in
+declaration order. `requirement [def] [<reqId>] r [: R] { subject ...; actor n
+[: T]; stakeholder n [: T]; ... }` parses, maps, validates (parameter types via
+the unresolved-type rule; the exact-one `broken-requirement-parameter` rule
+extended to both memberships), exports, round-trips (order-sensitive canonical
+entries), and persists. A `reqId` text-entry editor is added; structured
+actor/stakeholder UI-edit stays deferred, so the Requirement rows STAY `alpha`
+(framedConcern + Concern remain Phase 6d, and constraint expression semantics
+remain a later dependency). A latent grammar bug -- a USAGE with a type AND a body
+(`requirement r : R { ... }` / `constraint c : C { ... }`) mis-lexing `{` as a
+greedy body terminal -- was fixed by building constraint bodies from literal
+braces + a `BODY_TEXT` terminal so the parser disambiguates body context (opaque
+bodies stay verbatim). See `test_requirement_reqid_actor_stakeholder.py`. This is
+the Phase-6c requirement-parameter gate decision, taken explicitly per the roadmap.
+
 PortDefinition and PortUsage are `supported` for the declaration-and-typing
 surface INCLUDING conjugation (`port def Fuel; port p : Fuel; port q : ~Fuel;`).
 Phase F first built the unconjugated surface (every cell implemented and

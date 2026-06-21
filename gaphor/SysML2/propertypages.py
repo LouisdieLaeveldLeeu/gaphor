@@ -19,6 +19,7 @@ from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import mapping
+from gaphor.SysML2 import requirements
 from gaphor.SysML2 import sysml2
 
 _LIBRARY_PREFIX = "library:"
@@ -549,6 +550,50 @@ class ConstraintBodyPropertyPage(PropertyPageBase):
             # body.
             text = entry.get_text()
             constraints.set_body_text(self.subject, text if text.strip() else None)
+
+
+@PropertyPages.register(sysml2.RequirementDefinition)
+@PropertyPages.register(sysml2.RequirementUsage)
+class RequirementReqIdPropertyPage(PropertyPageBase):
+    """Edit a requirement's `reqId` (its KerML `declaredShortName`) (Phase 6c).
+
+    A blank field clears the reqId (stores None) rather than an empty short name.
+    Only requirements carry a reqId, so this page is registered on the requirement
+    classes alone (not on the plain constraint classes they subclass).
+    """
+
+    order = 40
+
+    def __init__(
+        self,
+        subject: sysml2.RequirementDefinition | sysml2.RequirementUsage,
+        event_manager,
+    ):
+        super().__init__()
+        self.subject = subject
+        self.event_manager = event_manager
+        self.watcher = subject.watcher()
+
+    def construct(self):
+        builder = new_builder("requirement-reqid-editor")
+        entry = builder.get_object("requirement-reqid")
+        entry.set_text(requirements.reqId(self.subject) or "")
+
+        @handler_blocking(entry, "changed", self._on_reqid_changed)
+        def text_handler(event):
+            if event.element is self.subject and (event.new_value or "") != entry.get_text():
+                entry.set_text(event.new_value or "")
+
+        self.watcher.watch("declaredShortName", text_handler)
+
+        return unsubscribe_all_on_destroy(
+            builder.get_object("requirement-reqid-editor"), self.watcher
+        )
+
+    def _on_reqid_changed(self, entry):
+        with Transaction(self.event_manager, context="editing"):
+            text = entry.get_text()
+            requirements.set_reqId(self.subject, text if text.strip() else None)
 
 
 @PropertyPages.register(sysml2.InterfaceUsage)

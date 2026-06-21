@@ -10,6 +10,8 @@ harness relies on.
 
 from __future__ import annotations
 
+import re
+
 from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml, sysml2
@@ -58,7 +60,7 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         return f"{pad}action def {element.declaredName};\n"
     if isinstance(element, sysml2.RequirementDefinition):
         return (
-            f"{pad}requirement def {element.declaredName}"
+            f"{pad}requirement def {_short_name_prefix(element)}{element.declaredName}"
             f"{_requirement_tail(element, root)}\n"
         )
     if isinstance(element, sysml2.ConstraintDefinition):
@@ -84,7 +86,8 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     if isinstance(element, sysml2.RequirementUsage):
         dir_ = _direction_prefix(element)
         return (
-            f"{pad}{dir_}requirement {_usage_decl(element, root)}"
+            f"{pad}{dir_}requirement {_short_name_prefix(element)}"
+            f"{_usage_decl(element, root)}"
             f"{_requirement_tail(element, root)}\n"
         )
     if isinstance(element, sysml2.ConstraintUsage):
@@ -99,23 +102,38 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     return ""
 
 
-def _requirement_tail(req: kerml.Element, root: kerml.Namespace) -> str:
-    """` { subject ...; assume constraint {...} require constraint {...} }` for a
-    requirement with parts, else `;` (Phase 6b).
+def _short_name_prefix(req: kerml.Element) -> str:
+    """`<reqId> ` for a requirement with a reqId (declaredShortName), else `""`.
 
-    The subject's type and the assumed/required constraint bodies are re-emitted so
-    the body re-parses to the same structure on round-trip.
+    The reqId is emitted as a bare `<id>` when it is a valid identifier, else
+    quoted `<'id'>` (e.g. a dotted `1.1.3`), so it re-parses to the same value
+    (Phase 6c).
+    """
+    value = requirements.reqId(req)
+    if not value:
+        return ""
+    token = value if re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]*", value) else f"'{value}'"
+    return f"<{token}> "
+
+
+def _requirement_tail(req: kerml.Element, root: kerml.Namespace) -> str:
+    """` { subject ...; actor ...; stakeholder ...; assume constraint {...}
+    require constraint {...} }` for a requirement with parts, else `;`
+    (Phase 6b/6c).
+
+    The subject/actor/stakeholder types and the assumed/required constraint bodies
+    are re-emitted so the body re-parses to the same structure on round-trip.
     """
     parts: list[str] = []
     subj = requirements.subject(req)
     if subj is not None:
-        type_name = _usage_type_name(subj, root)
-        decl = (
-            f"{subj.declaredName} : {type_name}"
-            if type_name is not None
-            else f"{subj.declaredName}"
-        )
-        parts.append(f"subject {decl};")
+        parts.append(f"subject {_parameter_decl(subj, root)};")
+    for keyword, features in (
+        ("actor", requirements.actors(req)),
+        ("stakeholder", requirements.stakeholders(req)),
+    ):
+        for feature in features:
+            parts.append(f"{keyword} {_parameter_decl(feature, root)};")
     for keyword, kind in (
         ("assume", requirements.Assumption),
         ("require", requirements.Requirement),
@@ -127,6 +145,15 @@ def _requirement_tail(req: kerml.Element, root: kerml.Namespace) -> str:
     if not parts:
         return ";"
     return " { " + " ".join(parts) + " }"
+
+
+def _parameter_decl(feature: kerml.Feature, root: kerml.Namespace) -> str:
+    """`<name>` or `<name> : <type>` for a requirement parameter (subject/actor/
+    stakeholder) feature, re-emitting its declared type when present."""
+    type_name = _usage_type_name(feature, root)
+    if type_name is not None:
+        return f"{feature.declaredName} : {type_name}"
+    return f"{feature.declaredName}"
 
 
 def _constraint_tail(constraint: kerml.Element) -> str:

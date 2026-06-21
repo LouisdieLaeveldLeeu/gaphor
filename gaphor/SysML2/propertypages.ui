@@ -238,4 +238,25 @@
     </style>
   </object>
 
+  <object class="GtkBox" id="requirement-reqid-editor">
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkLabel">
+        <property name="label" translatable="yes">Requirement Id</property>
+        <property name="xalign">0</property>
+        <style>
+          <class name="title"/>
+        </style>
+      </object>
+    </child>
+    <child>
+      <object class="GtkEntry" id="requirement-reqid">
+        <property name="placeholder-text" translatable="yes">e.g. 1.1.3</property>
+      </object>
+    </child>
+    <style>
+      <class name="propertypage"/>
+    </style>
+  </object>
+
 </interface>

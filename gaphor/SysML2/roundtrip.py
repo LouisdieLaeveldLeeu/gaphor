@@ -158,12 +158,16 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
             if body is not None:
                 entries.add(("ConstraintBody", kk.qualified_name(member), body))
 
-            # A requirement's subject/assume/require parts are SEPARATE entries
-            # (Phase 6b); an ordinal keeps duplicate assume/require bodies distinct.
+            # A requirement's reqId/subject/actor/stakeholder/assume/require parts
+            # are SEPARATE entries (Phase 6b/6c); an ordinal keeps duplicate
+            # actor/stakeholder/assume/require parts distinct and order-sensitive.
             if isinstance(
                 member, (sysml2.RequirementDefinition, sysml2.RequirementUsage)
             ):
                 req_qn = kk.qualified_name(member)
+                req_id = requirements.reqId(member)
+                if req_id is not None:
+                    entries.add(("RequirementReqId", req_qn, req_id))
                 subj = requirements.subject(member)
                 if subj is not None:
                     entries.add(
@@ -174,6 +178,20 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                             _usage_type_qualified_name(subj) or "",
                         )
                     )
+                for tag, features in (
+                    ("RequirementActor", requirements.actors(member)),
+                    ("RequirementStakeholder", requirements.stakeholders(member)),
+                ):
+                    for i, feature in enumerate(features):
+                        entries.add(
+                            (
+                                tag,
+                                req_qn,
+                                i,
+                                feature.declaredName or "",
+                                _usage_type_qualified_name(feature) or "",
+                            )
+                        )
                 for tag, kind in (
                     ("RequirementAssume", requirements.Assumption),
                     ("RequirementRequire", requirements.Requirement),

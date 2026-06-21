@@ -148,6 +148,17 @@
 <owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
 <package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
 </UML:Class>
+<UML:Class id="bdc5abe5-8871-54cb-9899-d02d7b7ddd5a">
+<name><val>ActorMembership</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="f151b175-03c5-5493-8267-7d4a810bbda0"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
 <UML:Class id="a5583a5f-40a8-53f2-9bc4-b09d738bc151">
 <name><val>AttributeDefinition</val></name>
 <ownedAttribute><reflist>
@@ -422,6 +433,17 @@
 <owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
 <package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
 </UML:Class>
+<UML:Class id="ccfc0574-4ef5-5e25-9ed2-41ad3e8bdc17">
+<name><val>StakeholderMembership</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="7b0fc9c6-90a1-5dfc-84e2-1401de5e586d"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
 <UML:Class id="b921e5c2-9fea-532a-a34c-9913fddc7a46">
 <name><val>SubjectMembership</val></name>
 <ownedAttribute><reflist>
@@ -459,6 +481,10 @@
 <UML:Generalization id="eebd68b3-36af-5ac7-96bd-5f5878979c82">
 <general><ref refid="9bd38d4d-ffa0-52b5-b2f2-eb107a0fea9d"/></general>
 <specific><ref refid="19d550ae-b47c-5908-94c6-f438efce8984"/></specific>
+</UML:Generalization>
+<UML:Generalization id="f151b175-03c5-5493-8267-7d4a810bbda0">
+<general><ref refid="74a1d128-d78e-5357-97c2-3411474384b3"/></general>
+<specific><ref refid="bdc5abe5-8871-54cb-9899-d02d7b7ddd5a"/></specific>
 </UML:Generalization>
 <UML:Generalization id="1e129c91-78fe-5ada-acc4-c8d320645ff2">
 <general><ref refid="91895e05-7bd5-50bf-b36b-e90d3d8955e6"/></general>
@@ -591,6 +617,10 @@
 <UML:Generalization id="4befe0eb-41cf-544a-8c43-c220ee217a00">
 <general><ref refid="09991571-5448-531b-b5ed-3172ffb12cbc"/></general>
 <specific><ref refid="f05bac51-274e-5213-b16f-9da7591ebecb"/></specific>
+</UML:Generalization>
+<UML:Generalization id="7b0fc9c6-90a1-5dfc-84e2-1401de5e586d">
+<general><ref refid="74a1d128-d78e-5357-97c2-3411474384b3"/></general>
+<specific><ref refid="ccfc0574-4ef5-5e25-9ed2-41ad3e8bdc17"/></specific>
 </UML:Generalization>
 <UML:Generalization id="d8e8466a-07d5-5fc2-924b-3b90a6a9fb40">
 <general><ref refid="74a1d128-d78e-5357-97c2-3411474384b3"/></general>

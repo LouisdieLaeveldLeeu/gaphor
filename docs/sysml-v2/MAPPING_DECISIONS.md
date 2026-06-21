@@ -906,3 +906,55 @@ exactly subject/assume/require; `reqId` (6c) and actor/stakeholder/framedConcern
 - **UI-edit (deferred).** Structured editing of subject/assume/require is
   deliberately deferred -- the requirement keeps its name/type editors -- so the
   rows stay `alpha` honestly rather than claiming a half-built editor.
+
+### Completion Phase 6c: Lightweight Requirement Parameters (verified 2026-06-21)
+
+The remaining lightweight requirement parameters `reqId`, `actor`, and
+`stakeholder` -- grouped because they share an implementation shape (a short-name
+attribute plus two `subject`-style parameter memberships) and none introduces a
+new construct. Rows stay `alpha`.
+
+- **reqId -> declaredShortName (canonical, single home).** The normative `reqId`
+  REDEFINES `Element::declaredShortName`, but Gaphor's coder emits a redefinition
+  as a SEPARATE String slot (it does not collapse redefinitions). Writing both a
+  `reqId` slot and `declaredShortName` would double-store the same fact and let
+  them disagree. Decision: store the reqId CANONICALLY in `declaredShortName` and
+  treat the generated `reqId` slot as vestigial. `requirements.reqId` /
+  `set_reqId` are thin accessors over `declaredShortName` (empty string normalizes
+  to None).
+- **actor / stakeholder (memberships, not markers).** Parameter features carried
+  by the normative `ActorMembership` / `StakeholderMembership` -- both
+  `-> ParameterMembership`, so they are SysML-layer classes seeded from the pinned
+  XMI and the KERNEL count stays 31 (no kernel growth). Mapping mirrors the 6b
+  subject machinery: each becomes a `kerml.Feature` owned via its membership, kept
+  in declaration order, with its declared type resolved in the same phase-2 pass
+  (ANY Type, no kind check; unresolved names recorded like any usage type). The
+  phase-2 list was renamed `subject_typings` -> `parameter_typings` since it now
+  carries subject/actor/stakeholder.
+- **Grammar (short name + constraint-body restructure).** Added
+  `short_name: "<" (QUOTED_NAME | NAME) ">"` (a bare `<R1>` or quoted `<'1.1.3'>`
+  for dotted/special ids), threaded onto `requirement_definition`/`_usage` before
+  the NAME, and `actor_clause`/`stakeholder_clause` alongside the 6b clauses.
+  FIXING A LATENT 6b LEXER BUG: a USAGE with a type AND a body
+  (`requirement r : R { ... }`, and likewise `constraint c : C { ... }`) mis-lexed
+  the `{` as the greedy `CONSTRAINT_BODY` terminal (the type_ref tail let the
+  contextual lexer reach the constraint-body terminal). The greedy terminal was
+  REMOVED: a constraint body is now `"{" body_element* "}"` where
+  `body_element: BODY_TEXT | braced_text` and `BODY_TEXT.2: /[^{}]+/` (priority
+  above WS so a whitespace-only body is preserved). Every `{` now lexes to the
+  same literal token and the PARSER disambiguates constraint-body vs
+  requirement-body vs package body by context; opaque bodies are reassembled
+  VERBATIM (whitespace and nesting preserved -- the 6a guarantee holds, retested).
+- **Validation.** Parameter types via the existing `usage-without-valid-type`
+  rule. The model-derived exact-one `broken-requirement-parameter` rule was
+  EXTENDED to `ActorMembership` and `StakeholderMembership` (each must own exactly
+  one Feature), using the same `_sole` relation-many check as the subject.
+- **Export / round-trip.** Export emits the reqId as `<id>` when it is a valid
+  identifier else `<'id'>` quoted, and the body re-emits `subject`, then `actor*`,
+  then `stakeholder*`, then `assume*`/`require*`. The canonical form adds a
+  `RequirementReqId` entry and order-sensitive `RequirementActor` /
+  `RequirementStakeholder` entries (with an ordinal), leaving the base tuple
+  unchanged.
+- **UI-edit (reqId only).** A `RequirementReqIdPropertyPage` text editor sets
+  `declaredShortName` (blank clears to None). Structured actor/stakeholder editing
+  stays deferred, so the rows stay `alpha` honestly.

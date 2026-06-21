@@ -32,6 +32,13 @@ def _split_direction(items):
         return str(items[0]), items[1:]
     return None, items
 
+
+def _split_short_name(items):
+    """Pop a leading requirement short name (`<reqId>`). Returns `(reqId, rest)`."""
+    if items and isinstance(items[0], _ShortName):
+        return items[0].value, items[1:]
+    return None, items
+
 # Internal carrier for a port's `[~]<type>` reference: keeps the conjugation flag
 # alongside the (qualified) type name through the transform.
 _PortType = namedtuple("_PortType", "conjugated type_name")
@@ -47,30 +54,40 @@ _Require = namedtuple("_Require", "body")
 # Carrier for a whole requirement body, so it is distinguishable from an optional
 # type_ref (a tuple) on a requirement usage.
 _ReqBody = namedtuple("_ReqBody", "clauses")
+# Carrier for a requirement short name (`<reqId>`), distinguishable from the
+# NAME token (a Token is a str subclass, so a plain str would be ambiguous).
+_ShortName = namedtuple("_ShortName", "value")
 
 
 def _split_req_body(body):
-    """Split a `_ReqBody` into (subject, assume-texts, require-texts).
+    """Split a `_ReqBody` into (subject, assume, require, actors, stakeholders).
 
     A requirement has a SINGLE subject (KerML `subjectParameter` is [0..1]), so a
     second `subject` clause is rejected rather than silently overwriting the first
-    (no silent loss). A missing body yields no subject and empty assume/require.
+    (no silent loss). `actor`/`stakeholder` are ordered, so all are kept. A missing
+    body yields no subject and empty tuples.
     """
     if body is None:
-        return None, (), ()
+        return None, (), (), (), ()
     subject = None
     assume: list[str] = []
     require: list[str] = []
+    actors: list = []
+    stakeholders: list = []
     for clause in body.clauses:
         if isinstance(clause, ast.SubjectClause):
             if subject is not None:
                 raise SyntaxError("a requirement may declare at most one subject")
             subject = clause
+        elif isinstance(clause, ast.ActorClause):
+            actors.append(clause)
+        elif isinstance(clause, ast.StakeholderClause):
+            stakeholders.append(clause)
         elif isinstance(clause, _Assume):
             assume.append(clause.body)
         elif isinstance(clause, _Require):
             require.append(clause.body)
-    return subject, tuple(assume), tuple(require)
+    return subject, tuple(assume), tuple(require), tuple(actors), tuple(stakeholders)
 
 _GRAMMAR_PATH = Path(__file__).with_name("sysml2.lark")
 
@@ -122,11 +139,20 @@ class _ASTBuilder(Transformer):
         )
 
     def constraint_body(self, items):
-        # CONSTRAINT_BODY includes the outer braces; preserve the inner text
-        # VERBATIM (opaque, lossless). Whitespace is significant and kept; only
-        # the empty-check (on set / in validation) treats a whitespace-only body
-        # as empty.
-        return _Body(str(items[0])[1:-1])
+        # `{` body_element* `}` -- reassemble the inner text VERBATIM (opaque,
+        # lossless). Each body_element is an inner-text piece: a BODY_TEXT run
+        # (whitespace kept) or a nested `{...}` group with its braces re-added.
+        # The outer braces are dropped; only the empty-check (on set / in
+        # validation) treats a whitespace-only body as empty.
+        return _Body("".join(items))
+
+    def body_element(self, items):
+        # A BODY_TEXT run (a str-subclass Token) or a nested braced_text (a str).
+        return str(items[0])
+
+    def braced_text(self, items):
+        # A nested `{...}` group inside a body -- re-add its braces verbatim.
+        return "{" + "".join(items) + "}"
 
     def constraint_definition(self, items):
         name = items[0]
@@ -151,10 +177,28 @@ class _ASTBuilder(Transformer):
             line=name.line,
         )
 
+    def short_name(self, items):
+        # `<NAME>` or `<'quoted'>` -> the reqId string (quotes stripped).
+        token = items[0]
+        text = str(token)
+        if getattr(token, "type", None) == "QUOTED_NAME":
+            text = text[1:-1]
+        return _ShortName(text)
+
     def subject_clause(self, items):
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
         return ast.SubjectClause(name=str(name), type_name=type_name)
+
+    def actor_clause(self, items):
+        name = items[0]
+        type_name = items[1] if len(items) > 1 else None
+        return ast.ActorClause(name=str(name), type_name=type_name)
+
+    def stakeholder_clause(self, items):
+        name = items[0]
+        type_name = items[1] if len(items) > 1 else None
+        return ast.StakeholderClause(name=str(name), type_name=type_name)
 
     def assume_clause(self, items):
         return _Assume(items[0].text)
@@ -169,19 +213,24 @@ class _ASTBuilder(Transformer):
         return _ReqBody(tuple(items))
 
     def requirement_definition(self, items):
+        req_id, items = _split_short_name(items)
         name = items[0]
         body = items[1] if len(items) > 1 else None
-        subject, assume, require = _split_req_body(body)
+        subject, assume, require, actors, stakeholders = _split_req_body(body)
         return ast.RequirementDefinition(
             name=str(name),
+            reqId=req_id,
             subject=subject,
             assume=assume,
             require=require,
+            actors=actors,
+            stakeholders=stakeholders,
             line=name.line,
         )
 
     def requirement_usage(self, items):
         direction, items = _split_direction(items)
+        req_id, items = _split_short_name(items)
         name = items[0]
         type_name = None
         body = None
@@ -190,14 +239,17 @@ class _ASTBuilder(Transformer):
                 body = extra
             else:
                 type_name = extra
-        subject, assume, require = _split_req_body(body)
+        subject, assume, require, actors, stakeholders = _split_req_body(body)
         return ast.RequirementUsage(
             name=str(name),
             type_name=type_name,
             direction=direction,
+            reqId=req_id,
             subject=subject,
             assume=assume,
             require=require,
+            actors=actors,
+            stakeholders=stakeholders,
             line=name.line,
         )
 

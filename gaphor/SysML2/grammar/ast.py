@@ -109,29 +109,52 @@ class SubjectClause:
 
 
 @dataclass(frozen=True)
-class RequirementDefinition:
-    """`requirement def <name> ( ; | { <clauses> } )`
+class ActorClause:
+    """`actor <name> [ : <type> ]` inside a requirement body (Phase 6c)."""
 
-    `subject`/`assume`/`require` come from the requirement body (Phase 6b);
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
+class StakeholderClause:
+    """`stakeholder <name> [ : <type> ]` inside a requirement body (Phase 6c)."""
+
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
+class RequirementDefinition:
+    """`requirement def [<reqId>] <name> ( ; | { <clauses> } )`
+
+    `reqId` is the requirement short name (Phase 6c); `subject`/`assume`/`require`
+    (Phase 6b) and `actors`/`stakeholders` (Phase 6c) come from the body;
     `assume`/`require` are opaque constraint body texts (reusing 6a)."""
 
     name: str
+    reqId: str | None = None  # the requirement short name, or None
     subject: SubjectClause | None = None
     assume: tuple[str, ...] = ()  # assumed-constraint body texts
     require: tuple[str, ...] = ()  # required-constraint body texts
+    actors: tuple[ActorClause, ...] = ()
+    stakeholders: tuple[StakeholderClause, ...] = ()
     line: int | None = _line
 
 
 @dataclass(frozen=True)
 class RequirementUsage:
-    """`[<dir>] requirement <name> [ : <type> ] ( ; | { <clauses> } )`"""
+    """`[<dir>] requirement [<reqId>] <name> [ : <type> ] ( ; | { <clauses> } )`"""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    reqId: str | None = None  # the requirement short name, or None
     subject: SubjectClause | None = None
     assume: tuple[str, ...] = ()
     require: tuple[str, ...] = ()
+    actors: tuple[ActorClause, ...] = ()
+    stakeholders: tuple[StakeholderClause, ...] = ()
     line: int | None = _line
 
 

@@ -71,6 +71,10 @@ class ActionUsage(OccurrenceUsage, _Step):
     pass
 
 
+class ActorMembership(_ParameterMembership):
+    pass
+
+
 class AttributeDefinition(Definition, _DataType):
     pass
 
@@ -153,6 +157,10 @@ class RequirementDefinition(ConstraintDefinition):
 
 class RequirementUsage(ConstraintUsage):
     reqId: _attribute[str] = _attribute("reqId", str)
+
+
+class StakeholderMembership(_ParameterMembership):
+    pass
 
 
 class SubjectMembership(_ParameterMembership):

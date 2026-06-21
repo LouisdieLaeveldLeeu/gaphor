@@ -1026,6 +1026,12 @@ SYSML_SEED = (
     # state; their owned/referenced-constraint and parameter accessors are derived.
     "SubjectMembership",
     "RequirementConstraintMembership",
+    # ActorMembership and StakeholderMembership carry a requirement's actor and
+    # stakeholder parameters (Phase 6c). Both generalize KerML ParameterMembership
+    # (already in the kernel) and add only derived accessors, so they pull no new
+    # stored closure.
+    "ActorMembership",
+    "StakeholderMembership",
 )
 
 # KerML classes that the generated SysML kernel must already provide as a
