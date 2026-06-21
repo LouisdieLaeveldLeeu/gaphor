@@ -288,9 +288,19 @@ class enumeration(modelproperty):
 
     An enumeration is a special kind of attribute that can only hold a
     predefined set of values. Multiplicity is always `[0..1]`.
+
+    The `default` may be `None`, making the enumeration nullable: an unset
+    property then reads as `None` (the absent state), distinct from every
+    literal, and `None` may be assigned to clear it. This is how an OPTIONAL
+    enum (lower bound 0, e.g. KerML `Feature::direction`) is modelled so that
+    "undirected" is not collapsed into a literal. A non-`None` default keeps the
+    original behaviour: the value is never `None`, and assigning the default just
+    unsets the stored attribute.
     """
 
-    def __init__(self, name: str, type: type[enum.StrEnum], default: enum.StrEnum):
+    def __init__(
+        self, name: str, type: type[enum.StrEnum], default: enum.StrEnum | None
+    ):
         super().__init__(name)
         self.type = type
         self.default = default
@@ -308,14 +318,20 @@ class enumeration(modelproperty):
         self.set(obj, self.default)
 
     def set(self, obj, value):
-        if value not in self.type:
-            raise TypeError(f"Value should be one of {list(self.type)}")
+        if value is not None and value not in self.type:
+            raise TypeError(f"Value should be one of {list(self.type)} or None")
         old = self.get(obj)
         if value == old:
             return
 
         if value == self.default:
-            delattr(obj, self._name)
+            # The stored attribute is only present for a non-default value; for a
+            # default (including a `None` default) there is nothing to delete the
+            # first time it is set.
+            try:
+                delattr(obj, self._name)
+            except AttributeError:
+                pass
         else:
             setattr(obj, self._name, value)
         self.handle(AttributeUpdated(obj, self, old, value))

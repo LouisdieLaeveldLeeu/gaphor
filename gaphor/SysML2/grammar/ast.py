@@ -16,6 +16,9 @@ from dataclasses import dataclass, field
 
 _line = field(default=None, compare=False)
 
+# A usage may carry a feature direction: "in", "out", "inout", or None
+# (undirected). Maps to KerML `Feature::direction` (Phase 8b).
+
 
 @dataclass(frozen=True)
 class PartDefinition:
@@ -27,10 +30,11 @@ class PartDefinition:
 
 @dataclass(frozen=True)
 class PartUsage:
-    """`part <name> [ : <type> ] ;`"""
+    """`[<dir>] part <name> [ : <type> ] ;`"""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     line: int | None = _line
 
 
@@ -44,10 +48,11 @@ class AttributeDefinition:
 
 @dataclass(frozen=True)
 class AttributeUsage:
-    """`attribute <name> [ : <type> ] ;`"""
+    """`[<dir>] attribute <name> [ : <type> ] ;`"""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     line: int | None = _line
 
 
@@ -61,10 +66,11 @@ class ActionDefinition:
 
 @dataclass(frozen=True)
 class ActionUsage:
-    """`action <name> [ : <type> ] ;`"""
+    """`[<dir>] action <name> [ : <type> ] ;`"""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     line: int | None = _line
 
 
@@ -78,10 +84,11 @@ class ConstraintDefinition:
 
 @dataclass(frozen=True)
 class ConstraintUsage:
-    """`constraint <name> [ : <type> ] ;`"""
+    """`[<dir>] constraint <name> [ : <type> ] ;`"""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     line: int | None = _line
 
 
@@ -95,10 +102,11 @@ class RequirementDefinition:
 
 @dataclass(frozen=True)
 class RequirementUsage:
-    """`requirement <name> [ : <type> ] ;`"""
+    """`[<dir>] requirement <name> [ : <type> ] ;`"""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     line: int | None = _line
 
 
@@ -120,6 +128,7 @@ class PortUsage:
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     conjugated: bool = False
+    direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     line: int | None = _line
 
 
@@ -142,6 +151,7 @@ class ConnectionUsage:
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     source: tuple[str, ...] | None = None  # endpoint 1, or None
     target: tuple[str, ...] | None = None  # endpoint 2, or None
+    direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     line: int | None = _line
 
 

@@ -50,6 +50,22 @@ def _xmi(elem: ET.Element, key: str) -> str | None:
     return elem.get(XMI_NS + key) or elem.get(key)
 
 
+def _is_optional_attr(owned: ET.Element) -> bool:
+    """Whether an ownedAttribute declares an explicit lower bound of 0.
+
+    The XMI marks an optional `[0..1]` property with a `lowerValue` LiteralInteger
+    whose `value` is absent (meaning 0) or "0". An attribute with no `lowerValue`
+    element (or a non-zero lower) is not optional.
+    """
+    for child in owned:
+        if not child.tag.endswith("lowerValue"):
+            continue
+        xsi_type = _xmi(child, "type")
+        if xsi_type and xsi_type.endswith("LiteralInteger"):
+            return child.get("value") in (None, "0")
+    return False
+
+
 @dataclass
 class Attribute:
     """A primitive-typed owned attribute (becomes a Python attribute)."""
@@ -73,6 +89,10 @@ class EnumAttribute:
 
     name: str
     enum: str  # name of the target enumeration
+    # True when the XMI gives it an explicit lower bound of 0 (an OPTIONAL enum,
+    # e.g. KerML `Feature::direction` [0..1]). Emitted as a lowerValue so the
+    # coder's nullable-optional-enum opt-in makes "unset" distinct from a literal.
+    optional: bool = False
 
 
 @dataclass
@@ -610,7 +630,11 @@ def extract_kernel(xmi_path: Path, seed: tuple[str, ...] = KERNEL_SEED) -> Kerne
                     out.derived_attrs.append(DerivedAttribute(pname))
                 else:
                     enum_targets.add(idref)
-                    out.enum_attrs.append(EnumAttribute(pname, target_name))
+                    out.enum_attrs.append(
+                        EnumAttribute(
+                            pname, target_name, optional=_is_optional_attr(owned)
+                        )
+                    )
             elif target_type is None:
                 # Unresolvable href to an external primitive we don't map -> skip.
                 continue
@@ -708,6 +732,8 @@ def emit_gaphor_kernel_model(
     generalization_blocks: list[str] = []
     property_blocks: list[str] = []
     association_blocks: list[str] = []
+    # LiteralInteger elements carrying an optional enum attribute's lower bound 0.
+    multiplicity_blocks: list[str] = []
 
     # Enumerations (value-domain types): UML:Enumeration + UML:EnumerationLiteral.
     for enum in kernel.enums:
@@ -749,11 +775,25 @@ def emit_gaphor_kernel_model(
         for enum_attr in c.enum_attributes:
             pid = _id(package_name, c.name, "enumattr", enum_attr.name)
             owned_attr_ids.append(pid)
+            # An optional enum attribute carries an explicit lower bound of 0,
+            # encoded as a LiteralInteger lowerValue (the coder's nullable opt-in
+            # reads it to emit a nullable enumeration).
+            lower_value_block = ""
+            if enum_attr.optional:
+                lid = _id(package_name, c.name, "enumattr", enum_attr.name, "lower")
+                multiplicity_blocks.append(
+                    f'<UML:LiteralInteger id="{lid}">\n'
+                    f"<value><val>0</val></value>\n"
+                    f'<owningLower><ref refid="{pid}"/></owningLower>\n'
+                    f"</UML:LiteralInteger>"
+                )
+                lower_value_block = f'<lowerValue><ref refid="{lid}"/></lowerValue>\n'
             property_blocks.append(
                 f'<UML:Property id="{pid}">\n'
                 f"<name><val>{escape(enum_attr.name)}</val></name>\n"
                 f'<structuredClassifier><ref refid="{class_ids[c.name]}"/></structuredClassifier>\n'
                 f'<type><ref refid="{enum_ids[enum_attr.enum]}"/></type>\n'
+                f"{lower_value_block}"
                 f"</UML:Property>"
             )
 
@@ -892,6 +932,7 @@ def emit_gaphor_kernel_model(
             *blocks,
             *generalization_blocks,
             *property_blocks,
+            *multiplicity_blocks,
             *association_blocks,
         ]
     )

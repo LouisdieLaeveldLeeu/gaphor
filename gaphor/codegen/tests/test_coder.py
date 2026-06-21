@@ -130,6 +130,66 @@ def test_coder_write_class_with_enumeration_and_default_value(
     assert attr_def == ['first = _enumeration("first", EnumKind, EnumKind.out)']
 
 
+def _optional_enum_class(element_factory: ElementFactory) -> UML.Class:
+    class_ = element_factory.create(UML.Class)
+    attr = create_attribute("first: EnumKind", element_factory)
+    lower = element_factory.create(UML.LiteralInteger)
+    lower.value = 0
+    attr.lowerValue = lower  # explicit lower bound 0 -> optional
+    class_.ownedAttribute = attr
+
+    enum = element_factory.create(UML.Enumeration)
+    enum.name = "EnumKind"
+    enum.ownedLiteral = create_literal("in", element_factory)
+    enum.ownedLiteral = create_literal("out", element_factory)
+
+    resolve_attribute_type_values(element_factory)
+    return class_
+
+
+def test_optional_enum_keeps_literal_default_when_opt_in_off(
+    element_factory: ElementFactory,
+):
+    class_ = _optional_enum_class(element_factory)
+
+    # Default behaviour (opt-in off): an optional enum still defaults to its first
+    # literal -- so every existing modeling language is unaffected.
+    assert list(variables(class_)) == [
+        'first = _enumeration("first", EnumKind, EnumKind.in_)'
+    ]
+
+
+def test_optional_enum_is_nullable_when_opt_in_on(element_factory: ElementFactory):
+    class_ = _optional_enum_class(element_factory)
+
+    # Opt-in on: an optional enum (lower 0) with no explicit default is nullable.
+    assert list(variables(class_, nullable_optional_enums=True)) == [
+        'first = _enumeration("first", EnumKind, None)'
+    ]
+
+
+def test_optional_enum_with_default_is_not_nullified(element_factory: ElementFactory):
+    class_ = element_factory.create(UML.Class)
+    attr = create_attribute("first: EnumKind = out", element_factory)
+    lower = element_factory.create(UML.LiteralInteger)
+    lower.value = 0
+    attr.lowerValue = lower
+    class_.ownedAttribute = attr
+
+    enum = element_factory.create(UML.Enumeration)
+    enum.name = "EnumKind"
+    enum.ownedLiteral = create_literal("in", element_factory)
+    enum.ownedLiteral = create_literal("out", element_factory)
+
+    resolve_attribute_type_values(element_factory)
+
+    # Even with the opt-in, an explicit default keeps the literal (only a
+    # default-less optional enum becomes nullable).
+    assert list(variables(class_, nullable_optional_enums=True)) == [
+        'first = _enumeration("first", EnumKind, EnumKind.out)'
+    ]
+
+
 @pytest.fixture
 def navigable_association(element_factory):
     class_a = element_factory.create(UML.Class)

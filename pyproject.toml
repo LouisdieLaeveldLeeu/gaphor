@@ -238,7 +238,8 @@ sysml2-kernel-model.script = """gaphor.SysML2.codegen.xmi_adapter:main_kernel(
 sysml2-kernel.script = """gaphor.codegen.coder:main(
     modelfile='models/KerML.gaphor',
     outfile='gaphor/SysML2/kerml.py',
-    supermodelfiles=[('Core', 'models/Core.gaphor')]
+    supermodelfiles=[('Core', 'models/Core.gaphor')],
+    nullable_optional_enums=True
     )"""
 # SysML v2 user-concept layer (M2): PartDefinition/PartUsage on the KerML kernel.
 # The SysML2 model generalizes KerML classes, resolved via the KerML supermodel
@@ -254,7 +255,8 @@ sysml2-classes.script = """gaphor.codegen.coder:main(
     outfile='gaphor/SysML2/sysml2.py',
     supermodelfiles=[
         ('KerML', 'models/KerML.gaphor'),
-        ('Core', 'models/Core.gaphor')]
+        ('Core', 'models/Core.gaphor')],
+    nullable_optional_enums=True
     )"""
 lint = "pre-commit run --all-files"
 docs = { "cwd" = "docs", "shell" = "sphinx-build -W -b html . _build/html" }

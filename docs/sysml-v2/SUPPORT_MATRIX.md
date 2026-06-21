@@ -153,11 +153,22 @@ conjugate -> `broken-conjugation`, model-derived), Export/Round-trip (re-emits
 conjugated port projects as a subject-bound PortUsageItem; the conjugate is never
 projectable), and UI-edit (the PortUsage type page's conjugation toggle).
 
-Still explicitly OUT of the promoted surface, scheduled as named follow-ups (not
-silently implied by `supported`): flow direction `in`/`out`/`inout` (Phase 8b)
-and InterfaceDefinition / InterfaceUsage semantics (Phase 8c). The `supported`
-claim covers declaration, typing, and conjugation only. This is the Phase-8a
-port-conjugation gate decision, taken explicitly per the roadmap.
+Flow direction `in`/`out`/`inout` on ports (and all other usages) was since added
+in Phase 8b -- see the feature-direction note below. Still explicitly OUT of the
+promoted port surface, scheduled as a named follow-up (not silently implied by
+`supported`): InterfaceDefinition / InterfaceUsage semantics (Phase 8c). This was
+the Phase-8a port-conjugation gate decision, taken explicitly per the roadmap.
+
+Feature direction (Phase 8b) is supported on ALL usages (Part/Attribute/Action/
+Constraint/Requirement/Port/Connection): `in`/`out`/`inout` parse, map to the
+nullable KerML `Feature::direction`, export, round-trip, show in the diagram
+label, and edit via a direction property page; undirected is the absent (None)
+state, distinct from `in`. This adds direction to the existing declaration-and-
+typing surface of each usage, so it changes no row's status: the already-
+`supported` rows (Part*, Attribute*, Port*, Connection*) now also cover direction,
+and the `alpha` rows (Action*, Constraint*, Requirement*) gain direction while
+staying capped on their other named dependencies. The nullable enum is a scoped
+coder generation rule (opt-in), so Gaphor's UML/Core/SysML/RAAML stay unchanged.
 
 ConnectionDefinition and ConnectionUsage (Phase G) have all nine cells
 implemented and focused-tested for the declaration-and-typing surface

@@ -681,6 +681,60 @@ def test_enumerations():
     assert a.a == "one"
 
 
+def test_nullable_enumeration_defaults_to_none():
+    class EnumKind(enum.StrEnum):
+        one = "one"
+        two = "two"
+
+    class A(Base):
+        a: enumeration
+
+    A.a = enumeration("a", EnumKind, None)
+    a = A()
+
+    # An unset nullable enum reads as None (the absent state), distinct from a
+    # literal; a literal can be assigned and then cleared back to None.
+    assert a.a is None
+    a.a = "one"
+    assert a.a == EnumKind.one
+    a.a = None
+    assert a.a is None
+
+    with pytest.raises(TypeError):
+        a.a = "three"
+
+
+def test_nullable_enumeration_saves_absence_and_loads_explicit():
+    class EnumKind(enum.StrEnum):
+        one = "one"
+        two = "two"
+
+    class A(Base):
+        a: enumeration
+
+    A.a = enumeration("a", EnumKind, None)
+
+    # Unset (None) saves nothing -- absence is not persisted as a literal.
+    saved: dict[str, object] = {}
+    A.a.save(A(), lambda name, value: saved.__setitem__(name, value))
+    assert saved == {}
+
+    # An explicit literal is saved and loads back distinctly.
+    explicit = A()
+    explicit.a = "two"
+    saved2: dict[str, object] = {}
+    A.a.save(explicit, lambda name, value: saved2.__setitem__(name, value))
+    assert saved2 == {"a": EnumKind.two}
+
+    loaded = A()
+    A.a.load(loaded, "two")
+    assert loaded.a == EnumKind.two
+    # Loading None restores the absent state.
+    cleared = A()
+    A.a.load(cleared, None)
+    assert cleared.a is None
+
+
 def test_derived():
     class A(Base):
         a: relation_many[A]

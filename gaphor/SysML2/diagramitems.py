@@ -23,10 +23,22 @@ from gaphor.diagram.support import represents
 from gaphor.SysML2 import kerml, sysml2
 
 
+def _subject_label(item) -> str:
+    """The item's label: its subject's name, prefixed by a feature direction
+    (`in`/`out`/`inout`) when the subject is a directed usage (Phase 8b).
+    Definitions are not Features, so they show just the name."""
+    subject = item.subject
+    if subject is None:
+        return ""
+    name = subject.declaredName or ""
+    direction = getattr(subject, "direction", None)
+    return f"{direction} {name}" if direction is not None else name
+
+
 def _name_box(item):
-    """A box shape showing the item's subject's declared name."""
+    """A box shape showing the item's subject's declared name (and direction)."""
     return Box(
-        Text(text=lambda: (item.subject.declaredName if item.subject else "") or ""),
+        Text(text=lambda: _subject_label(item)),
         draw=draw_border,
     )
 
@@ -46,6 +58,9 @@ class PackageItem(Named, ElementPresentation[kerml.Package]):
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id, width=120, height=80)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -59,6 +74,9 @@ class PartDefinitionItem(Named, ElementPresentation[sysml2.PartDefinition]):
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -72,6 +90,9 @@ class AttributeDefinitionItem(Named, ElementPresentation[sysml2.AttributeDefinit
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -85,6 +106,9 @@ class ActionDefinitionItem(Named, ElementPresentation[sysml2.ActionDefinition]):
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -100,6 +124,9 @@ class ConstraintDefinitionItem(
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -115,6 +142,9 @@ class RequirementDefinitionItem(
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -128,6 +158,9 @@ class PortDefinitionItem(Named, ElementPresentation[sysml2.PortDefinition]):
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -143,6 +176,9 @@ class ConnectionDefinitionItem(
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -156,6 +192,9 @@ class PartUsageItem(Named, ElementPresentation[sysml2.PartUsage]):
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -169,6 +208,9 @@ class AttributeUsageItem(Named, ElementPresentation[sysml2.AttributeUsage]):
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -182,6 +224,9 @@ class ActionUsageItem(Named, ElementPresentation[sysml2.ActionUsage]):
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -195,6 +240,9 @@ class ConstraintUsageItem(Named, ElementPresentation[sysml2.ConstraintUsage]):
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -208,6 +256,9 @@ class RequirementUsageItem(Named, ElementPresentation[sysml2.RequirementUsage]):
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -221,6 +272,9 @@ class PortUsageItem(Named, ElementPresentation[sysml2.PortUsage]):
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
+        # Redraw when a usage's feature direction changes (no-op for definitions,
+        # whose subject is not a Feature, so the path matches nothing).
+        self.watch("subject[Feature].direction", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):

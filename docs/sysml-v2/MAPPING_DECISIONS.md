@@ -740,3 +740,45 @@ interfaces (8c) remain follow-ups.
   PortUsage type page gained a "Conjugated (~)" toggle that re-types the port via
   the conjugate (preselecting the ORIGINAL definition and reflecting an existing
   conjugation).
+
+### Completion Phase 8b: Flow Direction (verified 2026-06-21)
+
+Feature direction (`in` / `out` / `inout`) on ALL usages, mapping to KerML
+`Feature::direction`. No support-matrix row changes status; direction is added to
+the existing declaration-and-typing surface of every usage.
+
+- **Nullable direction (the central decision).** KerML `Feature::direction` is
+  `[0..1]`, but the coder generated it as an enum defaulting to `in`, so an
+  undirected feature and an `in` feature collapsed (and `set(in)` deletes the
+  stored value, so the two were indistinguishable on reload). Direction is now
+  NULLABLE: undirected = `None` (unset), `in`/`out`/`inout` explicit, all four
+  round-tripping distinctly. Implemented as a GENERATION RULE, not a hand override
+  of one property: core `enumeration` gained `None`-default support
+  (backward-compatible -- a non-`None` default keeps the old behaviour), and the
+  coder gained an explicit `nullable_optional_enums` opt-in that emits an OPTIONAL
+  enum (XMI lower 0, no explicit default) as `_enumeration(..., None)`.
+- **Scoped so legacy languages are untouched.** The opt-in defaults OFF and is
+  enabled only for the SysML2/KerML coder calls (poe tasks + freshness tests), so
+  UML/Core/C4/SysML/RAAML regenerate byte-identical (`test_models_up_to_date`
+  passes). The xmi_adapter captures an enum attribute's explicit lower bound and
+  emits a `lowerValue` LiteralInteger, so the rule fires for `direction` and
+  `portionKind` (lower 0, no default) but NOT `visibility` (which has a default in
+  the XMI and no explicit lowerValue) -- visibility stays non-nullable.
+- **Grammar/parse.** A `DIRECTION?` prefix (`in`/`out`/`inout`) on every usage
+  rule; definitions are Classifiers (not Features) and take none (`in part def D;`
+  is a syntax error). `DIRECTION` is a distinct terminal, so it is lexed as a
+  direction only where a usage expects it (contextual LALR) -- a part may still be
+  named `inlet`. Each usage AST node carries a `direction` string (or None); the
+  parser splits a leading DIRECTION token, keeping the usage's existing positional
+  layout.
+- **Map / export / round-trip.** The mapper sets `feature.direction` from the
+  prefix (undirected leaves the nullable default None). Export re-emits the prefix
+  before the usage keyword. The canonical form records a directed usage's
+  direction as a SEPARATE `("FeatureDirection", qn, dir)` entry, so a directed and
+  an undirected usage are distinct fingerprints WITHOUT changing the base usage
+  tuple (the many existing canonical-tuple assertions are untouched).
+- **Diagram / UI-edit.** The usage box label shows the direction prefix
+  (`in p`); definitions show just the name. A `FeatureDirectionPropertyPage`
+  (registered on the base usage classes -- ConnectionUsage and RequirementUsage
+  are matched by MRO, so no duplicate editor) sets the direction via a dropdown,
+  with `(undirected)` clearing it back to None.

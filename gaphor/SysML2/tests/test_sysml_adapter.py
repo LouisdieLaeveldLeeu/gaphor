@@ -156,6 +156,7 @@ def test_committed_sysml_module_is_up_to_date(tmp_path):
             ("KerML", "models/KerML.gaphor"),
             ("Core", "models/Core.gaphor"),
         ],
+        nullable_optional_enums=True,
     )
     assert outfile.read_text(encoding="utf-8") == SYSML_MODULE.read_text(
         encoding="utf-8"

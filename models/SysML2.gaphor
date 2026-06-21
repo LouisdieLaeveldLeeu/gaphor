@@ -548,6 +548,7 @@
 <name><val>portionKind</val></name>
 <structuredClassifier><ref refid="9bd38d4d-ffa0-52b5-b2f2-eb107a0fea9d"/></structuredClassifier>
 <type><ref refid="8287125c-ef15-5f3c-be37-8c9f22545cf1"/></type>
+<lowerValue><ref refid="a792ad28-63aa-5474-83c1-1ac87232ef6c"/></lowerValue>
 </UML:Property>
 <UML:Property id="c6059def-a2ea-5681-be69-25cc68ce1654">
 <association><ref refid="286197a9-93a3-5ad1-8770-d2164ecf6199"/></association>
@@ -575,6 +576,10 @@
 <structuredClassifier><ref refid="8fe3b35a-fd8f-5694-b48c-13123e9ad33e"/></structuredClassifier>
 <typeValue><val>bool</val></typeValue>
 </UML:Property>
+<UML:LiteralInteger id="a792ad28-63aa-5474-83c1-1ac87232ef6c">
+<value><val>0</val></value>
+<owningLower><ref refid="0e535eb6-0072-5d53-aaa0-33292c4593f6"/></owningLower>
+</UML:LiteralInteger>
 <UML:Association id="6936789b-445e-5d75-a154-1804a0ca8ab3">
 <memberEnd><reflist><ref refid="5da09d6b-947b-5689-9632-3d1b34e4d253"/><ref refid="63e87f04-4bf9-5d17-88fc-a63ee94beec0"/></reflist></memberEnd>
 <owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>

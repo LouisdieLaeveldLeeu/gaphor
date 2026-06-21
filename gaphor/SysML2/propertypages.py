@@ -98,6 +98,76 @@ class DeclaredNamePropertyPage(PropertyPageBase):
 
 
 @PropertyPages.register(sysml2.PartUsage)
+@PropertyPages.register(sysml2.AttributeUsage)
+@PropertyPages.register(sysml2.ActionUsage)
+@PropertyPages.register(sysml2.ConstraintUsage)
+@PropertyPages.register(sysml2.PortUsage)
+class FeatureDirectionPropertyPage(PropertyPageBase):
+    """Set a usage's feature direction (`in` / `out` / `inout`, or undirected).
+
+    Maps to KerML `Feature::direction` (Phase 8b). Registered on the base usage
+    classes only: ConnectionUsage (a PartUsage) and RequirementUsage (a
+    ConstraintUsage) are matched by `PropertyPages.find` (isinstance), so
+    registering them again would show two direction editors. Definitions are
+    Classifiers (not Features) and get no direction editor.
+    """
+
+    order = 15
+
+    # (label, stored value) -- value is the FeatureDirectionKind string, or None
+    # for the undirected (unset) state.
+    _CHOICES = (
+        ("(undirected)", None),
+        ("in", "in"),
+        ("out", "out"),
+        ("inout", "inout"),
+    )
+
+    def __init__(
+        self,
+        subject: (
+            sysml2.PartUsage
+            | sysml2.AttributeUsage
+            | sysml2.ActionUsage
+            | sysml2.ConstraintUsage
+            | sysml2.PortUsage
+        ),
+        event_manager,
+    ):
+        super().__init__()
+        self.subject = subject
+        self.event_manager = event_manager
+
+    def construct(self):
+        builder = new_builder("feature-direction-editor")
+
+        dropdown = builder.get_object("feature-direction")
+        model = Gio.ListStore.new(LabelValue)
+        for label, value in self._CHOICES:
+            model.append(LabelValue(label, value))
+        dropdown.set_model(model)
+
+        current = self.subject.direction
+        current_value = str(current) if current is not None else None
+        selected = next(
+            (n for n, (_, v) in enumerate(self._CHOICES) if v == current_value),
+            0,
+        )
+        dropdown.set_selected(selected)
+        dropdown.connect("notify::selected", self._on_direction_changed)
+
+        return builder.get_object("feature-direction-editor")
+
+    def _on_direction_changed(self, dropdown, _pspec):
+        selected = dropdown.get_selected_item()
+        value = selected.value if selected else None
+        with Transaction(self.event_manager, context="editing"):
+            self.subject.direction = (
+                kerml.FeatureDirectionKind(value) if value is not None else None
+            )
+
+
+@PropertyPages.register(sysml2.PartUsage)
 class PartUsageTypePropertyPage(PropertyPageBase):
     """Set the PartDefinition type for a PartUsage."""
 

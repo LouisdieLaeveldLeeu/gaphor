@@ -76,7 +76,18 @@ def main(
     supermodelfiles: list[tuple[str, str]] | None = None,
     overridesfile: str | None = None,
     outfile: str | None = None,
+    nullable_optional_enums: bool = False,
 ):
+    """Generate model code.
+
+    `nullable_optional_enums` is an explicit opt-in (default off, so existing
+    modeling languages are unaffected and stay byte-identical): when on, an
+    OPTIONAL enumeration attribute (lower bound 0) with no explicit default is
+    emitted as a nullable enumeration (default `None`) rather than defaulting to
+    its first literal. Enabled only for the SysML2/KerML generation path, where
+    KerML `[0..1]` enums like `Feature::direction` must keep "unset" distinct
+    from any literal.
+    """
     logging.basicConfig()
 
     extra_langs = (
@@ -115,7 +126,7 @@ def main(
         if outfile
         else contextlib.nullcontext(sys.stdout) as out
     ):
-        for line in coder(model, super_models, overrides):
+        for line in coder(model, super_models, overrides, nullable_optional_enums):
             print(line, file=out)
 
 
@@ -141,6 +152,7 @@ def coder(
     model: ElementFactory,
     super_models: dict[str, tuple[ModelingLanguage, ElementFactory]],
     overrides: Overrides | None,
+    nullable_optional_enums: bool = False,
 ) -> Iterable[str]:
     yield header
     if overrides and overrides.header:
@@ -185,7 +197,7 @@ def coder(
             continue
 
         yield class_declaration(c)
-        if properties := list(variables(c, overrides)):
+        if properties := list(variables(c, overrides, nullable_optional_enums)):
             yield from (f"    {p}" for p in properties)
         else:
             yield "    pass"
@@ -230,7 +242,11 @@ def class_declaration(class_: UML.Class):
     return f"class {class_.name}({base_classes}):"
 
 
-def variables(class_: UML.Class, overrides: Overrides | None = None):
+def variables(
+    class_: UML.Class,
+    overrides: Overrides | None = None,
+    nullable_optional_enums: bool = False,
+):
     if class_.ownedAttribute:
         a: UML.Property
         for a in sorted(class_.ownedAttribute, key=lambda a: a.name or ""):
@@ -246,10 +262,18 @@ def variables(class_: UML.Class, overrides: Overrides | None = None):
                 yield f'{a.name}: _attribute[{a.typeValue}] = _attribute("{a.name}", {a.typeValue}{default_value(a)})'
             elif is_enumeration(a.type):
                 assert isinstance(a.type, UML.Enumeration)
+                has_default = (
+                    isinstance(a.defaultValue, UML.LiteralString)
+                    and a.defaultValue.value
+                )
+                if nullable_optional_enums and not has_default and is_optional(a):
+                    # An optional enum (lower 0) with no default is nullable, so
+                    # "unset" (None) stays distinct from every literal.
+                    yield f'{a.name} = _enumeration("{a.name}", {a.type.name}, None)'
+                    continue
                 default = (
                     a.defaultValue.value
-                    if isinstance(a.defaultValue, UML.LiteralString)
-                    and a.defaultValue.value
+                    if has_default
                     else a.type.ownedLiteral[0].name
                 )
                 if keyword.iskeyword(default):
@@ -402,6 +426,20 @@ def default_value(a) -> str:
                 )
         return f", default={defaultValue}"
     return ""
+
+
+def is_optional(a) -> bool:
+    """Whether attribute `a` carries an explicit lower bound of 0 (optional).
+
+    An explicit `LiteralInteger` lower of 0 (or empty, which loads as `None`)
+    marks an optional property. Absence of a lowerValue element (None) is NOT
+    treated as optional here, so an enum with a default but no explicit lower
+    (e.g. KerML `Membership::visibility`) is left non-nullable.
+    """
+    return isinstance(a.lowerValue, UML.LiteralInteger) and a.lowerValue.value in (
+        0,
+        None,
+    )
 
 
 def lower(a):

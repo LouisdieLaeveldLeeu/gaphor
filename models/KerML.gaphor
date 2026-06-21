@@ -643,6 +643,7 @@
 <name><val>direction</val></name>
 <structuredClassifier><ref refid="36130c41-b738-56bc-bca7-fb3bd3191b46"/></structuredClassifier>
 <type><ref refid="4672a5b5-c39c-5c65-bbb8-1b9312d14af8"/></type>
+<lowerValue><ref refid="1f494749-e4ad-510b-8b6e-5831ec230d8b"/></lowerValue>
 </UML:Property>
 <UML:Property id="245da090-7cee-5218-ba32-717b81d8270c">
 <association><ref refid="b5ffddbf-6637-5602-bcdc-543f75fbb3ff"/></association>
@@ -789,6 +790,10 @@
 <structuredClassifier><ref refid="8d9234aa-97e6-529b-8f71-14939a9c6434"/></structuredClassifier>
 <typeValue><val>bool</val></typeValue>
 </UML:Property>
+<UML:LiteralInteger id="1f494749-e4ad-510b-8b6e-5831ec230d8b">
+<value><val>0</val></value>
+<owningLower><ref refid="db44b3f4-e92a-57e1-bd29-e278d61c2898"/></owningLower>
+</UML:LiteralInteger>
 <UML:Association id="5a7a1238-da43-5bdf-938a-b0d6904244a9">
 <memberEnd><reflist><ref refid="634036f3-c3ea-55a7-93ac-4039583413d6"/><ref refid="a349ef53-235a-50b3-9e8c-bd3ef149cdaa"/></reflist></memberEnd>
 <owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>

@@ -128,6 +128,14 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                     )
                 )
 
+            # A feature direction is recorded as a SEPARATE entry (only when set),
+            # so a directed usage's fingerprint differs from the undirected one
+            # without changing the base usage tuple.
+            if isinstance(member, kerml.Feature) and member.direction is not None:
+                entries.add(
+                    ("FeatureDirection", kk.qualified_name(member), str(member.direction))
+                )
+
     visit(root)
     return frozenset(entries)
 

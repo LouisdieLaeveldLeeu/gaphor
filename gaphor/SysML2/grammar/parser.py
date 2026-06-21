@@ -11,7 +11,7 @@ from collections import namedtuple
 from functools import lru_cache
 from pathlib import Path
 
-from lark import Lark, Transformer
+from lark import Lark, Token, Transformer
 from lark.exceptions import LarkError
 
 from gaphor.SysML2.grammar import ast
@@ -19,6 +19,18 @@ from gaphor.SysML2.grammar import ast
 # Internal carrier so connection_usage can tell an optional connect-clause apart
 # from an optional type_ref (both reduce to tuples otherwise).
 _Connect = namedtuple("_Connect", "source target")
+
+
+def _split_direction(items):
+    """Pop a leading DIRECTION token (a usage's `in`/`out`/`inout` prefix).
+
+    Returns `(direction, rest)`: the direction string (or None when absent) and
+    the remaining items. The DIRECTION terminal is optional and only appears
+    first, so the rest keeps the usage's existing positional layout.
+    """
+    if items and isinstance(items[0], Token) and items[0].type == "DIRECTION":
+        return str(items[0]), items[1:]
+    return None, items
 
 # Internal carrier for a port's `[~]<type>` reference: keeps the conjugation flag
 # alongside the (qualified) type name through the transform.
@@ -42,45 +54,60 @@ class _ASTBuilder(Transformer):
         return ast.PartDefinition(name=str(name), line=name.line)
 
     def part_usage(self, items):
+        direction, items = _split_direction(items)
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.PartUsage(name=str(name), type_name=type_name, line=name.line)
+        return ast.PartUsage(
+            name=str(name), type_name=type_name, direction=direction, line=name.line
+        )
 
     def attribute_definition(self, items):
         (name,) = items
         return ast.AttributeDefinition(name=str(name), line=name.line)
 
     def attribute_usage(self, items):
+        direction, items = _split_direction(items)
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.AttributeUsage(name=str(name), type_name=type_name, line=name.line)
+        return ast.AttributeUsage(
+            name=str(name), type_name=type_name, direction=direction, line=name.line
+        )
 
     def action_definition(self, items):
         (name,) = items
         return ast.ActionDefinition(name=str(name), line=name.line)
 
     def action_usage(self, items):
+        direction, items = _split_direction(items)
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.ActionUsage(name=str(name), type_name=type_name, line=name.line)
+        return ast.ActionUsage(
+            name=str(name), type_name=type_name, direction=direction, line=name.line
+        )
 
     def constraint_definition(self, items):
         (name,) = items
         return ast.ConstraintDefinition(name=str(name), line=name.line)
 
     def constraint_usage(self, items):
+        direction, items = _split_direction(items)
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.ConstraintUsage(name=str(name), type_name=type_name, line=name.line)
+        return ast.ConstraintUsage(
+            name=str(name), type_name=type_name, direction=direction, line=name.line
+        )
 
     def requirement_definition(self, items):
         (name,) = items
         return ast.RequirementDefinition(name=str(name), line=name.line)
 
     def requirement_usage(self, items):
+        direction, items = _split_direction(items)
         name = items[0]
         type_name = items[1] if len(items) > 1 else None
-        return ast.RequirementUsage(name=str(name), type_name=type_name, line=name.line)
+        return ast.RequirementUsage(
+            name=str(name), type_name=type_name, direction=direction, line=name.line
+        )
 
     def port_definition(self, items):
         (name,) = items
@@ -94,6 +121,7 @@ class _ASTBuilder(Transformer):
         return _PortType(conjugated=conjugated, type_name=type_name)
 
     def port_usage(self, items):
+        direction, items = _split_direction(items)
         name = items[0]
         port_type = items[1] if len(items) > 1 else None
         type_name = port_type.type_name if port_type is not None else None
@@ -102,6 +130,7 @@ class _ASTBuilder(Transformer):
             name=str(name),
             type_name=type_name,
             conjugated=conjugated,
+            direction=direction,
             line=name.line,
         )
 
@@ -116,6 +145,7 @@ class _ASTBuilder(Transformer):
         return _Connect(items[0], items[1])
 
     def connection_usage(self, items):
+        direction, items = _split_direction(items)
         name = items[0]
         type_name = None
         source = target = None
@@ -129,6 +159,7 @@ class _ASTBuilder(Transformer):
             type_name=type_name,
             source=source,
             target=target,
+            direction=direction,
             line=name.line,
         )
 

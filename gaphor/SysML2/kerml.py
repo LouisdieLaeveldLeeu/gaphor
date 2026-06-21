@@ -89,7 +89,7 @@ class Behavior(Class):
 
 
 class Feature(Type):
-    direction = _enumeration("direction", FeatureDirectionKind, FeatureDirectionKind.in_)
+    direction = _enumeration("direction", FeatureDirectionKind, None)
     isComposite: _attribute[bool] = _attribute("isComposite", bool)
     isConstant: _attribute[bool] = _attribute("isConstant", bool)
     isDerived: _attribute[bool] = _attribute("isDerived", bool)

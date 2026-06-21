@@ -262,6 +262,7 @@ def test_committed_kernel_module_is_up_to_date(tmp_path):
         modelfile=str(KERNEL_MODEL),
         outfile=str(outfile),
         supermodelfiles=[("Core", "models/Core.gaphor")],
+        nullable_optional_enums=True,
     )
     assert outfile.read_text(encoding="utf-8") == KERNEL_MODULE.read_text(
         encoding="utf-8"

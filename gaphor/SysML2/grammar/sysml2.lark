@@ -30,53 +30,59 @@ member: part_definition
       | connection_usage
       | package_definition
 
+// A usage may carry a feature direction prefix (`in` / `out` / `inout`), which
+// maps to KerML `Feature::direction` (Phase 8b). Definitions are Classifiers, not
+// Features, so they take NO direction. The keyword is a distinct terminal so it
+// is lexed as a direction only where a usage expects it (contextual LALR).
+DIRECTION: "inout" | "in" | "out"
+
 // `part def <name> ;`
 part_definition: "part" "def" NAME ";"
 
-// `part <name> [ ":" <type> ] ;`
-part_usage: "part" NAME (":" type_ref)? ";"
+// `[<dir>] part <name> [ ":" <type> ] ;`
+part_usage: DIRECTION? "part" NAME (":" type_ref)? ";"
 
 // `attribute def <name> ;`
 attribute_definition: "attribute" "def" NAME ";"
 
-// `attribute <name> [ ":" <type> ] ;`
-attribute_usage: "attribute" NAME (":" type_ref)? ";"
+// `[<dir>] attribute <name> [ ":" <type> ] ;`
+attribute_usage: DIRECTION? "attribute" NAME (":" type_ref)? ";"
 
 // `action def <name> ;`
 action_definition: "action" "def" NAME ";"
 
-// `action <name> [ ":" <type> ] ;`
-action_usage: "action" NAME (":" type_ref)? ";"
+// `[<dir>] action <name> [ ":" <type> ] ;`
+action_usage: DIRECTION? "action" NAME (":" type_ref)? ";"
 
 // `constraint def <name> ;`
 constraint_definition: "constraint" "def" NAME ";"
 
-// `constraint <name> [ ":" <type> ] ;`
-constraint_usage: "constraint" NAME (":" type_ref)? ";"
+// `[<dir>] constraint <name> [ ":" <type> ] ;`
+constraint_usage: DIRECTION? "constraint" NAME (":" type_ref)? ";"
 
 // `requirement def <name> ;`
 requirement_definition: "requirement" "def" NAME ";"
 
-// `requirement <name> [ ":" <type> ] ;`
-requirement_usage: "requirement" NAME (":" type_ref)? ";"
+// `[<dir>] requirement <name> [ ":" <type> ] ;`
+requirement_usage: DIRECTION? "requirement" NAME (":" type_ref)? ";"
 
 // `port def <name> ;`
 port_definition: "port" "def" NAME ";"
 
-// `port <name> [ ":" ["~"] <type> ] ;`
+// `[<dir>] port <name> [ ":" ["~"] <type> ] ;`
 // `~<type>` types the port by the conjugate of the referenced PortDefinition
 // (Phase 8a). The `~` is port-scoped: it is a distinct rule, not folded into the
 // shared `type_ref`, so conjugation cannot leak onto non-port usages.
-port_usage: "port" NAME (":" port_type_ref)? ";"
+port_usage: DIRECTION? "port" NAME (":" port_type_ref)? ";"
 port_type_ref: CONJUGATE? type_ref
 CONJUGATE: "~"
 
 // `connection def <name> ;`
 connection_definition: "connection" "def" NAME ";"
 
-// `connection <name> [ ":" <type> ] [ "connect" <end> "to" <end> ] ;`
+// `[<dir>] connection <name> [ ":" <type> ] [ "connect" <end> "to" <end> ] ;`
 // Binary connector ends, non-chain references; n-ary/unnamed forms are later.
-connection_usage: "connection" NAME (":" type_ref)? connect_clause? ";"
+connection_usage: DIRECTION? "connection" NAME (":" type_ref)? connect_clause? ";"
 
 connect_clause: "connect" connection_end "to" connection_end
 connection_end: qualified_name

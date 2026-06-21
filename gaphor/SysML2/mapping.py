@@ -333,6 +333,12 @@ def _build_members(
         else:  # pragma: no cover - AST node types are exhaustive
             raise TypeError(f"unsupported AST member: {member!r}")
         element.declaredName = member.name
+        # A usage may carry a feature direction (`in`/`out`/`inout`); definitions
+        # do not (no `direction` field). Undirected stays None (the nullable
+        # default), distinct from any direction.
+        direction = getattr(member, "direction", None)
+        if direction is not None:
+            element.direction = kerml.FeatureDirectionKind(direction)
         kk.add_owned_member(
             namespace, element, factory.create(kerml.OwningMembership)
         )

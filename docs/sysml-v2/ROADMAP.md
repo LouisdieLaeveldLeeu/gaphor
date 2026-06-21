@@ -13,13 +13,16 @@ tests.
 
 ## Current State
 
-- KerML kernel (27 generated non-enum classes plus 2 enums): `internal-only` --
+- KerML kernel (28 generated non-enum classes plus 2 enums): `internal-only` --
   Create-API + Persist are tested, and the five kernel behaviours are tested.
   The kernel grew deliberately from the original 12-class minimal slice:
   Classifier/Class/Structure and FeatureTyping for M2; Package and DataType for
   package/attribute work; BooleanExpression/Predicate plus
-  Expression/Step/Function/Behavior for constraints/requirements; and
-  AssociationStructure/Connector plus Association for connections.
+  Expression/Step/Function/Behavior for constraints/requirements;
+  AssociationStructure/Connector plus Association for connections; and
+  Conjugation for port conjugation (Phase 8a). The `FeatureDirectionKind` enum
+  is one of the 2 enums; Phase 8b made `Feature::direction` nullable (no new
+  class).
 - KerML Package: `supported` (all nine cells).
 - SysML PartDefinition, PartUsage: `supported` (all nine cells).
 - SysML AttributeDefinition: `supported` (all nine cells).
@@ -35,8 +38,12 @@ tests.
 - SysML PortDefinition, PortUsage: `supported` (all nine cells for the
   declaration-and-typing surface INCLUDING conjugation -- `port p : ~Fuel` typed
   by the faithful conjugate via PortConjugation/ConjugatedPortDefinition/
-  ConjugatedPortTyping over KerML Conjugation; Phase 8a). Flow-direction
-  (Phase 8b) and interface semantics (Phase 8c) remain follow-ups.
+  ConjugatedPortTyping over KerML Conjugation; Phase 8a). Interface semantics
+  (Phase 8c) remain a follow-up.
+- Feature direction (`in`/`out`/`inout`) is supported on ALL usages (Phase 8b),
+  mapping to the nullable KerML `Feature::direction` so undirected stays distinct
+  from `in`. Parse, map, export, round-trip, diagram label, and a direction
+  property page are covered; undirected is the absent (None) state.
 - SysML ConnectionDefinition, ConnectionUsage: `supported` (binary, non-chain
   connector ends -- `connection c connect a to b;` -- resolved to features,
   validated, exported, round-tripped, and projected as a line bound to its ends;
@@ -401,11 +408,30 @@ Exit (reached): PortDefinition and PortUsage are promoted from `alpha` to
 `supported` for the declaration-and-typing surface INCLUDING conjugation;
 flow-direction (8b) and interface (8c) remain explicit follow-ups.
 
-#### Phase 8b -- Flow Direction -- PLANNED
+#### Phase 8b -- Flow Direction -- DONE
 
-Feature/port direction (`in` / `out` / `inout`) on ports and features:
-grammar, mapping (`FeatureDirectionKind`), validation, export, round-trip,
-diagram, and UI-edit.
+Delivered feature direction (`in` / `out` / `inout`) on ALL usages, mapping to
+KerML `Feature::direction`.
+
+- The generated `Feature::direction` defaulted to `in`, collapsing undirected
+  into `in`. KerML makes it `[0..1]`, so direction is now NULLABLE: an explicit
+  opt-in (`nullable_optional_enums`) on Gaphor's coder emits an optional enum
+  (XMI lower 0, no default) as `_enumeration(..., None)`, and core `enumeration`
+  gained `None`-default support. The opt-in is enabled ONLY for the SysML2/KerML
+  generation path, so UML/Core/SysML/RAAML stay byte-identical
+  (`tests/test_models_up_to_date.py` passes); the adapter emits the lowerValue so
+  the rule fires for `direction`/`portionKind` but not `visibility` (which has a
+  default).
+- Grammar/parser/AST: a port-scoped-free `DIRECTION?` prefix on every usage
+  (definitions are Classifiers, not Features, so they take none). Mapping sets
+  `feature.direction`; export re-emits the prefix; the round-trip canonical form
+  records direction as a separate entry so directed and undirected usages are
+  distinct. The diagram label shows the prefix, and a direction property page
+  edits it (undirected = the absent None state).
+
+No support-matrix row changes status (direction is added to the existing
+declaration-and-typing surface of every usage); the already-`supported` rows now
+also cover direction.
 
 #### Phase 8c -- Interface Definition / Usage Semantics -- PLANNED
 
@@ -490,6 +516,12 @@ Make verification authoritative:
   than manual/nightly;
 - add KPAR artifact/hash checks to the static gates;
 - add matrix consistency checks for Markdown and `.xls`;
+- add generic generated-metamodel multiplicity validation for conceptually
+  single-valued stored references that are emitted as `relation_many` at runtime
+  (for example `FeatureTyping.type`/`typedFeature`,
+  `Specialization.general`/`specific`, and other `0..1` or `1..1` ends), so
+  API-mutated or hand-edited models with appended extra targets are reported
+  instead of accepted by first-value helpers;
 - run full suite plus focused SysML2 tests before final support claims.
 
 Exit: final claims are backed by local and CI verification with no known

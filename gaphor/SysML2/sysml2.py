@@ -57,7 +57,7 @@ class Usage(_Feature):
 
 class OccurrenceUsage(Usage):
     isIndividual: _attribute[bool] = _attribute("isIndividual", bool)
-    portionKind = _enumeration("portionKind", PortionKind, PortionKind.timeslice)
+    portionKind = _enumeration("portionKind", PortionKind, None)
 
 
 class ActionUsage(OccurrenceUsage, _Step):

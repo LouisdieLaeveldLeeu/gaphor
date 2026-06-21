@@ -57,21 +57,39 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         return f"{pad}constraint def {element.declaredName};\n"
     if isinstance(element, sysml2.PortDefinition):
         return f"{pad}port def {element.declaredName};\n"
+    # Usages may carry a feature direction prefix (`in`/`out`/`inout`).
     if isinstance(element, sysml2.ConnectionUsage):
-        return f"{pad}connection {_connection_decl(element, root)};\n"
+        dir_ = _direction_prefix(element)
+        return f"{pad}{dir_}connection {_connection_decl(element, root)};\n"
     if isinstance(element, sysml2.PartUsage):
-        return f"{pad}part {_usage_decl(element, root)};\n"
+        dir_ = _direction_prefix(element)
+        return f"{pad}{dir_}part {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.AttributeUsage):
-        return f"{pad}attribute {_usage_decl(element, root)};\n"
+        dir_ = _direction_prefix(element)
+        return f"{pad}{dir_}attribute {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.ActionUsage):
-        return f"{pad}action {_usage_decl(element, root)};\n"
+        dir_ = _direction_prefix(element)
+        return f"{pad}{dir_}action {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.RequirementUsage):
-        return f"{pad}requirement {_usage_decl(element, root)};\n"
+        dir_ = _direction_prefix(element)
+        return f"{pad}{dir_}requirement {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.ConstraintUsage):
-        return f"{pad}constraint {_usage_decl(element, root)};\n"
+        dir_ = _direction_prefix(element)
+        return f"{pad}{dir_}constraint {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.PortUsage):
-        return f"{pad}port {_usage_decl(element, root)};\n"
+        dir_ = _direction_prefix(element)
+        return f"{pad}{dir_}port {_usage_decl(element, root)};\n"
     return ""
+
+
+def _direction_prefix(usage: kerml.Feature) -> str:
+    """`in `/`out `/`inout ` for a directed usage, else `""` (undirected).
+
+    A usage's `direction` is the nullable KerML `Feature::direction`; `None`
+    means undirected and emits no prefix (Phase 8b).
+    """
+    direction = usage.direction
+    return f"{direction} " if direction is not None else ""
 
 
 def _connection_decl(connection: kerml.Feature, root: kerml.Namespace) -> str:
