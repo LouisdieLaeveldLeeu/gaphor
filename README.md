@@ -53,7 +53,7 @@ and interact with models programmatically.
 
 Non-Goals:
 
-- Generating UML diagrams from source code. [pynsource](https://github.com/abulka/pynsource) or [pyreverse](https://github.com/pylint-dev/pylint/tree/main/pylint/pyreverse) might be what you are looking for.
+- Generating UML diagrams from source code. [pynsource](https://github.com/abulka/pynsouhttps://qlty.sh/gh/gaphor/projects/gaphor/maintainability.svgrce) or [pyreverse](https://github.com/pylint-dev/pylint/tree/main/pylint/pyreverse) might be what you are looking for.
 - Generating source code from diagrams or creating other concrete executable artifacts including use of fUML or ALF.
 
 Although it would be possible to incorporate these features, these aren't the

@@ -134,6 +134,21 @@ class Documentation(Comment):
     pass
 
 
+class Membership(Relationship):
+    memberElement: relation_many[Element]
+    memberName: _attribute[str] = _attribute("memberName", str)
+    memberShortName: _attribute[str] = _attribute("memberShortName", str)
+    visibility = _enumeration("visibility", VisibilityKind, VisibilityKind.private)
+
+
+class OwningMembership(Membership):
+    pass
+
+
+class FeatureMembership(OwningMembership):
+    pass
+
+
 class Specialization(Relationship):
     general: relation_many[Type]
     specific: relation_many[Type]
@@ -154,18 +169,11 @@ class Import(Relationship):
     visibility = _enumeration("visibility", VisibilityKind, VisibilityKind.private)
 
 
-class Membership(Relationship):
-    memberElement: relation_many[Element]
-    memberName: _attribute[str] = _attribute("memberName", str)
-    memberShortName: _attribute[str] = _attribute("memberShortName", str)
-    visibility = _enumeration("visibility", VisibilityKind, VisibilityKind.private)
-
-
-class OwningMembership(Membership):
+class Package(Namespace):
     pass
 
 
-class Package(Namespace):
+class ParameterMembership(FeatureMembership):
     pass
 
 
@@ -187,8 +195,8 @@ Relationship.owningRelatedElement = association("owningRelatedElement", Element)
 Relationship.ownedRelatedElement = association("ownedRelatedElement", Element, composite=True)
 Conjugation.originalType = association("originalType", Type)
 Conjugation.conjugatedType = association("conjugatedType", Type)
+Membership.memberElement = association("memberElement", Element)
 Specialization.general = association("general", Type)
 Specialization.specific = association("specific", Type)
 FeatureTyping.typedFeature = association("typedFeature", Feature)
 FeatureTyping.type = association("type", Type)
-Membership.memberElement = association("memberElement", Element)

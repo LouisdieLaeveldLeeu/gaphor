@@ -103,7 +103,38 @@ def validate(
     diagnostics.extend(_check_connection_end_integrity(factory))
     diagnostics.extend(_check_conjugated_typing(factory))
     diagnostics.extend(_check_constraint_body(factory))
+    diagnostics.extend(_check_requirement_parameters(factory))
     return diagnostics
+
+
+def _check_requirement_parameters(factory: ElementFactory) -> Iterator[Diagnostic]:
+    """A requirement's subject/assume/require memberships must own the right kind.
+
+    Model-derived (no mapping context): a `SubjectMembership` must own a `Feature`
+    (the subject parameter) and a `RequirementConstraintMembership` must own a
+    `ConstraintUsage` (the assumed/required constraint). The textual mapper always
+    builds these correctly; this is the safety net for a hand-edited/persisted
+    .gaphor or an API mutation. The subject's declared TYPE is validated by the
+    usual unresolved-type rule (it is recorded during mapping like any usage type).
+    """
+    for membership in factory.select(sysml2.SubjectMembership):
+        member = kk._single(membership.memberElement)
+        if member is not None and not isinstance(member, kerml.Feature):
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-requirement-parameter",
+                "requirement subject is not a feature",
+                membership.id,
+            )
+    for membership in factory.select(sysml2.RequirementConstraintMembership):
+        member = kk._single(membership.memberElement)
+        if member is not None and not isinstance(member, sysml2.ConstraintUsage):
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-requirement-parameter",
+                f"requirement {membership.kind} is not a constraint",
+                membership.id,
+            )
 
 
 def _check_constraint_body(factory: ElementFactory) -> Iterator[Diagnostic]:

@@ -101,20 +101,37 @@ class ConstraintUsage:
 
 
 @dataclass(frozen=True)
-class RequirementDefinition:
-    """`requirement def <name> ;`"""
+class SubjectClause:
+    """`subject <name> [ : <type> ]` inside a requirement body (Phase 6b)."""
 
     name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+
+
+@dataclass(frozen=True)
+class RequirementDefinition:
+    """`requirement def <name> ( ; | { <clauses> } )`
+
+    `subject`/`assume`/`require` come from the requirement body (Phase 6b);
+    `assume`/`require` are opaque constraint body texts (reusing 6a)."""
+
+    name: str
+    subject: SubjectClause | None = None
+    assume: tuple[str, ...] = ()  # assumed-constraint body texts
+    require: tuple[str, ...] = ()  # required-constraint body texts
     line: int | None = _line
 
 
 @dataclass(frozen=True)
 class RequirementUsage:
-    """`[<dir>] requirement <name> [ : <type> ] ;`"""
+    """`[<dir>] requirement <name> [ : <type> ] ( ; | { <clauses> } )`"""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    subject: SubjectClause | None = None
+    assume: tuple[str, ...] = ()
+    require: tuple[str, ...] = ()
     line: int | None = _line
 
 

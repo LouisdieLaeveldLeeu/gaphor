@@ -856,3 +856,46 @@ stay `alpha`.
   the field removes it); it DEFERS for requirements (they subclass the constraint
   classes, but requirement bodies are Phase 6b and not yet exported, so a body
   must not be authorable on a requirement here).
+
+### Completion Phase 6b: Requirement Parameters (verified 2026-06-21)
+
+Requirement `subject`/`assume`/`require` parts, modeled FAITHFULLY on the
+normative membership structure (the explicit decision over local marker fields,
+so future KPAR/validation/semantics work builds on the real model). Scope is
+exactly subject/assume/require; `reqId` (6c) and actor/stakeholder/framedConcern
+(6d) are out. Rows stay `alpha`.
+
+- **Metamodel (generated).** Seeded the membership classes from the pinned XMI:
+  KerML FeatureMembership/ParameterMembership (kernel; 31 non-enum classes now)
+  and SysML SubjectMembership (-> ParameterMembership) and
+  RequirementConstraintMembership (-> FeatureMembership, with `kind`:
+  RequirementConstraintKind assumption/requirement -- the only new stored state).
+- **Grammar.** `requirement [def] r [: R] ( ";" | requirement_body )`, where
+  `requirement_body: "{" (subject_clause | assume_clause | require_clause)* "}"`;
+  `subject_clause: "subject" NAME (":" type_ref)? ";"`; `assume_clause: "assume"
+  "constraint" constraint_body` (and `require` likewise), REUSING the 6a
+  `constraint_body`. The requirement body's literal `{ }` and the inner
+  CONSTRAINT_BODY terminal are disambiguated by the contextual LALR lexer (verified
+  alongside package `{ }`).
+- **Mapping (memberships, not markers).** `requirements.py`: the subject becomes a
+  `kerml.Feature` owned via a `SubjectMembership` (its declared type resolved in a
+  separate phase-2 pass -- ANY Type, no usage-kind check, since a subject is a
+  parameter; unresolved names recorded like any usage type, a scoped reference);
+  each assumed/required constraint becomes an anonymous `ConstraintUsage` carrying
+  a 6a opaque body, owned via a `RequirementConstraintMembership` with the matching
+  kind. All are owned through these memberships (which ARE OwningMemberships), so
+  they persist, cascade, and round-trip.
+- **Validation.** The subject type is validated by the existing
+  `usage-without-valid-type` rule (recorded during mapping). A model-derived
+  `broken-requirement-parameter` guards a SubjectMembership member that is not a
+  Feature and a RequirementConstraintMembership member that is not a ConstraintUsage
+  (the safety net for hand-edited/API models).
+- **Export / round-trip.** Export re-emits `{ subject n : T; assume constraint
+  {<body>} require constraint {<body>} }`; the canonical form records
+  subject/assume/require as SEPARATE entries (`RequirementSubject` /
+  `RequirementAssume` / `RequirementRequire`, the constraint entries carrying an
+  ordinal so duplicate bodies stay distinct), leaving the base requirement tuple
+  unchanged.
+- **UI-edit (deferred).** Structured editing of subject/assume/require is
+  deliberately deferred -- the requirement keeps its name/type editors -- so the
+  rows stay `alpha` honestly rather than claiming a half-built editor.

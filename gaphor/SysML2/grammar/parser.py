@@ -40,6 +40,35 @@ _PortType = namedtuple("_PortType", "conjugated type_name")
 # type_ref (a tuple) in the transform.
 _Body = namedtuple("_Body", "text")
 
+# Internal carriers for requirement-body clauses (Phase 6b), distinguished by
+# type while collecting a requirement_body's children.
+_Assume = namedtuple("_Assume", "body")
+_Require = namedtuple("_Require", "body")
+# Carrier for a whole requirement body, so it is distinguishable from an optional
+# type_ref (a tuple) on a requirement usage.
+_ReqBody = namedtuple("_ReqBody", "clauses")
+
+
+def _split_req_body(body):
+    """Split a `_ReqBody` into (subject, assume-texts, require-texts).
+
+    At most one subject is kept (SysML requirements have a single subject); a
+    missing body yields no subject and empty assume/require tuples.
+    """
+    if body is None:
+        return None, (), ()
+    subject = None
+    assume: list[str] = []
+    require: list[str] = []
+    for clause in body.clauses:
+        if isinstance(clause, ast.SubjectClause):
+            subject = clause
+        elif isinstance(clause, _Assume):
+            assume.append(clause.body)
+        elif isinstance(clause, _Require):
+            require.append(clause.body)
+    return subject, tuple(assume), tuple(require)
+
 _GRAMMAR_PATH = Path(__file__).with_name("sysml2.lark")
 
 
@@ -119,16 +148,54 @@ class _ASTBuilder(Transformer):
             line=name.line,
         )
 
+    def subject_clause(self, items):
+        name = items[0]
+        type_name = items[1] if len(items) > 1 else None
+        return ast.SubjectClause(name=str(name), type_name=type_name)
+
+    def assume_clause(self, items):
+        return _Assume(items[0].text)
+
+    def require_clause(self, items):
+        return _Require(items[0].text)
+
+    def requirement_clause(self, items):
+        return items[0]
+
+    def requirement_body(self, items):
+        return _ReqBody(tuple(items))
+
     def requirement_definition(self, items):
-        (name,) = items
-        return ast.RequirementDefinition(name=str(name), line=name.line)
+        name = items[0]
+        body = items[1] if len(items) > 1 else None
+        subject, assume, require = _split_req_body(body)
+        return ast.RequirementDefinition(
+            name=str(name),
+            subject=subject,
+            assume=assume,
+            require=require,
+            line=name.line,
+        )
 
     def requirement_usage(self, items):
         direction, items = _split_direction(items)
         name = items[0]
-        type_name = items[1] if len(items) > 1 else None
+        type_name = None
+        body = None
+        for extra in items[1:]:
+            if isinstance(extra, _ReqBody):
+                body = extra
+            else:
+                type_name = extra
+        subject, assume, require = _split_req_body(body)
         return ast.RequirementUsage(
-            name=str(name), type_name=type_name, direction=direction, line=name.line
+            name=str(name),
+            type_name=type_name,
+            direction=direction,
+            subject=subject,
+            assume=assume,
+            require=require,
+            line=name.line,
         )
 
     def port_definition(self, items):

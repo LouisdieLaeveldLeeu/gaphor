@@ -69,11 +69,20 @@ constraint_usage: DIRECTION? "constraint" NAME (":" type_ref)? (";" | constraint
 constraint_body: CONSTRAINT_BODY
 CONSTRAINT_BODY: /\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}/
 
-// `requirement def <name> ;`
-requirement_definition: "requirement" "def" NAME ";"
+// `requirement def <name> ( ";" | "{" <clauses> "}" )`
+requirement_definition: "requirement" "def" NAME (";" | requirement_body)
 
-// `[<dir>] requirement <name> [ ":" <type> ] ;`
-requirement_usage: DIRECTION? "requirement" NAME (":" type_ref)? ";"
+// `[<dir>] requirement <name> [ ":" <type> ] ( ";" | "{" <clauses> "}" )`
+requirement_usage: DIRECTION? "requirement" NAME (":" type_ref)? (";" | requirement_body)
+
+// A requirement body holds subject/assume/require clauses (Phase 6b). The
+// assumed/required constraints reuse the opaque 6a constraint body; the subject is
+// a (optionally typed) parameter feature.
+requirement_body: "{" requirement_clause* "}"
+requirement_clause: subject_clause | assume_clause | require_clause
+subject_clause: "subject" NAME (":" type_ref)? ";"
+assume_clause: "assume" "constraint" constraint_body
+require_clause: "require" "constraint" constraint_body
 
 // `port def <name> ;`
 port_definition: "port" "def" NAME ";"

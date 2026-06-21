@@ -37,10 +37,11 @@ tests.
   succession/flow connections, and parameters).
 - SysML ConstraintDefinition/Usage and RequirementDefinition/Usage: `alpha` (the
   declaration-and-typing surface; constraints also preserve an opaque expression
-  body -- `constraint c { <expr> }` stored as a TextualRepresentation, Phase 6a).
-  Capped on constraint expression SEMANTICS (a faithful KerML expression tree)
-  and the remaining named requirement surfaces: `subject`/`assume`/`require`
-  (Phase 6b), `reqId` (Phase 6c), and
+  body -- `constraint c { <expr> }` stored as a TextualRepresentation, Phase 6a;
+  requirements also carry `subject`/`assume`/`require` via their normative
+  memberships, Phase 6b). Capped on constraint expression SEMANTICS (a faithful
+  KerML expression tree), structured requirement-parameter UI-edit, and the
+  remaining named requirement surfaces: `reqId` (Phase 6c) and
   `actor`/`stakeholder`/`framedConcern` (Phase 6d).
 - SysML PortDefinition, PortUsage: `supported` (all nine cells for the
   declaration-and-typing surface INCLUDING conjugation -- `port p : ~Fuel` typed
@@ -401,15 +402,32 @@ so the body is preserved without claiming expression semantics):
 Exit (reached): constraint body text parses, persists, exports, round-trips, and
 preserves arbitrary expression text safely; the matrix stays honest (`alpha`).
 
-#### Phase 6b -- Requirement Parameters -- PLANNED
+#### Phase 6b -- Requirement Parameters -- DONE
 
-Requirement `subject`, `assume`, and `require` parameters, reusing the 6a body
-mechanism with requirement-specific semantics. Represent the parameters through
-their normative membership structure rather than local marker fields: generate
-the required KerML membership roots and SysML requirement-parameter memberships
-from the pinned XMI, validate scoped references where supported, export and
-round-trip the proven surface, and keep Requirement rows `alpha` because `reqId`
-(6c) and the context parameters (6d) are still scheduled.
+Delivered requirement `subject`, `assume`, and `require` through their NORMATIVE
+membership structure (no local marker fields):
+
+- membership classes generated from the pinned XMI -- KerML
+  FeatureMembership/ParameterMembership (kernel) and SysML SubjectMembership/
+  RequirementConstraintMembership (with RequirementConstraintKind:
+  assumption/requirement);
+- grammar/parser/AST: `requirement [def] r [: R] { subject n [: T]; assume
+  constraint { <body> } require constraint { <body> } }`; the subject is a
+  parameter feature and assume/require constraints REUSE the 6a opaque body;
+- mapping builds the subject feature via a SubjectMembership (its type resolved
+  nearest-first -- a scoped reference, recorded unresolved if it does not resolve)
+  and each assumed/required constraint as a ConstraintUsage owned via a
+  RequirementConstraintMembership carrying the kind;
+- validation: the subject type via the usual unresolved-type rule, plus a
+  model-derived `broken-requirement-parameter` guarding membership-member kinds;
+  export re-emits the parts and the round-trip canonical form records
+  subject/assume/require as separate entries;
+- structured UI-edit for these parts is deliberately deferred (the requirement
+  keeps its name/type editors); the rows stay `alpha`.
+
+Requirement rows stay `alpha` after 6b because `reqId` (6c) and the context
+parameters (6d) are still scheduled, and constraint expression SEMANTICS remain a
+later, multi-phase dependency.
 
 #### Phase 6c -- Requirement Identification (`reqId`) -- PLANNED
 
@@ -653,7 +671,7 @@ counted here.
 12. Phase 8b -- Flow Direction -- DONE
 13. Phase 8c -- Interface Definition / Usage Semantics -- DONE
 14. Phase 6a -- Constraint Expression Bodies -- DONE
-15. Phase 6b -- Requirement Parameters -- PLANNED
+15. Phase 6b -- Requirement Parameters -- DONE
 16. Phase 6c -- Requirement Identification (`reqId`) -- PLANNED
 17. Phase 6d -- Requirement Context Parameters -- PLANNED
 18. Phase 7 -- Action Semantics -- PLANNED

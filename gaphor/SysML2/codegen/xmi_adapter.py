@@ -490,6 +490,13 @@ KERNEL_SEED = (
     # semantics. Its `language`/`body` are Strings and `representedElement` is
     # derived, so it adds no new stored closure.
     "TextualRepresentation",
+    # FeatureMembership and ParameterMembership are the KerML membership roots the
+    # SysML requirement-parameter layer generalizes (Phase 6b): SubjectMembership
+    # -> ParameterMembership and RequirementConstraintMembership -> FeatureMembership.
+    # Seeded so the kernel supermodel supplies them for `requirement r { subject
+    # ...; assume ...; require ...; }`.
+    "FeatureMembership",
+    "ParameterMembership",
 )
 
 
@@ -1012,6 +1019,13 @@ SYSML_SEED = (
     # (no construct has it yet) and remain a named later dependency.
     "InterfaceDefinition",
     "InterfaceUsage",
+    # SubjectMembership and RequirementConstraintMembership carry a requirement's
+    # subject and assumed/required constraints (Phase 6b). They generalize the
+    # KerML membership roots (now in the kernel) and add `kind`
+    # (RequirementConstraintKind: assumption/requirement) -- the only new stored
+    # state; their owned/referenced-constraint and parameter accessors are derived.
+    "SubjectMembership",
+    "RequirementConstraintMembership",
 )
 
 # KerML classes that the generated SysML kernel must already provide as a

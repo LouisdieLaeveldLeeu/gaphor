@@ -28,7 +28,9 @@ from gaphor.SysML2.kerml import Conjugation as _Conjugation
 from gaphor.SysML2.kerml import Connector as _Connector
 from gaphor.SysML2.kerml import DataType as _DataType
 from gaphor.SysML2.kerml import Feature as _Feature
+from gaphor.SysML2.kerml import FeatureMembership as _FeatureMembership
 from gaphor.SysML2.kerml import FeatureTyping as _FeatureTyping
+from gaphor.SysML2.kerml import ParameterMembership as _ParameterMembership
 from gaphor.SysML2.kerml import Predicate as _Predicate
 from gaphor.SysML2.kerml import Step as _Step
 from gaphor.SysML2.kerml import Structure as _Structure
@@ -37,6 +39,11 @@ from gaphor.SysML2.kerml import Structure as _Structure
 class PortionKind(enum.StrEnum):
     timeslice = "timeslice"
     snapshot = "snapshot"
+
+
+class RequirementConstraintKind(enum.StrEnum):
+    assumption = "assumption"
+    requirement = "requirement"
 
 
 class Definition(_Classifier):
@@ -136,12 +143,20 @@ class PortUsage(OccurrenceUsage):
     pass
 
 
+class RequirementConstraintMembership(_FeatureMembership):
+    kind = _enumeration("kind", RequirementConstraintKind, RequirementConstraintKind.assumption)
+
+
 class RequirementDefinition(ConstraintDefinition):
     reqId: _attribute[str] = _attribute("reqId", str)
 
 
 class RequirementUsage(ConstraintUsage):
     reqId: _attribute[str] = _attribute("reqId", str)
+
+
+class SubjectMembership(_ParameterMembership):
+    pass
 
 
 

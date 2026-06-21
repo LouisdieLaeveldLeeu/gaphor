@@ -25,6 +25,7 @@ import gaphor.storage as storage
 from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml, sysml2
+from gaphor.SysML2 import requirements
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2.export import export_namespace
 from gaphor.SysML2.grammar.parser import parse
@@ -156,6 +157,31 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
             body = constraints.body_text(member)
             if body is not None:
                 entries.add(("ConstraintBody", kk.qualified_name(member), body))
+
+            # A requirement's subject/assume/require parts are SEPARATE entries
+            # (Phase 6b); an ordinal keeps duplicate assume/require bodies distinct.
+            if isinstance(
+                member, (sysml2.RequirementDefinition, sysml2.RequirementUsage)
+            ):
+                req_qn = kk.qualified_name(member)
+                subj = requirements.subject(member)
+                if subj is not None:
+                    entries.add(
+                        (
+                            "RequirementSubject",
+                            req_qn,
+                            subj.declaredName or "",
+                            _usage_type_qualified_name(subj) or "",
+                        )
+                    )
+                for tag, kind in (
+                    ("RequirementAssume", requirements.Assumption),
+                    ("RequirementRequire", requirements.Requirement),
+                ):
+                    for i, c in enumerate(
+                        requirements.requirement_constraints(member, kind)
+                    ):
+                        entries.add((tag, req_qn, i, constraints.body_text(c) or ""))
 
     visit(root)
     return frozenset(entries)

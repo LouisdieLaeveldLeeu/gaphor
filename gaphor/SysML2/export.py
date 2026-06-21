@@ -14,6 +14,7 @@ from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
+from gaphor.SysML2 import requirements
 
 _INDENT = "    "
 
@@ -56,7 +57,10 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     if isinstance(element, sysml2.ActionDefinition):
         return f"{pad}action def {element.declaredName};\n"
     if isinstance(element, sysml2.RequirementDefinition):
-        return f"{pad}requirement def {element.declaredName};\n"
+        return (
+            f"{pad}requirement def {element.declaredName}"
+            f"{_requirement_tail(element, root)}\n"
+        )
     if isinstance(element, sysml2.ConstraintDefinition):
         return f"{pad}constraint def {element.declaredName}{_constraint_tail(element)}\n"
     if isinstance(element, sysml2.PortDefinition):
@@ -79,7 +83,10 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         return f"{pad}{dir_}action {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.RequirementUsage):
         dir_ = _direction_prefix(element)
-        return f"{pad}{dir_}requirement {_usage_decl(element, root)};\n"
+        return (
+            f"{pad}{dir_}requirement {_usage_decl(element, root)}"
+            f"{_requirement_tail(element, root)}\n"
+        )
     if isinstance(element, sysml2.ConstraintUsage):
         dir_ = _direction_prefix(element)
         return (
@@ -90,6 +97,36 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         dir_ = _direction_prefix(element)
         return f"{pad}{dir_}port {_usage_decl(element, root)};\n"
     return ""
+
+
+def _requirement_tail(req: kerml.Element, root: kerml.Namespace) -> str:
+    """` { subject ...; assume constraint {...} require constraint {...} }` for a
+    requirement with parts, else `;` (Phase 6b).
+
+    The subject's type and the assumed/required constraint bodies are re-emitted so
+    the body re-parses to the same structure on round-trip.
+    """
+    parts: list[str] = []
+    subj = requirements.subject(req)
+    if subj is not None:
+        type_name = _usage_type_name(subj, root)
+        decl = (
+            f"{subj.declaredName} : {type_name}"
+            if type_name is not None
+            else f"{subj.declaredName}"
+        )
+        parts.append(f"subject {decl};")
+    for keyword, kind in (
+        ("assume", requirements.Assumption),
+        ("require", requirements.Requirement),
+    ):
+        for constraint in requirements.requirement_constraints(req, kind):
+            parts.append(
+                f"{keyword} constraint {{{constraints.body_text(constraint) or ''}}}"
+            )
+    if not parts:
+        return ";"
+    return " { " + " ".join(parts) + " }"
 
 
 def _constraint_tail(constraint: kerml.Element) -> str:
