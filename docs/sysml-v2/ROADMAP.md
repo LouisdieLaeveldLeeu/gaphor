@@ -13,17 +13,19 @@ tests.
 
 ## Current State
 
-- KerML kernel (29 generated non-enum classes plus 2 enums): `internal-only` --
+- KerML kernel (31 generated non-enum classes plus 2 enums): `internal-only` --
   Create-API + Persist are tested, and the five kernel behaviours are tested.
   The kernel grew deliberately from the original 12-class minimal slice:
   Classifier/Class/Structure and FeatureTyping for M2; Package and DataType for
   package/attribute work; BooleanExpression/Predicate plus
   Expression/Step/Function/Behavior for constraints/requirements;
   AssociationStructure/Connector plus Association for connections;
-  Conjugation for port conjugation (Phase 8a); and TextualRepresentation (the
-  carrier for a preserved constraint body) for Phase 6a. The `FeatureDirectionKind`
-  enum is one of the 2 enums; Phase 8b made `Feature::direction` nullable (no new
-  class).
+  Conjugation for port conjugation (Phase 8a); TextualRepresentation (the
+  carrier for a preserved constraint body) for Phase 6a; and
+  FeatureMembership/ParameterMembership (the membership roots the SysML
+  requirement-parameter memberships generalize) for Phase 6b. The
+  `FeatureDirectionKind` enum is one of the 2 enums; Phase 8b made
+  `Feature::direction` nullable (no new class).
 - KerML Package: `supported` (all nine cells).
 - SysML PartDefinition, PartUsage: `supported` (all nine cells).
 - SysML AttributeDefinition: `supported` (all nine cells).
@@ -36,8 +38,10 @@ tests.
 - SysML ConstraintDefinition/Usage and RequirementDefinition/Usage: `alpha` (the
   declaration-and-typing surface; constraints also preserve an opaque expression
   body -- `constraint c { <expr> }` stored as a TextualRepresentation, Phase 6a).
-  Capped on constraint expression SEMANTICS (a faithful KerML expression tree) and
-  requirement `subject`/`assume`/`require` parameters (Phase 6b).
+  Capped on constraint expression SEMANTICS (a faithful KerML expression tree)
+  and the remaining named requirement surfaces: `subject`/`assume`/`require`
+  (Phase 6b), `reqId` (Phase 6c), and
+  `actor`/`stakeholder`/`framedConcern` (Phase 6d).
 - SysML PortDefinition, PortUsage: `supported` (all nine cells for the
   declaration-and-typing surface INCLUDING conjugation -- `port p : ~Fuel` typed
   by the faithful conjugate via PortConjugation/ConjugatedPortDefinition/
@@ -62,11 +66,10 @@ tests.
   root-qualified names, with inner scopes shadowing outer ones. Imports, aliases,
   inherited members, visibility, implicit specialization, and feature chains
   remain planned follow-up work (they need new grammar and semantics).
-- KPAR is now in completion scope. General KPAR import is the next architectural
-  track after the read-only reader: first a design contract, then minimal
-  normative-library import, then general user KPAR import. Standard-library
-  value typing and AttributeUsage promotion build on that import path rather
-  than on a separate pre-import library index.
+- KPAR is now in completion scope. KPAR artifact pinning, reader inspection,
+  import contract, normative-library import, user-project import, GUI import, and
+  the AttributeUsage value-type promotion built on that path are complete for the
+  implemented SysML2 surface. KPAR export/round-trip remains Phase 10.
 
 ## Definition Of Supported
 
@@ -361,10 +364,18 @@ deferred by Phase 9's non-chain endpoint scope.
 
 ### Phase 6 -- Constraint And Requirement Semantics
 
-Sliced into 6a (constraint expression bodies) and 6b (requirement parameters),
-each a complete, reviewable, individually-stoppable slice (the 8a/8b/8c
-precedent). Both need new definition/usage BODY grammar; 6a proves the body
-mechanism, which 6b reuses with requirement-specific semantics.
+Sliced into independently reviewable requirement/constraint surfaces:
+
+- 6a: constraint expression bodies;
+- 6b: requirement `subject` / `assume` / `require`;
+- 6c: requirement `reqId`;
+- 6d: requirement context parameters (`actor`, `stakeholder`,
+  `framedConcern`).
+
+Each slice stops for review before the next starts (the 8a/8b/8c precedent).
+The requirement rows remain `alpha` until the named requirement surfaces through
+6d are complete and verified; no phase should claim full requirement support
+while one of these named surfaces remains scheduled.
 
 #### Phase 6a -- Constraint Expression Bodies -- DONE
 
@@ -380,8 +391,9 @@ so the body is preserved without claiming expression semantics):
   constraint -- the normative KerML carrier for "this element's content as text in
   a language" (seeded into the kernel; 29 generated non-enum classes now). The
   faithful `Annotation` attachment + expression tree are deferred;
-- export re-emits `{ <body> }`; the round-trip canonical form records the body as a
-  separate entry (so a constraint with a body differs from one without);
+- export re-emits `{<body>}` with no added inner padding; the round-trip
+  canonical form records the body as a separate entry (so a constraint with a
+  body differs from one without);
   validation reports an empty body (`empty-constraint-body`, WARNING); a property
   page edits the body (deferring for requirements);
 - Constraint rows stay `alpha` (the body is preserved, not semantically modeled).
@@ -392,8 +404,48 @@ preserves arbitrary expression text safely; the matrix stays honest (`alpha`).
 #### Phase 6b -- Requirement Parameters -- PLANNED
 
 Requirement `subject`, `assume`, and `require` parameters, reusing the 6a body
-mechanism with requirement-specific semantics: validate scoped references where
-supported, export/round-trip, and promote only the proven requirement cells.
+mechanism with requirement-specific semantics. Represent the parameters through
+their normative membership structure rather than local marker fields: generate
+the required KerML membership roots and SysML requirement-parameter memberships
+from the pinned XMI, validate scoped references where supported, export and
+round-trip the proven surface, and keep Requirement rows `alpha` because `reqId`
+(6c) and the context parameters (6d) are still scheduled.
+
+#### Phase 6c -- Requirement Identification (`reqId`) -- PLANNED
+
+Add requirement identification as its own requirement surface.
+
+Work:
+
+- verify the normative source of `reqId` before choosing storage (generated
+  SysML property, library-defined convention, or another normative structure);
+- parse/map/create/persist/validate/export/round-trip requirement identifiers;
+- add diagram and UI-edit support where the existing requirement item/property
+  surface claims editability;
+- preserve import/KPAR diagnostics for unsupported or conflicting identifier
+  content.
+
+Exit: `reqId` is implemented and tested end to end for RequirementDefinition and
+RequirementUsage where applicable. Requirement rows still stay `alpha` until 6d.
+
+#### Phase 6d -- Requirement Context Parameters -- PLANNED
+
+Add the remaining named requirement context parameters:
+
+- `actor`;
+- `stakeholder`;
+- `framedConcern`.
+
+Use faithful normative membership/parameter representation, not local marker
+fields. Validate scoped references where supported, report unresolved or
+wrong-kind references explicitly, and cover parse/map/create/persist/validate/
+export/round-trip/diagram/UI-edit for the claimed surface.
+
+Exit: all currently named requirement surfaces (`subject`, `assume`, `require`,
+`reqId`, `actor`, `stakeholder`, and `framedConcern`) are implemented and tested.
+At this point RequirementDefinition and RequirementUsage can be considered for
+promotion out of `alpha`, subject to the normal nine-cell support rule and the
+remaining expression-semantics limits.
 
 ### Phase 7 -- Action Semantics
 
@@ -581,29 +633,39 @@ Make verification authoritative:
 Exit: final claims are backed by local and CI verification with no known
 environment-only ambiguity.
 
-## Recommended Execution Order
+## Execution Status And Order
 
-1. Phase 0
-2. Phase 1
-3. Phase 2
-4. Phase 3a
-5. Phase 3b
-6. Phase 3c
-7. Phase 4
-8. Phase 5
-9. Phase 9
-10. Phase 8
-11. Phase 6
-12. Phase 7
-13. Phase 5a
-14. Phase 5b
-15. Phase 5c
-16. Phase 5d
-17. Phase 5e
-18. Phase 10
-19. Phase 11
-20. Phase 12
-21. Phase 13
+This roadmap is the planning source of truth. `DONE` means committed and
+reviewed against the phase gate; work present only in the dirty worktree is not
+counted here.
+
+1. Phase 0 -- Scope Reset And Audit Cleanup -- DONE
+2. Phase 1 -- KPAR Artifact Baseline -- DONE
+3. Phase 2 -- KPAR Reader Core -- DONE
+4. Phase 3a -- KPAR Import Design Contract -- DONE
+5. Phase 3b -- Minimal Normative Library Import -- DONE
+6. Phase 3c -- General User KPAR Import -- DONE
+7. Phase 3d -- GUI KPAR Import -- DONE
+8. Phase 4 -- AttributeUsage Promotion -- DONE
+9. Phase 5 -- Deeper Name Resolution (Enclosing-Namespace Lookup) -- DONE
+10. Phase 9 -- Connection End Semantics -- DONE
+11. Phase 8a -- Port Conjugation -- DONE
+12. Phase 8b -- Flow Direction -- DONE
+13. Phase 8c -- Interface Definition / Usage Semantics -- DONE
+14. Phase 6a -- Constraint Expression Bodies -- DONE
+15. Phase 6b -- Requirement Parameters -- PLANNED
+16. Phase 6c -- Requirement Identification (`reqId`) -- PLANNED
+17. Phase 6d -- Requirement Context Parameters -- PLANNED
+18. Phase 7 -- Action Semantics -- PLANNED
+19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- PLANNED
+20. Phase 5b -- Aliases -- PLANNED
+21. Phase 5c -- Inherited Members -- PLANNED
+22. Phase 5d -- Implicit Specialization -- PLANNED
+23. Phase 5e -- Feature Chains -- PLANNED
+24. Phase 10 -- General KPAR Export And Round-Trip -- PLANNED
+25. Phase 11 -- Versioned Spec-Ingestion Pipeline -- PLANNED
+26. Phase 12 -- SysML v2 API Alignment -- PLANNED
+27. Phase 13 -- CI And Release Hardening -- PLANNED
 
 Rationale: the project now intentionally resolves KPAR import architecture
 before standard-library/value-type promotion. Phase 3a prevents import identity,
@@ -612,8 +674,10 @@ Phase 3b proves that policy on the real normative library content needed for
 `attribute x : Real`, and Phase 3c expands it to general user KPAR import. Deeper
 resolution then becomes shared infrastructure for the remaining semantic work.
 Connector ends and ports are closely related, so they should be addressed before
-the larger expression/action behavior phases. KPAR export/round-trip follows
-after import semantics exist. Spec-ingestion and CI hardening close the loop.
+the larger expression/action behavior phases. Requirement surfaces now continue
+through 6b/6c/6d before action semantics, so Requirement rows do not promote
+while named requirement work remains. KPAR export/round-trip follows after import
+semantics exist. Spec-ingestion and CI hardening close the loop.
 
 ## Definition Of Done
 
