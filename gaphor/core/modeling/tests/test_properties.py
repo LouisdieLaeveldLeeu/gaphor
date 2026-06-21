@@ -675,6 +675,11 @@ def test_enumerations():
     with pytest.raises(TypeError):
         a.a = "four"
 
+    # A non-nullable enum (non-None default) must reject None -- it always holds a
+    # literal, never the absent state.
+    with pytest.raises(TypeError):
+        a.a = None
+
     assert a.a == EnumKind.three
 
     del a.a

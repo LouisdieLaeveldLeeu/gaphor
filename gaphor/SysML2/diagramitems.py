@@ -299,14 +299,13 @@ class ConnectionUsageItem(LinePresentation):
         super().__init__(
             diagram,
             id=id,
-            shape_middle=Text(
-                text=lambda: (self.subject.declaredName if self.subject else "")
-                or ""
-            ),
+            shape_middle=Text(text=lambda: _subject_label(self)),
         )
         self._handles[0].pos = (0, 0)
         self._handles[1].pos = (40, 20)
         self.watch("subject[Element].declaredName")
+        # A connection usage may be directed too; redraw the line label on change.
+        self.watch("subject[Feature].direction")
 
 
 @represents(

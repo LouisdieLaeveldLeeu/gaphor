@@ -318,8 +318,16 @@ class enumeration(modelproperty):
         self.set(obj, self.default)
 
     def set(self, obj, value):
-        if value is not None and value not in self.type:
-            raise TypeError(f"Value should be one of {list(self.type)} or None")
+        # `None` is accepted ONLY for a nullable enumeration (default `None`),
+        # where it is the unset state. A non-nullable enumeration rejects `None`
+        # exactly as before, so existing (Core/UML/SysML/RAAML) enums keep their
+        # invariant that the value is always a literal.
+        if value is None:
+            if self.default is not None:
+                raise TypeError(f"Value should be one of {list(self.type)}")
+        elif value not in self.type:
+            suffix = " or None" if self.default is None else ""
+            raise TypeError(f"Value should be one of {list(self.type)}{suffix}")
         old = self.get(obj)
         if value == old:
             return

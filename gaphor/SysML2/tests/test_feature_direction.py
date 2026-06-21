@@ -164,6 +164,26 @@ def test_diagram_label_shows_direction(element_factory):
     assert _subject_label(d_item) == "D"  # a definition never shows a direction
 
 
+def test_directed_connection_line_label_shows_direction(element_factory):
+    # A connection usage is a line item; its middle label must also show the
+    # direction prefix (not just the name).
+    from gaphor.SysML2.diagramitems import ConnectionUsageItem
+
+    map_package(
+        parse("in connection c;\nconnection d;"), element_factory
+    )
+    c = _usage(element_factory, sysml2.ConnectionUsage, "c")
+    d = _usage(element_factory, sysml2.ConnectionUsage, "d")
+    diagram = element_factory.create(Diagram)
+
+    c_item = drop(c, diagram, 0, 0)
+    d_item = drop(d, diagram, 50, 0)
+
+    assert isinstance(c_item, ConnectionUsageItem)
+    assert _subject_label(c_item) == "in c"
+    assert _subject_label(d_item) == "d"  # undirected: just the name
+
+
 # --- UI-edit -----------------------------------------------------------------
 
 
