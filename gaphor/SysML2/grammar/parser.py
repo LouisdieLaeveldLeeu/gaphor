@@ -12,7 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from lark import Lark, Token, Transformer
-from lark.exceptions import LarkError
+from lark.exceptions import LarkError, VisitError
 
 from gaphor.SysML2.grammar import ast
 
@@ -52,8 +52,9 @@ _ReqBody = namedtuple("_ReqBody", "clauses")
 def _split_req_body(body):
     """Split a `_ReqBody` into (subject, assume-texts, require-texts).
 
-    At most one subject is kept (SysML requirements have a single subject); a
-    missing body yields no subject and empty assume/require tuples.
+    A requirement has a SINGLE subject (KerML `subjectParameter` is [0..1]), so a
+    second `subject` clause is rejected rather than silently overwriting the first
+    (no silent loss). A missing body yields no subject and empty assume/require.
     """
     if body is None:
         return None, (), ()
@@ -62,6 +63,8 @@ def _split_req_body(body):
     require: list[str] = []
     for clause in body.clauses:
         if isinstance(clause, ast.SubjectClause):
+            if subject is not None:
+                raise SyntaxError("a requirement may declare at most one subject")
             subject = clause
         elif isinstance(clause, _Assume):
             assume.append(clause.body)
@@ -310,5 +313,12 @@ def parse(text: str) -> ast.Package:
     """
     try:
         return _parser().parse(text)
+    except VisitError as exc:
+        # A transformer raised (e.g. a semantic constraint like "at most one
+        # subject"). Surface its own SyntaxError message rather than Lark's
+        # wrapper.
+        if isinstance(exc.orig_exc, SyntaxError):
+            raise exc.orig_exc from None
+        raise SyntaxError(f"invalid SysML v2 text: {exc}") from exc
     except LarkError as exc:
         raise SyntaxError(f"invalid SysML v2 text: {exc}") from exc

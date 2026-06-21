@@ -108,31 +108,32 @@ def validate(
 
 
 def _check_requirement_parameters(factory: ElementFactory) -> Iterator[Diagnostic]:
-    """A requirement's subject/assume/require memberships must own the right kind.
+    """A requirement's subject/assume/require memberships must own EXACTLY ONE
+    member of the right kind.
 
-    Model-derived (no mapping context): a `SubjectMembership` must own a `Feature`
-    (the subject parameter) and a `RequirementConstraintMembership` must own a
-    `ConstraintUsage` (the assumed/required constraint). The textual mapper always
-    builds these correctly; this is the safety net for a hand-edited/persisted
-    .gaphor or an API mutation. The subject's declared TYPE is validated by the
-    usual unresolved-type rule (it is recorded during mapping like any usage type).
+    Model-derived (no mapping context): a `SubjectMembership` must own exactly one
+    `Feature` (the subject parameter) and a `RequirementConstraintMembership` must
+    own exactly one `ConstraintUsage` (the assumed/required constraint). `memberElement`
+    is relation-many at runtime, so `_sole` is used (not first-value `_single`): a
+    membership with zero, multiple (appended), or a wrong-kind member is reported.
+    The textual mapper always builds these correctly; this is the safety net for a
+    hand-edited/persisted .gaphor or an API mutation. The subject's declared TYPE is
+    validated by the usual unresolved-type rule (recorded during mapping).
     """
     for membership in factory.select(sysml2.SubjectMembership):
-        member = kk._single(membership.memberElement)
-        if member is not None and not isinstance(member, kerml.Feature):
+        if not isinstance(_sole(membership.memberElement), kerml.Feature):
             yield Diagnostic(
                 Severity.ERROR,
                 "broken-requirement-parameter",
-                "requirement subject is not a feature",
+                "requirement subject is not exactly one feature",
                 membership.id,
             )
     for membership in factory.select(sysml2.RequirementConstraintMembership):
-        member = kk._single(membership.memberElement)
-        if member is not None and not isinstance(member, sysml2.ConstraintUsage):
+        if not isinstance(_sole(membership.memberElement), sysml2.ConstraintUsage):
             yield Diagnostic(
                 Severity.ERROR,
                 "broken-requirement-parameter",
-                f"requirement {membership.kind} is not a constraint",
+                f"requirement {membership.kind} is not exactly one constraint",
                 membership.id,
             )
 

@@ -58,6 +58,15 @@ def test_requirement_without_body_has_no_parts():
     assert member.subject is None and member.assume == () and member.require == ()
 
 
+def test_duplicate_subject_is_rejected_not_silently_collapsed():
+    import pytest
+
+    # A requirement has a single subject; a second `subject` clause is a clear
+    # error, not silently dropped.
+    with pytest.raises(SyntaxError, match="at most one subject"):
+        parse("requirement def R { subject a; subject b; }")
+
+
 # --- map ---------------------------------------------------------------------
 
 
@@ -123,6 +132,28 @@ def test_broken_subject_membership_is_reported_model_derived():
     for old in list(membership.memberElement):
         kerml.OwningMembership.memberElement.delete(membership, old)
     membership.memberElement = pkg
+    assert any(
+        d.rule == "broken-requirement-parameter" for d in validate(factory)
+    )
+
+
+def test_appended_subject_member_is_reported_model_derived():
+    # `memberElement` is relation-many; an APPENDED extra member (the correct
+    # feature stays first) must be reported -- a first-value check would miss it.
+    factory, _ = _map("requirement def R { subject v; }")
+    membership = next(iter(factory.select(sysml2.SubjectMembership)))
+    membership.memberElement = factory.create(kerml.Package)  # appends a 2nd value
+    assert len(list(membership.memberElement)) == 2
+    assert any(
+        d.rule == "broken-requirement-parameter" for d in validate(factory)
+    )
+
+
+def test_appended_requirement_constraint_member_is_reported_model_derived():
+    factory, _ = _map("requirement def R { require constraint {x} }")
+    membership = next(iter(factory.select(sysml2.RequirementConstraintMembership)))
+    membership.memberElement = factory.create(kerml.Package)  # appends a 2nd value
+    assert len(list(membership.memberElement)) == 2
     assert any(
         d.rule == "broken-requirement-parameter" for d in validate(factory)
     )

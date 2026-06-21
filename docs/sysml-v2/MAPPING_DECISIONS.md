@@ -885,11 +885,18 @@ exactly subject/assume/require; `reqId` (6c) and actor/stakeholder/framedConcern
   a 6a opaque body, owned via a `RequirementConstraintMembership` with the matching
   kind. All are owned through these memberships (which ARE OwningMemberships), so
   they persist, cascade, and round-trip.
+- **Single subject.** A requirement has exactly one subject (KerML
+  `subjectParameter` is [0..1]), so a second textual `subject` clause is REJECTED
+  at parse (a clear SyntaxError, surfaced by unwrapping Lark's VisitError) rather
+  than silently overwriting the first.
 - **Validation.** The subject type is validated by the existing
   `usage-without-valid-type` rule (recorded during mapping). A model-derived
-  `broken-requirement-parameter` guards a SubjectMembership member that is not a
-  Feature and a RequirementConstraintMembership member that is not a ConstraintUsage
-  (the safety net for hand-edited/API models).
+  `broken-requirement-parameter` guards each membership's member using an
+  EXACT-ONE check (`_sole`, not first-value `_single`, since `memberElement` is
+  relation-many): a SubjectMembership must own exactly one Feature and a
+  RequirementConstraintMembership exactly one ConstraintUsage, so a zero/multiple
+  (appended)/wrong-kind member is reported -- a real safety net for a
+  hand-edited/persisted .gaphor or an API mutation.
 - **Export / round-trip.** Export re-emits `{ subject n : T; assume constraint
   {<body>} require constraint {<body>} }`; the canonical form records
   subject/assume/require as SEPARATE entries (`RequirementSubject` /
