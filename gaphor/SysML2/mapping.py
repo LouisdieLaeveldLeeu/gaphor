@@ -23,6 +23,7 @@ from functools import lru_cache
 
 from gaphor.core.modeling import ElementFactory
 from gaphor.SysML2 import conjugation
+from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2.grammar import ast
@@ -352,6 +353,11 @@ def _build_members(
         direction = getattr(member, "direction", None)
         if direction is not None:
             element.direction = kerml.FeatureDirectionKind(direction)
+        # A constraint body is preserved as opaque text (Phase 6a); only the
+        # constraint AST nodes carry `body`, so this is a no-op for the rest.
+        body = getattr(member, "body", None)
+        if body is not None:
+            constraints.set_body_text(element, body)
         kk.add_owned_member(
             namespace, element, factory.create(kerml.OwningMembership)
         )

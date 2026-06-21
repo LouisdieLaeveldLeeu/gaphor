@@ -76,19 +76,27 @@ class ActionUsage:
 
 @dataclass(frozen=True)
 class ConstraintDefinition:
-    """`constraint def <name> ;`"""
+    """`constraint def <name> ( ; | { <body> } )`
+
+    `body` is the opaque expression text between the braces (or None), preserved
+    verbatim -- NOT parsed into an expression tree (Phase 6a)."""
 
     name: str
+    body: str | None = None
     line: int | None = _line
 
 
 @dataclass(frozen=True)
 class ConstraintUsage:
-    """`[<dir>] constraint <name> [ : <type> ] ;`"""
+    """`[<dir>] constraint <name> [ : <type> ] ( ; | { <body> } )`
+
+    `body` is the opaque expression text between the braces (or None), preserved
+    verbatim -- NOT parsed into an expression tree (Phase 6a)."""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    body: str | None = None  # opaque constraint body text, or None
     line: int | None = _line
 
 

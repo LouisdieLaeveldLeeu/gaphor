@@ -56,11 +56,18 @@ action_definition: "action" "def" NAME ";"
 // `[<dir>] action <name> [ ":" <type> ] ;`
 action_usage: DIRECTION? "action" NAME (":" type_ref)? ";"
 
-// `constraint def <name> ;`
-constraint_definition: "constraint" "def" NAME ";"
+// `constraint def <name> ( ";" | "{" <body> "}" )`
+constraint_definition: "constraint" "def" NAME (";" | constraint_body)
 
-// `[<dir>] constraint <name> [ ":" <type> ] ;`
-constraint_usage: DIRECTION? "constraint" NAME (":" type_ref)? ";"
+// `[<dir>] constraint <name> [ ":" <type> ] ( ";" | "{" <body> "}" )`
+constraint_usage: DIRECTION? "constraint" NAME (":" type_ref)? (";" | constraint_body)
+
+// A constraint body is opaque expression text in braces (Phase 6a): it is
+// preserved as text, NOT parsed into a KerML expression tree. The terminal
+// matches balanced braces (tolerant to nesting), so the body may itself contain
+// `{ }` groups; deeper nesting than this is not supported.
+constraint_body: CONSTRAINT_BODY
+CONSTRAINT_BODY: /\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}/
 
 // `requirement def <name> ;`
 requirement_definition: "requirement" "def" NAME ";"

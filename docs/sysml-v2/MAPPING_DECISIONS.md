@@ -815,3 +815,42 @@ definition-body grammar that no construct has yet.
   InterfaceDefinitions only (exact-kind), so an interface gets exactly one
   type editor of the right kind. Toolbox tools create the interface item/element
   directly.
+
+### Completion Phase 6a: Constraint Expression Bodies (verified 2026-06-21)
+
+A constraint body (`constraint c { <expr> }`) is preserved as OPAQUE TEXT, not
+parsed into a KerML expression tree. This was the explicit decision: a faithful
+expression tree (operators as invocations of library functions, plus expression-
+node classes and the function libraries) is a multi-phase effort, and a tiny
+structured subset now would look more semantic than it is. The Constraint rows
+stay `alpha`.
+
+- **Carrier (honest, normative).** The body is stored as a `TextualRepresentation`
+  (language `sysml`) owned by the constraint -- the KerML carrier for "this
+  element's content represented as text in a named language". This preserves the
+  body without claiming expression semantics. TextualRepresentation was seeded
+  into the kernel (an AnnotatingElement with String body/language; 29 generated
+  non-enum classes now). It is owned via the ordinary OwningMembership spine
+  (there is no `Annotation` relationship class in the closure yet); the faithful
+  Annotation attachment is deferred with the expression tree. A `Comment` was
+  rejected as the carrier -- a constraint body is not documentation.
+- **Grammar.** `constraint def NAME ( ";" | constraint_body )` and
+  `[<dir>] constraint NAME [: type] ( ";" | constraint_body )`, where the body is a
+  single `CONSTRAINT_BODY` terminal matching balanced braces (tolerant to a couple
+  of nesting levels, so `{ ... { ... } ... }` is captured). Unbalanced braces are
+  a parse error -- that IS the delimiter validation. The body is captured opaque
+  (the inner text, trimmed); it is never tokenized as SysML. Only the constraint
+  rules get bodies; requirement bodies are Phase 6b.
+- **Map / export / round-trip.** The mapper stores the body via
+  `constraints.set_body_text`; export re-emits `{ <body> }` verbatim (so it
+  re-parses identically); the round-trip canonical form records the body as a
+  SEPARATE `("ConstraintBody", qn, text)` entry, so a constraint with a body is a
+  distinct fingerprint without changing the base constraint tuple.
+- **Validation.** Only basic well-formedness: an empty/whitespace body is a
+  WARNING (`empty-constraint-body`) -- syntactically allowed, almost certainly a
+  mistake; the body is otherwise not interpreted. (This is the first non-ERROR
+  rule.)
+- **UI-edit.** A `ConstraintBodyPropertyPage` text entry edits the body (clearing
+  the field removes it); it DEFERS for requirements (they subclass the constraint
+  classes, but requirement bodies are Phase 6b and not yet exported, so a body
+  must not be authorable on a requirement here).

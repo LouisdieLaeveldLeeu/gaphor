@@ -1,8 +1,10 @@
 """Scoped structural + typing validation for the SysML2 model.
 
 Validation grows construct by construct (each rule tested); it started as the
-four M2 rules and now also enforces kind-specific typing. All rules are ERROR
-severity per the conformance policy (decision sec 4):
+four M2 rules and now also enforces kind-specific typing. Rules are ERROR severity
+per the conformance policy (decision sec 4), except where noted (the
+empty-constraint-body rule is a WARNING -- syntactically allowed, likely a
+mistake):
 
 - missing owner            -> structural integrity broken
 - duplicate member name    -> name resolution would be ambiguous
@@ -24,6 +26,10 @@ severity per the conformance policy (decision sec 4):
                               caught model-derived (no valid textual form)
 - broken conjugation       -> a conjugated port typing does not resolve to a real
                               conjugate of a port definition (model-derived)
+- empty constraint body    -> a preserved constraint body is empty/whitespace
+                              (WARNING; model-derived). The body is opaque text,
+                              not interpreted -- expression semantics are out of
+                              scope.
 
 Rules that need mapping context (unresolved-symbol, mapping-context kind
 mismatch) take it as an argument; the rest are recomputed from the stored model
@@ -40,6 +46,7 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 from gaphor.core.modeling import ElementFactory
+from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import sysml2
@@ -95,7 +102,34 @@ def validate(
     diagnostics.extend(_check_connection_ends(factory, unresolved_ends or {}))
     diagnostics.extend(_check_connection_end_integrity(factory))
     diagnostics.extend(_check_conjugated_typing(factory))
+    diagnostics.extend(_check_constraint_body(factory))
     return diagnostics
+
+
+def _check_constraint_body(factory: ElementFactory) -> Iterator[Diagnostic]:
+    """A preserved constraint body must not be empty (basic well-formedness).
+
+    Model-derived: a constraint body is preserved as opaque text in a
+    `TextualRepresentation` (language `sysml`); the grammar already enforces the
+    `{ }` delimiters, so the only well-formedness check left is that the body is
+    not empty/whitespace-only (`constraint c { }`), which is reported as a
+    WARNING (it is syntactically allowed but almost certainly a mistake). The body
+    is NOT otherwise interpreted -- expression semantics are out of scope here.
+    """
+    for rep in factory.select(kerml.TextualRepresentation):
+        if rep.language != constraints.BODY_LANGUAGE:
+            continue
+        if not (rep.body or "").strip():
+            owner = kk.owning_namespace(rep)
+            name = owner.declaredName if owner is not None else None
+            yield Diagnostic(
+                Severity.WARNING,
+                "empty-constraint-body",
+                f"constraint {name!r} has an empty body"
+                if name
+                else "constraint has an empty body",
+                owner.id if owner is not None else rep.id,
+            )
 
 
 def _sole(values) -> kerml.Element | None:

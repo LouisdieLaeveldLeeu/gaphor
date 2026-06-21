@@ -483,6 +483,13 @@ KERNEL_SEED = (
     # conjugatedType) reference Type (already seeded) and `conjugator`/
     # `ownedConjugator` are derived, so it adds no new stored closure.
     "Conjugation",
+    # TextualRepresentation (an AnnotatingElement, already in the closure) carries
+    # an element's content as text in a named language. Seeded in Phase 6a as the
+    # honest, normative carrier for an opaque constraint body (`constraint c { ...
+    # }`): the body is preserved as text WITHOUT claiming an expression-tree
+    # semantics. Its `language`/`body` are Strings and `representedElement` is
+    # derived, so it adds no new stored closure.
+    "TextualRepresentation",
 )
 
 

@@ -23,6 +23,7 @@ from gaphor.core.modeling.modelinglanguage import (
 )
 import gaphor.storage as storage
 from gaphor.SysML2 import conjugation
+from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2.export import export_namespace
@@ -149,6 +150,12 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                 entries.add(
                     ("FeatureDirection", kk.qualified_name(member), str(member.direction))
                 )
+
+            # A constraint body is likewise a SEPARATE entry (only when present),
+            # so a constraint with a preserved body differs from one without.
+            body = constraints.body_text(member)
+            if body is not None:
+                entries.add(("ConstraintBody", kk.qualified_name(member), body))
 
     visit(root)
     return frozenset(entries)

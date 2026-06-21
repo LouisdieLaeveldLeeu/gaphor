@@ -36,6 +36,10 @@ def _split_direction(items):
 # alongside the (qualified) type name through the transform.
 _PortType = namedtuple("_PortType", "conjugated type_name")
 
+# Internal carrier for a constraint body so it is distinguishable from an optional
+# type_ref (a tuple) in the transform.
+_Body = namedtuple("_Body", "text")
+
 _GRAMMAR_PATH = Path(__file__).with_name("sysml2.lark")
 
 
@@ -85,16 +89,33 @@ class _ASTBuilder(Transformer):
             name=str(name), type_name=type_name, direction=direction, line=name.line
         )
 
+    def constraint_body(self, items):
+        # CONSTRAINT_BODY includes the outer braces; preserve the inner text,
+        # trimmed of surrounding whitespace (round-trip compares this normalized
+        # form, not raw bytes).
+        return _Body(str(items[0])[1:-1].strip())
+
     def constraint_definition(self, items):
-        (name,) = items
-        return ast.ConstraintDefinition(name=str(name), line=name.line)
+        name = items[0]
+        body = items[1].text if len(items) > 1 else None
+        return ast.ConstraintDefinition(name=str(name), body=body, line=name.line)
 
     def constraint_usage(self, items):
         direction, items = _split_direction(items)
         name = items[0]
-        type_name = items[1] if len(items) > 1 else None
+        type_name = None
+        body = None
+        for extra in items[1:]:
+            if isinstance(extra, _Body):
+                body = extra.text
+            else:
+                type_name = extra
         return ast.ConstraintUsage(
-            name=str(name), type_name=type_name, direction=direction, line=name.line
+            name=str(name),
+            type_name=type_name,
+            direction=direction,
+            body=body,
+            line=name.line,
         )
 
     def requirement_definition(self, items):

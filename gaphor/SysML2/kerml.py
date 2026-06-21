@@ -173,6 +173,11 @@ class Predicate(Function):
     pass
 
 
+class TextualRepresentation(AnnotatingElement):
+    body: _attribute[str] = _attribute("body", str)
+    language: _attribute[str] = _attribute("language", str)
+
+
 
 Element.owningRelationship = association("owningRelationship", Relationship)
 Element.ownedRelationship = association("ownedRelationship", Relationship, composite=True)

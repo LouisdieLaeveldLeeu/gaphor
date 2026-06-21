@@ -193,6 +193,27 @@
     </style>
   </object>
 
+  <object class="GtkBox" id="constraint-body-editor">
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkLabel">
+        <property name="label" translatable="yes">Constraint Body</property>
+        <property name="xalign">0</property>
+        <style>
+          <class name="title"/>
+        </style>
+      </object>
+    </child>
+    <child>
+      <object class="GtkEntry" id="constraint-body">
+        <property name="placeholder-text" translatable="yes">e.g. mass &gt; 0</property>
+      </object>
+    </child>
+    <style>
+      <class name="propertypage"/>
+    </style>
+  </object>
+
   <object class="GtkBox" id="interface-usage-type-editor">
     <property name="orientation">vertical</property>
     <child>

@@ -13,15 +13,16 @@ tests.
 
 ## Current State
 
-- KerML kernel (28 generated non-enum classes plus 2 enums): `internal-only` --
+- KerML kernel (29 generated non-enum classes plus 2 enums): `internal-only` --
   Create-API + Persist are tested, and the five kernel behaviours are tested.
   The kernel grew deliberately from the original 12-class minimal slice:
   Classifier/Class/Structure and FeatureTyping for M2; Package and DataType for
   package/attribute work; BooleanExpression/Predicate plus
   Expression/Step/Function/Behavior for constraints/requirements;
-  AssociationStructure/Connector plus Association for connections; and
-  Conjugation for port conjugation (Phase 8a). The `FeatureDirectionKind` enum
-  is one of the 2 enums; Phase 8b made `Feature::direction` nullable (no new
+  AssociationStructure/Connector plus Association for connections;
+  Conjugation for port conjugation (Phase 8a); and TextualRepresentation (the
+  carrier for a preserved constraint body) for Phase 6a. The `FeatureDirectionKind`
+  enum is one of the 2 enums; Phase 8b made `Feature::direction` nullable (no new
   class).
 - KerML Package: `supported` (all nine cells).
 - SysML PartDefinition, PartUsage: `supported` (all nine cells).
@@ -32,9 +33,11 @@ tests.
 - SysML ActionDefinition, ActionUsage: `alpha` (all nine cells for the
   declaration-and-typing surface; capped on action bodies, nested steps,
   succession/flow connections, and parameters).
-- SysML ConstraintDefinition/Usage and RequirementDefinition/Usage: `alpha` (all
-  nine cells for the declaration-and-typing surface; capped on constraint
-  expression bodies and requirement `subject`/`assume`/`require` parameters).
+- SysML ConstraintDefinition/Usage and RequirementDefinition/Usage: `alpha` (the
+  declaration-and-typing surface; constraints also preserve an opaque expression
+  body -- `constraint c { <expr> }` stored as a TextualRepresentation, Phase 6a).
+  Capped on constraint expression SEMANTICS (a faithful KerML expression tree) and
+  requirement `subject`/`assume`/`require` parameters (Phase 6b).
 - SysML PortDefinition, PortUsage: `supported` (all nine cells for the
   declaration-and-typing surface INCLUDING conjugation -- `port p : ~Fuel` typed
   by the faithful conjugate via PortConjugation/ConjugatedPortDefinition/
@@ -358,16 +361,39 @@ deferred by Phase 9's non-chain endpoint scope.
 
 ### Phase 6 -- Constraint And Requirement Semantics
 
-Complete the expression/requirement gate:
+Sliced into 6a (constraint expression bodies) and 6b (requirement parameters),
+each a complete, reviewable, individually-stoppable slice (the 8a/8b/8c
+precedent). Both need new definition/usage BODY grammar; 6a proves the body
+mechanism, which 6b reuses with requirement-specific semantics.
 
-- constraint predicate/body syntax and semantic mapping;
-- persisted expression/body structure;
-- requirement `subject`, `assume`, and `require` parameters;
-- validation, export, round-trip, diagram, and UI-edit coverage for the new
-  surface.
+#### Phase 6a -- Constraint Expression Bodies -- DONE
 
-Exit: ConstraintDefinition/Usage and RequirementDefinition/Usage can be promoted
-from `alpha` when all claimed cells pass.
+Delivered the constraint body surface as PRESERVED OPAQUE TEXT (an explicit
+decision -- a faithful KerML expression tree is a later, multi-phase dependency,
+so the body is preserved without claiming expression semantics):
+
+- grammar/parser/AST: `constraint def C { <body> }` and
+  `[<dir>] constraint c [: C] { <body> }`; the body is captured by a balanced-brace
+  terminal (tolerant to nesting) as opaque text; unbalanced braces are a parse
+  error (delimiter validation);
+- the body is stored as a `TextualRepresentation` (language `sysml`) owned by the
+  constraint -- the normative KerML carrier for "this element's content as text in
+  a language" (seeded into the kernel; 29 generated non-enum classes now). The
+  faithful `Annotation` attachment + expression tree are deferred;
+- export re-emits `{ <body> }`; the round-trip canonical form records the body as a
+  separate entry (so a constraint with a body differs from one without);
+  validation reports an empty body (`empty-constraint-body`, WARNING); a property
+  page edits the body (deferring for requirements);
+- Constraint rows stay `alpha` (the body is preserved, not semantically modeled).
+
+Exit (reached): constraint body text parses, persists, exports, round-trips, and
+preserves arbitrary expression text safely; the matrix stays honest (`alpha`).
+
+#### Phase 6b -- Requirement Parameters -- PLANNED
+
+Requirement `subject`, `assume`, and `require` parameters, reusing the 6a body
+mechanism with requirement-specific semantics: validate scoped references where
+supported, export/round-trip, and promote only the proven requirement cells.
 
 ### Phase 7 -- Action Semantics
 

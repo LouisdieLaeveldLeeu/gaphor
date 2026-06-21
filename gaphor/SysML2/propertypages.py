@@ -15,6 +15,7 @@ from gaphor.diagram.propertypages import (
     unsubscribe_all_on_destroy,
 )
 from gaphor.SysML2 import conjugation
+from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import mapping
@@ -503,6 +504,49 @@ class ConnectionUsageTypePropertyPage(PropertyPageBase):
                 kk.set_feature_type(self.subject, type_)
             else:
                 kk.set_feature_type(self.subject, None)
+
+
+@PropertyPages.register(sysml2.ConstraintDefinition)
+@PropertyPages.register(sysml2.ConstraintUsage)
+class ConstraintBodyPropertyPage(PropertyPageBase):
+    """Edit a constraint's preserved body text (Phase 6a).
+
+    The body is opaque text stored as a `TextualRepresentation` (see
+    `constraints`); clearing the field removes it. Defers for requirements
+    (RequirementDefinition/Usage subclass the constraint classes, so they match by
+    isinstance): requirement bodies are Phase 6b and the export path does not yet
+    emit them, so a body must not be authorable on a requirement here.
+    """
+
+    order = 30
+
+    def __init__(
+        self,
+        subject: sysml2.ConstraintDefinition | sysml2.ConstraintUsage,
+        event_manager,
+    ):
+        super().__init__()
+        self.subject = subject
+        self.event_manager = event_manager
+
+    def construct(self):
+        if isinstance(
+            self.subject,
+            (sysml2.RequirementDefinition, sysml2.RequirementUsage),
+        ):
+            return None
+
+        builder = new_builder("constraint-body-editor")
+        entry = builder.get_object("constraint-body")
+        entry.set_text(constraints.body_text(self.subject) or "")
+        entry.connect("changed", self._on_body_changed)
+        return builder.get_object("constraint-body-editor")
+
+    def _on_body_changed(self, entry):
+        with Transaction(self.event_manager, context="editing"):
+            # An empty field clears the body (None) rather than storing an empty
+            # `{ }`; a non-empty field preserves the text verbatim.
+            constraints.set_body_text(self.subject, entry.get_text().strip() or None)
 
 
 @PropertyPages.register(sysml2.InterfaceUsage)

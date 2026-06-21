@@ -11,6 +11,7 @@ harness relies on.
 from __future__ import annotations
 
 from gaphor.SysML2 import conjugation
+from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 
@@ -57,7 +58,7 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     if isinstance(element, sysml2.RequirementDefinition):
         return f"{pad}requirement def {element.declaredName};\n"
     if isinstance(element, sysml2.ConstraintDefinition):
-        return f"{pad}constraint def {element.declaredName};\n"
+        return f"{pad}constraint def {element.declaredName}{_constraint_tail(element)}\n"
     if isinstance(element, sysml2.PortDefinition):
         return f"{pad}port def {element.declaredName};\n"
     # Usages may carry a feature direction prefix (`in`/`out`/`inout`).
@@ -81,11 +82,24 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         return f"{pad}{dir_}requirement {_usage_decl(element, root)};\n"
     if isinstance(element, sysml2.ConstraintUsage):
         dir_ = _direction_prefix(element)
-        return f"{pad}{dir_}constraint {_usage_decl(element, root)};\n"
+        return (
+            f"{pad}{dir_}constraint {_usage_decl(element, root)}"
+            f"{_constraint_tail(element)}\n"
+        )
     if isinstance(element, sysml2.PortUsage):
         dir_ = _direction_prefix(element)
         return f"{pad}{dir_}port {_usage_decl(element, root)};\n"
     return ""
+
+
+def _constraint_tail(constraint: kerml.Element) -> str:
+    """` { <body> }` for a constraint with a preserved body, else `;` (Phase 6a).
+
+    The body is emitted verbatim (it was preserved as opaque text), so it
+    re-parses to the same body on round-trip.
+    """
+    body = constraints.body_text(constraint)
+    return f" {{ {body} }}" if body is not None else ";"
 
 
 def _direction_prefix(usage: kerml.Feature) -> str:

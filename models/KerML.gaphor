@@ -383,6 +383,18 @@
 <owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
 <package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
 </UML:Class>
+<UML:Class id="fe1e588b-0504-5174-b7d6-3f6d6681c4b0">
+<name><val>TextualRepresentation</val></name>
+<ownedAttribute><reflist>
+<ref refid="5b81e529-6d00-5f92-a989-3669f8bbf60d"/>
+<ref refid="e792c954-3ac5-532a-a981-467971de5a72"/>
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="f3804762-beec-56c0-9aea-5047beb88d6b"/>
+</reflist></generalization>
+<owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
+<package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
+</UML:Class>
 <UML:Class id="8d9234aa-97e6-529b-8f71-14939a9c6434">
 <name><val>Type</val></name>
 <ownedAttribute><reflist>
@@ -514,6 +526,10 @@
 <UML:Generalization id="426c1518-d246-5fd8-8fca-98a90f3218cb">
 <general><ref refid="d2341cf2-33ce-5826-9fa3-8e9eb55523b3"/></general>
 <specific><ref refid="2efe9604-fabe-5754-a71f-f3f8a29c25c2"/></specific>
+</UML:Generalization>
+<UML:Generalization id="f3804762-beec-56c0-9aea-5047beb88d6b">
+<general><ref refid="c32116c0-0313-51fe-b090-027af61a42df"/></general>
+<specific><ref refid="fe1e588b-0504-5174-b7d6-3f6d6681c4b0"/></specific>
 </UML:Generalization>
 <UML:Generalization id="51fa0845-e0dc-5def-8261-28ddc1c70cc1">
 <general><ref refid="b7e4ddbd-8de5-56ee-92cb-933a9c2749a2"/></general>
@@ -779,6 +795,16 @@
 <name><val>Specialization_specific_of</val></name>
 <type><ref refid="e17b980c-d944-5dba-a06f-9e9854df380d"/></type>
 <owningAssociation><ref refid="bf3ba9c4-51cb-5a73-a288-805fc5ad93bf"/></owningAssociation>
+</UML:Property>
+<UML:Property id="5b81e529-6d00-5f92-a989-3669f8bbf60d">
+<name><val>language</val></name>
+<structuredClassifier><ref refid="fe1e588b-0504-5174-b7d6-3f6d6681c4b0"/></structuredClassifier>
+<typeValue><val>str</val></typeValue>
+</UML:Property>
+<UML:Property id="e792c954-3ac5-532a-a981-467971de5a72">
+<name><val>body</val></name>
+<structuredClassifier><ref refid="fe1e588b-0504-5174-b7d6-3f6d6681c4b0"/></structuredClassifier>
+<typeValue><val>str</val></typeValue>
 </UML:Property>
 <UML:Property id="fd14b003-e112-5f9a-9f42-f43086141fc4">
 <name><val>isAbstract</val></name>
