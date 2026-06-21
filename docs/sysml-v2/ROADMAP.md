@@ -48,6 +48,12 @@ tests.
   connector ends -- `connection c connect a to b;` -- resolved to features,
   validated, exported, round-tripped, and projected as a line bound to its ends;
   Phase 9). Feature-chain endpoints (Phase 5e) and n-ary forms remain follow-ups.
+- SysML InterfaceDefinition, InterfaceUsage: `alpha` (the connection-level
+  surface -- typing by an InterfaceDefinition, binary connect ends, direction,
+  own diagram items + type page; Phase 8c). They subclass the connection classes
+  and reuse their machinery. Held at alpha on a named dependency: interface-end
+  PORT bodies (`interface def I { end : ~P; }`) and flow need definition-body
+  grammar (no construct has it yet).
 - Resolution scope so far: nearest-first lookup across enclosing namespaces
   (Phase 5) -- same-namespace, enclosing-package, relative-qualified, and
   root-qualified names, with inner scopes shadowing outer ones. Imports, aliases,
@@ -433,11 +439,33 @@ No support-matrix row changes status (direction is added to the existing
 declaration-and-typing surface of every usage); the already-`supported` rows now
 also cover direction.
 
-#### Phase 8c -- Interface Definition / Usage Semantics -- PLANNED
+#### Phase 8c -- Interface Definition / Usage Semantics -- DONE
 
-`InterfaceDefinition` / `InterfaceUsage` (and the interface-end / flow
-semantics that build on conjugated ports): a new construct with its own support
-matrix rows, taken end to end.
+Delivered the CONNECTION-LEVEL surface for InterfaceDefinition/InterfaceUsage.
+They subclass ConnectionDefinition/ConnectionUsage (adding only derived
+properties), so an interface reuses the connection machinery one definition kind
+deeper:
+
+- generated from the pinned XMI (added to the SysML seed; no new stored closure);
+- grammar/parser/AST: `interface def I;` and `[<dir>] interface i [: I]
+  [connect a to b];` -- typing, binary connector ends (Phase 9), and the
+  direction prefix (Phase 8b) all via inheritance;
+- mapping types an InterfaceUsage by an InterfaceDefinition (exact kind, so a
+  plain ConnectionDefinition is mistyped) and resolves its ends with the shared
+  connection-end machinery; export emits the interface keywords; the round-trip
+  canonical form distinguishes interfaces from connections;
+- validation: the connection-end rules (broken/non-feature/incomplete) already
+  cover InterfaceUsage (it IS a ConnectionUsage);
+- diagram: `InterfaceDefinitionItem` (box) and `InterfaceUsageItem` (line, reusing
+  the connection line + connector via MRO), each registered so it wins over the
+  inherited connection item; UI-edit: an InterfaceUsage type page listing
+  InterfaceDefinitions (the inherited connection/part type pages defer) plus
+  toolbox tools.
+
+InterfaceDefinition/InterfaceUsage are held at `alpha`, NOT `supported`, on the
+named dependency: interface-end PORT bodies (`interface def I { end : ~P; }`) and
+flow semantics need definition-body grammar that no construct has yet. Only the
+connection-level surface is proven.
 
 ### Phase 9 -- Connection End Semantics -- DONE
 

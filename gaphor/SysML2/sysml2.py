@@ -120,6 +120,14 @@ class ConstraintUsage(OccurrenceUsage, _BooleanExpression):
     pass
 
 
+class InterfaceDefinition(ConnectionDefinition):
+    pass
+
+
+class InterfaceUsage(ConnectionUsage):
+    pass
+
+
 class PortConjugation(_Conjugation):
     originalPortDefinition: relation_many[PortDefinition]
 

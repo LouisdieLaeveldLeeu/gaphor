@@ -997,6 +997,14 @@ SYSML_SEED = (
     # behavior-layer dependency, not a faked stored endpoint here.
     "ConnectionDefinition",
     "ConnectionUsage",
+    # InterfaceDefinition/Usage for the connection-level surface (Phase 8c). They
+    # subclass ConnectionDefinition/ConnectionUsage and add only DERIVED
+    # properties (interfaceEnd, interfaceDefinition), so they pull no new stored
+    # closure -- an interface inherits the connector ends/typing/direction. The
+    # interface-end PORT bodies and flow semantics need definition-body grammar
+    # (no construct has it yet) and remain a named later dependency.
+    "InterfaceDefinition",
+    "InterfaceUsage",
 )
 
 # KerML classes that the generated SysML kernel must already provide as a

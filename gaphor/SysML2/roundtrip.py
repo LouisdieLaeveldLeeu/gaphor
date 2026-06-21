@@ -51,6 +51,20 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
             if isinstance(member, kerml.Package):
                 entries.add(("Package", kk.qualified_name(member)))
                 visit(member)
+            elif isinstance(member, sysml2.InterfaceDefinition):
+                entries.add(("InterfaceDefinition", kk.qualified_name(member)))
+            elif isinstance(member, sysml2.InterfaceUsage):
+                source = kk._single(member.source)
+                target = kk._single(member.target)
+                entries.add(
+                    (
+                        "InterfaceUsage",
+                        kk.qualified_name(member),
+                        _usage_type_qualified_name(member) or "",
+                        kk.qualified_name(source) if source is not None else "",
+                        kk.qualified_name(target) if target is not None else "",
+                    )
+                )
             elif isinstance(member, sysml2.ConnectionDefinition):
                 entries.add(("ConnectionDefinition", kk.qualified_name(member)))
             elif isinstance(member, sysml2.ConnectionUsage):

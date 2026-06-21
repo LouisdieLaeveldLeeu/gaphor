@@ -40,9 +40,12 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
             return f"{pad}package {element.declaredName} {{\n{inner}{pad}}}\n"
         return f"{pad}package {element.declaredName} {{ }}\n"
     # Definitions before usages, and the most-derived class before its bases:
-    # RequirementDefinition is a ConstraintDefinition (-> `requirement def`), and
-    # ConnectionDefinition is a PartDefinition (-> `connection def`), so the more
-    # specific classes are checked first; likewise for the usages.
+    # RequirementDefinition is a ConstraintDefinition (-> `requirement def`),
+    # ConnectionDefinition is a PartDefinition (-> `connection def`), and
+    # InterfaceDefinition is a ConnectionDefinition (-> `interface def`), so the
+    # more specific classes are checked first; likewise for the usages.
+    if isinstance(element, sysml2.InterfaceDefinition):
+        return f"{pad}interface def {element.declaredName};\n"
     if isinstance(element, sysml2.ConnectionDefinition):
         return f"{pad}connection def {element.declaredName};\n"
     if isinstance(element, sysml2.PartDefinition):
@@ -58,6 +61,9 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     if isinstance(element, sysml2.PortDefinition):
         return f"{pad}port def {element.declaredName};\n"
     # Usages may carry a feature direction prefix (`in`/`out`/`inout`).
+    if isinstance(element, sysml2.InterfaceUsage):
+        dir_ = _direction_prefix(element)
+        return f"{pad}{dir_}interface {_connection_decl(element, root)};\n"
     if isinstance(element, sysml2.ConnectionUsage):
         dir_ = _direction_prefix(element)
         return f"{pad}{dir_}connection {_connection_decl(element, root)};\n"

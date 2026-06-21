@@ -28,6 +28,8 @@ member: part_definition
       | port_usage
       | connection_definition
       | connection_usage
+      | interface_definition
+      | interface_usage
       | package_definition
 
 // A usage may carry a feature direction prefix (`in` / `out` / `inout`), which
@@ -86,6 +88,16 @@ connection_usage: DIRECTION? "connection" NAME (":" type_ref)? connect_clause? "
 
 connect_clause: "connect" connection_end "to" connection_end
 connection_end: qualified_name
+
+// `interface def <name> ;`
+interface_definition: "interface" "def" NAME ";"
+
+// `[<dir>] interface <name> [ ":" <type> ] [ "connect" <end> "to" <end> ] ;`
+// InterfaceUsage IS a ConnectionUsage, so it reuses the binary connect ends
+// (Phase 9) and the direction prefix (Phase 8b). Interface-end PORT bodies and
+// flow are a later dependency (need definition-body grammar) -- Phase 8c is the
+// connection-level surface only.
+interface_usage: DIRECTION? "interface" NAME (":" type_ref)? connect_clause? ";"
 
 // `package <name> { <members> }` (nestable) or `package <name> ;` (empty).
 package_definition: "package" NAME "{" package_body "}"  -> package_definition

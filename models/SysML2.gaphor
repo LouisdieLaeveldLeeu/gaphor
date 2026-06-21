@@ -237,6 +237,28 @@
 <owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
 <package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
 </UML:Class>
+<UML:Class id="bdfa053e-4703-51bb-98a3-859c98a71e5a">
+<name><val>InterfaceDefinition</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="554f0b1b-f5f9-5a55-b98c-fb5946f5f218"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
+<UML:Class id="284f539a-7925-5ff9-8907-1fd103bb34f3">
+<name><val>InterfaceUsage</val></name>
+<ownedAttribute><reflist>
+
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="c865969b-6a6f-5e4a-a1aa-680d984fab70"/>
+</reflist></generalization>
+<owningPackage><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></owningPackage>
+<package><ref refid="44287151-de15-5bb5-ba48-8e2e5498b96e"/></package>
+</UML:Class>
 <UML:Class id="b3dc6dc9-38cf-51c3-a9f4-86d872cf5a16">
 <name><val>ItemDefinition</val></name>
 <ownedAttribute><reflist>
@@ -452,6 +474,14 @@
 <UML:Generalization id="7f7016f2-5bd6-522a-8b73-0092738dc227">
 <general><ref refid="2ce861ec-fe54-5239-9261-17dfc3e91d2d"/></general>
 <specific><ref refid="e1156fcd-c775-55e0-913d-0ce75246ac5f"/></specific>
+</UML:Generalization>
+<UML:Generalization id="554f0b1b-f5f9-5a55-b98c-fb5946f5f218">
+<general><ref refid="6c9fcc72-8346-5298-90fa-81b17bf66867"/></general>
+<specific><ref refid="bdfa053e-4703-51bb-98a3-859c98a71e5a"/></specific>
+</UML:Generalization>
+<UML:Generalization id="c865969b-6a6f-5e4a-a1aa-680d984fab70">
+<general><ref refid="828aa4cb-17a3-5e71-9ec8-8c57164e65da"/></general>
+<specific><ref refid="284f539a-7925-5ff9-8907-1fd103bb34f3"/></specific>
 </UML:Generalization>
 <UML:Generalization id="0e7e03aa-2b32-5728-aa6b-90376923a5d7">
 <general><ref refid="39c7820a-c5bf-51dd-8f2b-ac20c08a407e"/></general>

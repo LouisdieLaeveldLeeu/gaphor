@@ -43,6 +43,7 @@ USAGE_DEFINITION_KIND: dict[type, type] = {
     sysml2.RequirementUsage: sysml2.RequirementDefinition,
     sysml2.PortUsage: sysml2.PortDefinition,
     sysml2.ConnectionUsage: sysml2.ConnectionDefinition,
+    sysml2.InterfaceUsage: sysml2.InterfaceDefinition,
 }
 
 
@@ -322,6 +323,18 @@ def _build_members(
             element = factory.create(sysml2.ConnectionDefinition)
         elif isinstance(member, ast.ConnectionUsage):
             element = factory.create(sysml2.ConnectionUsage)
+            if member.type_name is not None:
+                typed_usages.append((element, namespace, member.type_name, False))
+            if member.source is not None and member.target is not None:
+                connection_ends.append(
+                    (element, namespace, member.source, member.target)
+                )
+        elif isinstance(member, ast.InterfaceDefinition):
+            element = factory.create(sysml2.InterfaceDefinition)
+        elif isinstance(member, ast.InterfaceUsage):
+            # An InterfaceUsage IS a ConnectionUsage: same typing + binary
+            # connector-end machinery (Phase 9), one definition kind deeper.
+            element = factory.create(sysml2.InterfaceUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name, False))
             if member.source is not None and member.target is not None:

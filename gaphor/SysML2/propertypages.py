@@ -466,6 +466,14 @@ class ConnectionUsageTypePropertyPage(PropertyPageBase):
         self.event_manager = event_manager
 
     def construct(self):
+        # InterfaceUsage subclasses ConnectionUsage, so this page is also matched
+        # for it by isinstance. An InterfaceUsage is typed by an
+        # InterfaceDefinition, not a ConnectionDefinition, and gets its own
+        # InterfaceUsageTypePropertyPage, so this page defers (returns no widget)
+        # to avoid a second, wrong-kind dropdown on an interface.
+        if isinstance(self.subject, sysml2.InterfaceUsage):
+            return None
+
         builder = new_builder("connection-usage-type-editor")
 
         dropdown = builder.get_object("connection-usage-type")
@@ -492,6 +500,56 @@ class ConnectionUsageTypePropertyPage(PropertyPageBase):
             if selected and selected.value:
                 type_ = self.subject.model.lookup(selected.value)
                 assert isinstance(type_, sysml2.ConnectionDefinition)
+                kk.set_feature_type(self.subject, type_)
+            else:
+                kk.set_feature_type(self.subject, None)
+
+
+@PropertyPages.register(sysml2.InterfaceUsage)
+class InterfaceUsageTypePropertyPage(PropertyPageBase):
+    """Set the InterfaceDefinition type for an InterfaceUsage.
+
+    InterfaceUsage subclasses ConnectionUsage (and PartUsage), so both their type
+    pages also match it; each defers for an InterfaceUsage, and this page provides
+    the InterfaceDefinition dropdown -- so an InterfaceUsage gets exactly one type
+    editor, of the right kind. The list is exact-kind, so it offers only
+    InterfaceDefinitions (never plain ConnectionDefinitions).
+    """
+
+    order = 20
+
+    def __init__(self, subject: sysml2.InterfaceUsage, event_manager):
+        super().__init__()
+        self.subject = subject
+        self.event_manager = event_manager
+
+    def construct(self):
+        builder = new_builder("interface-usage-type-editor")
+
+        dropdown = builder.get_object("interface-usage-type")
+        model = list_of_definitions(self.subject.model, sysml2.InterfaceDefinition)
+        dropdown.set_model(model)
+
+        if isinstance(
+            type_ := kk.feature_type(self.subject), sysml2.InterfaceDefinition
+        ):
+            selected = next(
+                (n for n, lv in enumerate(model) if lv.value == type_.id),
+                None,
+            )
+            if selected is not None:
+                dropdown.set_selected(selected)
+
+        dropdown.connect("notify::selected", self._on_type_changed)
+
+        return builder.get_object("interface-usage-type-editor")
+
+    def _on_type_changed(self, dropdown, _pspec):
+        selected = dropdown.get_selected_item()
+        with Transaction(self.event_manager, context="editing"):
+            if selected and selected.value:
+                type_ = self.subject.model.lookup(selected.value)
+                assert isinstance(type_, sysml2.InterfaceDefinition)
                 kk.set_feature_type(self.subject, type_)
             else:
                 kk.set_feature_type(self.subject, None)

@@ -163,6 +163,29 @@ class _ASTBuilder(Transformer):
             line=name.line,
         )
 
+    def interface_definition(self, items):
+        (name,) = items
+        return ast.InterfaceDefinition(name=str(name), line=name.line)
+
+    def interface_usage(self, items):
+        direction, items = _split_direction(items)
+        name = items[0]
+        type_name = None
+        source = target = None
+        for extra in items[1:]:
+            if isinstance(extra, _Connect):
+                source, target = extra.source, extra.target
+            else:
+                type_name = extra
+        return ast.InterfaceUsage(
+            name=str(name),
+            type_name=type_name,
+            source=source,
+            target=target,
+            direction=direction,
+            line=name.line,
+        )
+
     def package_definition(self, items):
         name = items[0]
         members = items[1]  # package_body -> tuple

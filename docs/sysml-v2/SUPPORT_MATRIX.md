@@ -61,6 +61,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML PortUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML ConnectionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML ConnectionUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
+| SysML InterfaceDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML InterfaceUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 
 ## Round-Trip Coverage Metric
 
@@ -88,8 +90,10 @@ references, never ids or raw text). M2 establishes the harness
 | SysML PortUsage (conjugated `~`) | yes | `test_port_conjugation.py::test_conjugated_port_round_trips` |
 | SysML ConnectionDefinition | yes | `test_roundtrip.py::test_connection_definition_and_usage_round_trip` |
 | SysML ConnectionUsage (typed) | yes | `test_roundtrip.py` |
+| SysML InterfaceDefinition | yes | `test_interface.py::test_interface_round_trips` |
+| SysML InterfaceUsage (typed + ends) | yes | `test_interface.py` |
 
-Coverage: 15 constructs round-trip-covered. Package, PartDefinition, PartUsage,
+Coverage: 17 constructs round-trip-covered. Package, PartDefinition, PartUsage,
 and AttributeDefinition are `supported`: every matrix cell is implemented and
 focused-tested for the claimed surface. Resolution remains same-namespace +
 simple/qualified name (incl. nested + cross-package). Typing is kind-specific: a
@@ -191,6 +195,23 @@ names); and it projects as a LINE whose head/tail bind to the source/target item
 (a view onto the connector ends -- anchoring or drawing authors the ends without
 duplicating the connection). See `test_connection_ends.py` and the connection
 line-binding tests in `test_diagram_projection.py`.
+
+InterfaceDefinition and InterfaceUsage (Phase 8c) reuse the connection-level
+surface: they subclass ConnectionDefinition/ConnectionUsage (adding only derived
+properties), so an interface is typed by an InterfaceDefinition (exact kind -- a
+plain ConnectionDefinition is a `type-kind-mismatch`), takes binary `connect a to
+b` ends (the same end machinery and validation), carries a direction prefix, and
+-- because InterfaceUsage IS a ConnectionUsage -- the export/round-trip/diagram/UI
+paths treat the more-derived interface kind first: it renders as `interface`,
+projects as an `InterfaceUsageItem` (its own line, reusing the connection line and
+connector via MRO; the box is an `InterfaceDefinitionItem`), and its type page
+lists InterfaceDefinitions only -- the inherited connection and part type pages
+defer for an interface. Both rows are held at `alpha`, NOT `supported`, on a named
+dependency: the DISTINCTIVE interface semantics -- interface ends being
+typed/conjugated PORTS declared in the definition body (`interface def I { end :
+~P; }`) plus flow -- need definition-body grammar that no construct has yet. Only
+the connection-level surface is proven (`test_interface.py`). This is the
+Phase-8c interface gate decision, taken explicitly per the roadmap.
 
 Deferred (named follow-up): feature-chain endpoints (`connect a.b to c.d`) depend
 on Phase 5e, and n-ary/unnamed connection forms are later work -- both beyond the

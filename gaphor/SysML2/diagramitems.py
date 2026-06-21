@@ -308,6 +308,29 @@ class ConnectionUsageItem(LinePresentation):
         self.watch("subject[Feature].direction")
 
 
+@represents(sysml2.InterfaceDefinition)
+class InterfaceDefinitionItem(ConnectionDefinitionItem):
+    """A diagram view onto a SysML2 `InterfaceDefinition` (a box).
+
+    An InterfaceDefinition IS a ConnectionDefinition, so it reuses the connection
+    definition box; registered for InterfaceDefinition so it wins over the
+    inherited ConnectionDefinitionItem."""
+
+
+@represents(
+    sysml2.InterfaceUsage,
+    head=kerml.Relationship.source,  # connector end 1
+    tail=kerml.Relationship.target,  # connector end 2
+)
+class InterfaceUsageItem(ConnectionUsageItem):
+    """A diagram view onto an `InterfaceUsage`: a line bound to its connector ends.
+
+    An InterfaceUsage IS a ConnectionUsage, so it reuses the connection line (and,
+    via MRO, the `ConnectionUsageConnect` connector); registered for InterfaceUsage
+    with its own head/tail metadata so it wins over the inherited
+    ConnectionUsageItem."""
+
+
 @represents(
     kerml.FeatureTyping,
     head=kerml.FeatureTyping.typedFeature,  # the typed feature (usage) end

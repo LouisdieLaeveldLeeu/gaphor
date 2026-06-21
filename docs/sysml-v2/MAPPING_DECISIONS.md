@@ -782,3 +782,36 @@ the existing declaration-and-typing surface of every usage.
   (registered on the base usage classes -- ConnectionUsage and RequirementUsage
   are matched by MRO, so no duplicate editor) sets the direction via a dropdown,
   with `(undirected)` clearing it back to None.
+
+### Completion Phase 8c: Interface Definition / Usage (verified 2026-06-21)
+
+The CONNECTION-LEVEL surface for InterfaceDefinition/InterfaceUsage. They are held
+at `alpha` (not `supported`): the distinctive interface semantics -- interface
+ends being typed/conjugated PORTS in the definition body plus flow -- need
+definition-body grammar that no construct has yet.
+
+- **Reuse by subclassing.** InterfaceDefinition IS a ConnectionDefinition and
+  InterfaceUsage IS a ConnectionUsage, adding only DERIVED properties
+  (interfaceEnd, interfaceDefinition). Seeded into the SysML generation, they pull
+  no new stored closure -- an interface inherits the connector ends, typing, and
+  direction. So Phase 8c is mostly wiring the existing machinery one definition
+  kind deeper, not new semantics.
+- **Most-derived-first everywhere.** Because the interface classes subclass the
+  connection classes (which subclass the part classes), every kind-dispatch checks
+  the interface kind FIRST: `USAGE_DEFINITION_KIND[InterfaceUsage] =
+  InterfaceDefinition` (exact, so `interface i : C` for a plain ConnectionDefinition
+  C is mistyped); export emits `interface`/`interface def` before the connection
+  branches; the canonical form has Interface* entries before Connection*; and the
+  diagram registers `InterfaceDefinitionItem`/`InterfaceUsageItem` (subclasses of
+  the connection items) so they win over the inherited ones. The InterfaceUsageItem
+  reuses the connection line AND, via MRO, the `ConnectionUsageConnect` connector.
+- **Ends + validation for free.** `interface i connect a to b;` uses the same
+  binary connector-end machinery as connections (Phase 9); the connection-end
+  validation rules select `ConnectionUsage`, which includes InterfaceUsage, so
+  broken/non-feature/incomplete ends are caught for interfaces with no new rule.
+- **UI-edit deferral chain.** An InterfaceUsage matches the PartUsage,
+  ConnectionUsage, AND InterfaceUsage type pages by MRO; the first two defer
+  (return no widget) for an interface, and the InterfaceUsage type page lists
+  InterfaceDefinitions only (exact-kind), so an interface gets exactly one
+  type editor of the right kind. Toolbox tools create the interface item/element
+  directly.

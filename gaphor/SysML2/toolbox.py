@@ -259,6 +259,37 @@ connections = ToolSection(
 )
 
 
+interfaces = ToolSection(
+    gettext("Interfaces"),
+    (
+        ToolDef(
+            "toolbox-interface-definition",
+            gettext("Interface Definition"),
+            "gaphor-association-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.InterfaceDefinitionItem,
+                sysml2_model.InterfaceDefinition,
+                config_func=_declared_name_config("InterfaceDefinition"),
+            ),
+            handle_index=SE,
+        ),
+        ToolDef(
+            "toolbox-interface-usage",
+            gettext("Interface Usage"),
+            "gaphor-connector-symbolic",
+            None,
+            new_item_factory(
+                sysml2_items.InterfaceUsageItem,
+                sysml2_model.InterfaceUsage,
+                config_func=_declared_name_config("interfaceUsage"),
+            ),
+            handle_index=SE,
+        ),
+    ),
+)
+
+
 sysml2_toolbox_actions: ToolboxDefinition = (
     packages,
     parts,
@@ -267,6 +298,7 @@ sysml2_toolbox_actions: ToolboxDefinition = (
     requirements,
     ports,
     connections,
+    interfaces,
 )
 
 sysml2_diagram_types: DiagramTypes = (

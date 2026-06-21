@@ -170,6 +170,22 @@ def drop_connection_usage(
     return item
 
 
+@drop.register(sysml2.InterfaceDefinition, Diagram)
+def drop_interface_definition(
+    element: sysml2.InterfaceDefinition, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
+@drop.register(sysml2.InterfaceUsage, Diagram)
+def drop_interface_usage(
+    element: sysml2.InterfaceUsage, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    # An InterfaceUsage IS a ConnectionUsage; project it as a line bound to its
+    # connector ends exactly like a connection (via its own InterfaceUsageItem).
+    return drop_connection_usage(element, diagram, x, y)
+
+
 @drop.register(kerml.FeatureTyping, Diagram)
 def drop_feature_typing(
     element: kerml.FeatureTyping, diagram: Diagram, x: float, y: float

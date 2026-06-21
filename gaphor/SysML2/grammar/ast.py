@@ -156,6 +156,30 @@ class ConnectionUsage:
 
 
 @dataclass(frozen=True)
+class InterfaceDefinition:
+    """`interface def <name> ;`"""
+
+    name: str
+    line: int | None = _line
+
+
+@dataclass(frozen=True)
+class InterfaceUsage:
+    """`[<dir>] interface <name> [ : <type> ] [ connect <end> to <end> ] ;`
+
+    An InterfaceUsage IS a ConnectionUsage; `source`/`target` are its two binary
+    connector-end references (or both None). `direction` is the optional feature
+    direction (Phase 8b)."""
+
+    name: str
+    type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    source: tuple[str, ...] | None = None  # endpoint 1, or None
+    target: tuple[str, ...] | None = None  # endpoint 2, or None
+    direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    line: int | None = _line
+
+
+@dataclass(frozen=True)
 class PackageDefinition:
     """`package <name> { <members> }` -- a named, nestable container."""
 
@@ -169,7 +193,8 @@ Member = (
     "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage "
     "| ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage "
     "| RequirementDefinition | RequirementUsage | PortDefinition | PortUsage "
-    "| ConnectionDefinition | ConnectionUsage | PackageDefinition"
+    "| ConnectionDefinition | ConnectionUsage | InterfaceDefinition "
+    "| InterfaceUsage | PackageDefinition"
 )
 
 
@@ -181,6 +206,7 @@ class Package:
         "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage"
         " | ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage"
         " | RequirementDefinition | RequirementUsage | PortDefinition | PortUsage"
-        " | ConnectionDefinition | ConnectionUsage | PackageDefinition",
+        " | ConnectionDefinition | ConnectionUsage | InterfaceDefinition"
+        " | InterfaceUsage | PackageDefinition",
         ...,
     ] = field(default_factory=tuple)
