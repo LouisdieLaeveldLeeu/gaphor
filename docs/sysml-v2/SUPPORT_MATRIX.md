@@ -168,11 +168,14 @@ Phase 6c adds the lightweight requirement parameters `reqId`, `actor`, and
 `declaredShortName` (the normative `reqId` redefines `declaredShortName`, and the
 coder emits redefinitions as distinct slots, so `declaredShortName` is the single
 home -- see MAPPING_DECISIONS 6c); it is written `<id>` (bare) or `<'1.1.3'>`
-(quoted for a dotted/special id). `actor`/`stakeholder` are parameter features
-carried by the normative ActorMembership/StakeholderMembership (KerML
-ParameterMembership, generated from the pinned XMI -- SysML-layer classes, so the
-kernel count stays 31), mirroring the 6b `subject` machinery and kept in
-declaration order. `requirement [def] [<reqId>] r [: R] { subject ...; actor n
+(quoted for a dotted/special id, with `\'`/`\\` escapes so ANY short name -- e.g.
+one containing a quote -- round-trips losslessly via the single `shortnames`
+encode/decode authority). `actor`/`stakeholder` are `PartUsage`
+parameters (the pinned XMI types ActorMembership/StakeholderMembership's owned
+parameter as a PartUsage) carried by the normative ActorMembership/
+StakeholderMembership (KerML ParameterMembership, generated from the pinned XMI --
+SysML-layer classes, so the kernel count stays 31), kept in declaration order and
+type-checked through the shared PartUsage->PartDefinition path. `requirement [def] [<reqId>] r [: R] { subject ...; actor n
 [: T]; stakeholder n [: T]; ... }` parses, maps, validates (parameter types via
 the unresolved-type rule; the exact-one `broken-requirement-parameter` rule
 extended to both memberships), exports, round-trips (order-sensitive canonical

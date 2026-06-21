@@ -111,27 +111,29 @@ def _check_requirement_parameters(factory: ElementFactory) -> Iterator[Diagnosti
     """A requirement's subject/actor/stakeholder/assume/require memberships must
     own EXACTLY ONE member of the right kind.
 
-    Model-derived (no mapping context): a `SubjectMembership`, `ActorMembership`,
-    and `StakeholderMembership` must each own exactly one `Feature` (the parameter),
-    and a `RequirementConstraintMembership` must own exactly one `ConstraintUsage`
-    (the assumed/required constraint). `memberElement` is relation-many at runtime,
-    so `_sole` is used (not first-value `_single`): a membership with zero, multiple
+    Model-derived (no mapping context): a `SubjectMembership` must own exactly one
+    `Feature` (the subject parameter); an `ActorMembership` and `StakeholderMembership`
+    must each own exactly one `PartUsage` (the pinned XMI types the actor/stakeholder
+    parameter as a PartUsage, so a bare Feature is NOT sufficient); and a
+    `RequirementConstraintMembership` must own exactly one `ConstraintUsage` (the
+    assumed/required constraint). `memberElement` is relation-many at runtime, so
+    `_sole` is used (not first-value `_single`): a membership with zero, multiple
     (appended), or a wrong-kind member is reported. The textual mapper always builds
     these correctly; this is the safety net for a hand-edited/persisted .gaphor or
     an API mutation. The parameter's declared TYPE is validated by the usual
     unresolved-type rule (recorded during mapping).
     """
-    for membership_type, label in (
-        (sysml2.SubjectMembership, "subject"),
-        (sysml2.ActorMembership, "actor"),
-        (sysml2.StakeholderMembership, "stakeholder"),
+    for membership_type, label, member_kind, kind_name in (
+        (sysml2.SubjectMembership, "subject", kerml.Feature, "feature"),
+        (sysml2.ActorMembership, "actor", sysml2.PartUsage, "part usage"),
+        (sysml2.StakeholderMembership, "stakeholder", sysml2.PartUsage, "part usage"),
     ):
         for membership in factory.select(membership_type):
-            if not isinstance(_sole(membership.memberElement), kerml.Feature):
+            if not isinstance(_sole(membership.memberElement), member_kind):
                 yield Diagnostic(
                     Severity.ERROR,
                     "broken-requirement-parameter",
-                    f"requirement {label} is not exactly one feature",
+                    f"requirement {label} is not exactly one {kind_name}",
                     membership.id,
                 )
     for membership in factory.select(sysml2.RequirementConstraintMembership):

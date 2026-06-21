@@ -8,9 +8,10 @@ parts are modeled faithfully on the normative memberships:
 - `assume`/`require` each own a `ConstraintUsage` (whose body reuses the Phase 6a
   opaque-text mechanism) through a `RequirementConstraintMembership` whose `kind`
   is `assumption` or `requirement`;
-- `actor`/`stakeholder` are parameter features related by an `ActorMembership` /
-  `StakeholderMembership` respectively (both KerML ParameterMemberships), kept in
-  declaration order (Phase 6c);
+- `actor`/`stakeholder` are `PartUsage` parameters related by an `ActorMembership`
+  / `StakeholderMembership` respectively (both KerML ParameterMemberships; the
+  pinned XMI types their owned parameter as a PartUsage), kept in declaration
+  order (Phase 6c);
 - `reqId` is the requirement's `declaredShortName` (Phase 6c): a plain KerML
   short-name attribute, not a membership.
 
@@ -77,55 +78,60 @@ def set_reqId(
     requirement.declaredShortName = value or None
 
 
-def _parameter_features(
+def _part_usage_parameters(
     requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
     membership_type: type,
-) -> Iterator[kerml.Feature]:
+) -> Iterator[sysml2.PartUsage]:
+    """The PartUsage parameters related by `membership_type`, in declaration order.
+
+    Actor/stakeholder parameters are PartUsages (per the pinned XMI); a member of
+    any other kind is skipped here and reported by validation.
+    """
     for relationship in requirement.ownedRelationship:
         if isinstance(relationship, membership_type):
             member = kk._single(relationship.memberElement)
-            if isinstance(member, kerml.Feature):
+            if isinstance(member, sysml2.PartUsage):
                 yield member
 
 
-def _add_parameter_feature(
+def _add_part_usage_parameter(
     requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
-    feature: kerml.Feature,
+    usage: sysml2.PartUsage,
     membership_type: type,
 ):
     membership = requirement.model.create(membership_type)
-    kk.add_owned_member(requirement, feature, membership)
+    kk.add_owned_member(requirement, usage, membership)
     return membership
 
 
 def actors(
     requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
-) -> Iterator[kerml.Feature]:
-    """The requirement's actor parameter features, in declaration order."""
-    return _parameter_features(requirement, sysml2.ActorMembership)
+) -> Iterator[sysml2.PartUsage]:
+    """The requirement's actor parameter PartUsages, in declaration order."""
+    return _part_usage_parameters(requirement, sysml2.ActorMembership)
 
 
 def add_actor(
     requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
-    feature: kerml.Feature,
+    usage: sysml2.PartUsage,
 ) -> sysml2.ActorMembership:
-    """Relate `feature` as an actor of the requirement via an ActorMembership."""
-    return _add_parameter_feature(requirement, feature, sysml2.ActorMembership)
+    """Relate `usage` as an actor of the requirement via an ActorMembership."""
+    return _add_part_usage_parameter(requirement, usage, sysml2.ActorMembership)
 
 
 def stakeholders(
     requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
-) -> Iterator[kerml.Feature]:
-    """The requirement's stakeholder parameter features, in declaration order."""
-    return _parameter_features(requirement, sysml2.StakeholderMembership)
+) -> Iterator[sysml2.PartUsage]:
+    """The requirement's stakeholder parameter PartUsages, in declaration order."""
+    return _part_usage_parameters(requirement, sysml2.StakeholderMembership)
 
 
 def add_stakeholder(
     requirement: sysml2.RequirementDefinition | sysml2.RequirementUsage,
-    feature: kerml.Feature,
+    usage: sysml2.PartUsage,
 ) -> sysml2.StakeholderMembership:
-    """Relate `feature` as a stakeholder via a StakeholderMembership."""
-    return _add_parameter_feature(requirement, feature, sysml2.StakeholderMembership)
+    """Relate `usage` as a stakeholder via a StakeholderMembership."""
+    return _add_part_usage_parameter(requirement, usage, sysml2.StakeholderMembership)
 
 
 def requirement_constraints(

@@ -958,3 +958,35 @@ new construct. Rows stay `alpha`.
 - **UI-edit (reqId only).** A `RequirementReqIdPropertyPage` text editor sets
   `declaredShortName` (blank clears to None). Structured actor/stakeholder editing
   stays deferred, so the rows stay `alpha` honestly.
+
+### Completion Phase 6c: review findings fix (verified 2026-06-21)
+
+Two review findings on the 6c work, both fixed.
+
+- **(High) actor/stakeholder are PartUsage, not bare Feature.** The pinned XMI
+  types `ActorMembership::ownedActorParameter` and
+  `StakeholderMembership::ownedStakeholderParameter` as `PartUsage`
+  (`docs/sysml-v2/omg/20250201/SysML.xmi` lines 594/656), so building them as a
+  generic `kerml.Feature` was unfaithful AND let an invalid parameter validate
+  cleanly. Now the mapper creates `sysml2.PartUsage` for each actor/stakeholder,
+  and -- because a PartUsage is kind-checked everywhere else -- their declared
+  type resolves through the SHARED `_resolve_typed_usages` path (PartUsage ->
+  PartDefinition, exact kind), so a wrong-kind type is reported (`type-kind-mismatch`)
+  instead of being accepted as "any Type". The phase-2 list reverted to its
+  subject-only name `subject_typings` (subject stays a `kerml.Feature` typed by ANY
+  Type -- not flagged; the subject=ReferenceUsage refinement remains deferred).
+  Validation's exact-one `broken-requirement-parameter` rule now requires exactly
+  one **PartUsage** for actor/stakeholder (subject still requires a Feature), so a
+  bare-Feature member is reported. `requirements.actors`/`stakeholders` return
+  PartUsages.
+- **(Medium) reqId short names round-trip losslessly via escaping.** Export used to
+  wrap any non-identifier reqId in single quotes WITHOUT escaping, so a reqId like
+  `A'B` exported as unparseable `<'A'B'>`. Decision (chosen over boundary
+  rejection): preserve first -- support the spec's quote/backslash escapes so any
+  short name round-trips. A new single authority `shortnames.py` does
+  `encode`/`decode` (bare `<id>` for identifiers, else `<'...'>` with `\` -> `\\`
+  and `'` -> `\'`); `QUOTED_NAME` accepts ONLY `\'`/`\\` escapes
+  (`/'(?:[^'\\]|\\['\\])*'/`), so an unterminated/extraneous escape is a parse
+  error, never silent corruption. The parser decodes and the exporter encodes
+  through this one module (the ad hoc `re` in `export.py` is gone). The reqId UI
+  setter needs no boundary rejection now -- every value is representable.

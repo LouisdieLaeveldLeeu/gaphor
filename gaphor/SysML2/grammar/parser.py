@@ -14,6 +14,7 @@ from pathlib import Path
 from lark import Lark, Token, Transformer
 from lark.exceptions import LarkError, VisitError
 
+from gaphor.SysML2 import shortnames
 from gaphor.SysML2.grammar import ast
 
 # Internal carrier so connection_usage can tell an optional connect-clause apart
@@ -178,12 +179,9 @@ class _ASTBuilder(Transformer):
         )
 
     def short_name(self, items):
-        # `<NAME>` or `<'quoted'>` -> the reqId string (quotes stripped).
-        token = items[0]
-        text = str(token)
-        if getattr(token, "type", None) == "QUOTED_NAME":
-            text = text[1:-1]
-        return _ShortName(text)
+        # `<NAME>` or `<'quoted'>` -> the reqId string (quotes stripped, escapes
+        # resolved). The encode/decode rules live in `shortnames`.
+        return _ShortName(shortnames.decode(str(items[0])))
 
     def subject_clause(self, items):
         name = items[0]

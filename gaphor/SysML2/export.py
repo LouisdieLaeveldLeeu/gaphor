@@ -10,11 +10,9 @@ harness relies on.
 
 from __future__ import annotations
 
-import re
-
 from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import constraints
-from gaphor.SysML2 import kerml, sysml2
+from gaphor.SysML2 import kerml, shortnames, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import requirements
 
@@ -105,15 +103,15 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
 def _short_name_prefix(req: kerml.Element) -> str:
     """`<reqId> ` for a requirement with a reqId (declaredShortName), else `""`.
 
-    The reqId is emitted as a bare `<id>` when it is a valid identifier, else
-    quoted `<'id'>` (e.g. a dotted `1.1.3`), so it re-parses to the same value
-    (Phase 6c).
+    The reqId is encoded as a bare `<id>` when it is a valid identifier, else as a
+    quoted, escaped `<'id'>` (e.g. a dotted `1.1.3`, or one containing a quote or
+    backslash), so it re-parses to the same value (Phase 6c). Encoding rules live
+    in `shortnames`.
     """
     value = requirements.reqId(req)
     if not value:
         return ""
-    token = value if re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]*", value) else f"'{value}'"
-    return f"<{token}> "
+    return f"<{shortnames.encode(value)}> "
 
 
 def _requirement_tail(req: kerml.Element, root: kerml.Namespace) -> str:

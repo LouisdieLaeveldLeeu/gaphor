@@ -441,15 +441,19 @@ share an implementation shape (a small short-name attribute plus two
   redefines `Element::declaredShortName`, but the coder emits redefinitions as
   distinct slots, so writing both would double-store; `declaredShortName` is the
   one true home (see MAPPING_DECISIONS 6c). Written `<id>` for a bare identifier
-  or `<'1.1.3'>` quoted for a dotted/special id; parse/map/persist/validate/
-  export/round-trip plus a text-entry editor (`RequirementReqIdPropertyPage`);
-- `actor` and `stakeholder` -- parameter features carried by the normative
-  ActorMembership/StakeholderMembership (KerML ParameterMembership, generated from
-  the pinned XMI), mirroring the 6b `subject` machinery: the features are built
-  via their memberships in declaration order, their declared types resolved
-  nearest-first (scoped references, recorded unresolved otherwise), exported and
+  or `<'1.1.3'>` quoted for a dotted/special id, with `\'`/`\\` escapes so any
+  short name (even one with a quote) round-trips losslessly via the single
+  `shortnames` encode/decode authority; parse/map/persist/validate/export/
+  round-trip plus a text-entry editor (`RequirementReqIdPropertyPage`);
+- `actor` and `stakeholder` -- `PartUsage` parameters (the pinned XMI types the
+  ActorMembership/StakeholderMembership owned parameter as a PartUsage) carried by
+  those normative memberships (generated from the pinned XMI): built via their
+  memberships in declaration order, their declared types resolved nearest-first
+  through the SHARED kind-checked PartUsage->PartDefinition path (scoped
+  references, recorded unresolved/wrong-kind otherwise), exported and
   round-tripped (order-sensitive canonical entries). The model-derived exact-one
-  `broken-requirement-parameter` rule was extended to both memberships;
+  `broken-requirement-parameter` rule was extended to both memberships (each must
+  own exactly one PartUsage);
 - structured UI-edit for `actor`/`stakeholder` is deliberately deferred (only the
   `reqId` text editor is added); the rows stay `alpha`.
 
