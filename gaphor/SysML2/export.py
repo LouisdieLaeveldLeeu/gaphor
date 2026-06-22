@@ -149,15 +149,17 @@ def _requirement_tail(req: kerml.Element, root: kerml.Namespace) -> str:
             parts.append(f"{keyword} {_parameter_decl(feature, root)};")
     for concern in requirements.framed_concerns(req):
         referenced = requirements.framed_concern_reference(concern)
-        if isinstance(referenced, sysml2.ConcernUsage):
-            # REFERENCE form (`frame <existing>`): emit a name that re-resolves.
+        if isinstance(referenced, sysml2.ConcernUsage) and not concern.declaredName:
+            # REFERENCE form (`frame <existing>`): an ANONYMOUS usage referencing an
+            # existing concern; emit a name that re-resolves.
             parts.append(f"frame {_end_name(req, referenced, root)};")
         elif referenced is None and concern.declaredName:
             # DECLARE form (`frame concern <name> [: <C>]`).
             parts.append(f"frame concern {_parameter_decl(concern, root)};")
         # else: a broken framed concern -- an unresolved `frame <ref>` (anonymous,
-        # no subsetting) or a reference that does not target a ConcernUsage -- is
-        # reported by validation and NOT re-emitted as invalid text (mirrors a
+        # no subsetting), a reference that does not target a ConcernUsage, or a mixed
+        # declare+reference state (a named usage that also owns a subsetting) -- is
+        # reported by validation and NOT re-emitted as invalid/lossy text (mirrors a
         # broken connect clause / unresolved usage type).
     for keyword, kind in (
         ("assume", requirements.Assumption),

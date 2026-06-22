@@ -484,6 +484,25 @@ def test_multiple_reference_subsettings_on_a_framed_concern_is_reported():
     assert "frame g;" not in export_namespace(result.root)
 
 
+def test_named_framed_concern_that_also_references_is_reported():
+    # The reference form owns an ANONYMOUS usage; a declared (named/typed) framed
+    # concern that ALSO owns a ReferenceSubsetting is a mixed corruption. It must be
+    # rejected, not validated clean and exported as `frame g;` (losing `local : C`).
+    factory, result = _map(
+        "concern def C;\nconcern g : C;\nrequirement def R { frame concern local : C; }"
+    )
+    R = _req_def(factory, "R")
+    (framed,) = list(requirements.framed_concerns(R))
+    assert framed.declaredName == "local"
+    g = next(c for c in factory.select(sysml2.ConcernUsage) if c.declaredName == "g")
+    kk.add_reference_subsetting(framed, g)  # corrupt: reference on a declared frame
+
+    assert any(d.rule == "broken-frame-reference" for d in validate(factory))
+    text = export_namespace(result.root)
+    assert "frame g;" not in text  # not misrepresented as a reference
+    assert "frame concern local" not in text  # the broken frame is skipped, not emitted
+
+
 def test_reqid_page_applies_to_concern(element_factory, event_manager):
     cdef = element_factory.create(sysml2.ConcernDefinition)
     cdef.declaredName = "Safety"

@@ -209,18 +209,23 @@ def _check_frame_references(
         subsettings = list(kk.reference_subsettings(concern))
         if not subsettings:
             continue  # a declared frame, or an unresolved import (mapping context)
-        # A referencing framed concern owns EXACTLY ONE ReferenceSubsetting, to
-        # EXACTLY ONE ConcernUsage. A second appended subsetting (a corruption) is
-        # reported -- otherwise export would emit only the first and silently drop
-        # the rest.
-        if len(subsettings) != 1 or not isinstance(
+        # A referencing framed concern owns EXACTLY ONE ReferenceSubsetting (to
+        # EXACTLY ONE ConcernUsage) and is otherwise ANONYMOUS: per the model
+        # contract the reference form (`frame <existing>`) owns an anonymous
+        # ConcernUsage. So a second appended subsetting, OR a declaredName / own
+        # FeatureTyping alongside a reference (a mixed declare+reference state), is
+        # a corruption -- otherwise export would silently drop the extra reference
+        # or the declared name/type.
+        valid_reference = len(subsettings) == 1 and isinstance(
             _sole(subsettings[0].referencedFeature), sysml2.ConcernUsage
-        ):
+        )
+        anonymous = not concern.declaredName and kk.feature_type(concern) is None
+        if not (valid_reference and anonymous):
             yield Diagnostic(
                 Severity.ERROR,
                 "broken-frame-reference",
-                "framed concern reference must be exactly one reference to a "
-                "concern usage",
+                "framed concern reference must be a single anonymous reference to "
+                "a concern usage",
                 membership.id,
             )
 

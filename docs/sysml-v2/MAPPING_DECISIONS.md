@@ -1114,3 +1114,15 @@ the integrity check requires EXACTLY ONE ReferenceSubsetting (to exactly one
 ConcernUsage) under a referencing framed concern. A second subsetting is reported,
 and export skips the corrupted frame (exact-one reader returns None) rather than
 emitting just the first.
+
+### Completion Phase 6d-2: follow-up finding 2 (verified 2026-06-22)
+
+A third-round Medium finding on the same area: the integrity check allowed a NAMED
+declared framed concern to ALSO own a valid ReferenceSubsetting. That mixed
+declare+reference state validated clean and exported as `frame g;`, silently
+dropping the declared `local : C`. Per the contract the reference form owns an
+ANONYMOUS ConcernUsage, so the model-derived check now requires a referencing
+framed concern (one owning a ReferenceSubsetting) to be a SINGLE ANONYMOUS
+reference: exactly one subsetting to a ConcernUsage AND no declaredName AND no own
+FeatureTyping. Export emits the reference form only for an anonymous usage, so a
+mixed/corrupted frame is skipped (and reported), never misrepresented as `frame g;`.
