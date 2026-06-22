@@ -1101,3 +1101,16 @@ Two review findings on 6d-2, both fixed.
   double-report. `framed_concern_reference` now uses exact-one too, and export
   emits the reference form only when the target is a ConcernUsage -- a corrupted
   reference is skipped (reported by validation), never emitted as invalid text.
+
+### Completion Phase 6d-2: follow-up finding (verified 2026-06-22)
+
+A second-round Medium finding on the same area: the model-derived integrity check
+read only the FIRST owned ReferenceSubsetting (`kk.reference_subsetting` returned
+the first match), so a framed concern with a valid first reference plus a second
+appended ReferenceSubsetting passed `validate(factory)` and exported only the first
+-- silently dropping the extra. Fixed: `reference_subsetting` is now EXACT-ONE
+(None on zero or multiple), a new `reference_subsettings` exposes the full set, and
+the integrity check requires EXACTLY ONE ReferenceSubsetting (to exactly one
+ConcernUsage) under a referencing framed concern. A second subsetting is reported,
+and export skips the corrupted frame (exact-one reader returns None) rather than
+emitting just the first.

@@ -206,14 +206,21 @@ def _check_frame_references(
         concern = _sole(membership.memberElement)
         if not isinstance(concern, sysml2.ConcernUsage):
             continue  # the membership-member kind is checked elsewhere
-        subsetting = kk.reference_subsetting(concern)
-        if subsetting is None:
+        subsettings = list(kk.reference_subsettings(concern))
+        if not subsettings:
             continue  # a declared frame, or an unresolved import (mapping context)
-        if not isinstance(_sole(subsetting.referencedFeature), sysml2.ConcernUsage):
+        # A referencing framed concern owns EXACTLY ONE ReferenceSubsetting, to
+        # EXACTLY ONE ConcernUsage. A second appended subsetting (a corruption) is
+        # reported -- otherwise export would emit only the first and silently drop
+        # the rest.
+        if len(subsettings) != 1 or not isinstance(
+            _sole(subsettings[0].referencedFeature), sysml2.ConcernUsage
+        ):
             yield Diagnostic(
                 Severity.ERROR,
                 "broken-frame-reference",
-                "framed concern reference does not target exactly one concern usage",
+                "framed concern reference must be exactly one reference to a "
+                "concern usage",
                 membership.id,
             )
 

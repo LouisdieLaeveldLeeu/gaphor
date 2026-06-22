@@ -133,12 +133,24 @@ def add_reference_subsetting(
     return subsetting
 
 
-def reference_subsetting(feature: Feature) -> ReferenceSubsetting | None:
-    """The ReferenceSubsetting owned by `feature` (its reference target), if any."""
+def reference_subsettings(feature: Feature) -> Iterator[ReferenceSubsetting]:
+    """All ReferenceSubsettings owned by `feature`, in order."""
     for relationship in feature.ownedRelationship:
         if isinstance(relationship, ReferenceSubsetting):
-            return relationship
-    return None
+            yield relationship
+
+
+def reference_subsetting(feature: Feature) -> ReferenceSubsetting | None:
+    """The SOLE ReferenceSubsetting owned by `feature`, or None if it owns zero or
+    MORE THAN ONE.
+
+    Exact-one (not first-of-many): a feature that references via subsetting
+    references exactly one target, so a second owned reference subsetting is a
+    corruption the caller must not silently read as the first (which would drop the
+    extra on export). `reference_subsettings` exposes the full set for the
+    integrity check that reports the corruption."""
+    subsettings = list(reference_subsettings(feature))
+    return subsettings[0] if len(subsettings) == 1 else None
 
 
 # --- derived surface (computed from stored structure) ------------------------

@@ -465,6 +465,25 @@ def test_corrupted_frame_reference_not_exported_as_invalid_text():
     assert "requirement def R;" in text
 
 
+def test_multiple_reference_subsettings_on_a_framed_concern_is_reported():
+    # `reference_subsetting` reads only the first match, so a SECOND appended
+    # ReferenceSubsetting must be caught by the exactly-one integrity check --
+    # otherwise validate passes and export silently drops the extra reference.
+    factory, result = _map(
+        "concern def C;\nconcern g : C;\nconcern h : C;\n"
+        "requirement def R { frame g; }"
+    )
+    R = _req_def(factory, "R")
+    (framed,) = list(requirements.framed_concerns(R))
+    h = next(c for c in factory.select(sysml2.ConcernUsage) if c.declaredName == "h")
+    kk.add_reference_subsetting(framed, h)  # append a SECOND reference (corruption)
+    assert len(list(kk.reference_subsettings(framed))) == 2
+
+    assert any(d.rule == "broken-frame-reference" for d in validate(factory))
+    # export must not silently emit only the first reference.
+    assert "frame g;" not in export_namespace(result.root)
+
+
 def test_reqid_page_applies_to_concern(element_factory, event_manager):
     cdef = element_factory.create(sysml2.ConcernDefinition)
     cdef.declaredName = "Safety"
