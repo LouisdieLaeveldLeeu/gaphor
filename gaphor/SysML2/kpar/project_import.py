@@ -241,6 +241,12 @@ def import_user_kpar(
         for connection_id, ends in result.unresolved_ends.items()
         for end_name in ends
     )
+    # A framed-concern reference (`frame <existing>`) that did not resolve to a
+    # ConcernUsage is an unresolved reference too (Phase 6d-2).
+    unresolved.extend(
+        make_unresolved(concern_id, ref_name, "unresolved-frame-reference")
+        for concern_id, ref_name in result.unresolved_frame_refs.items()
+    )
 
     # Gate only on diagnostics this import introduced: whole-factory validation
     # minus what was already there. This catches problems within the imported
@@ -249,7 +255,13 @@ def import_user_kpar(
     # lands in a fresh root namespace, so detecting a collision against
     # pre-existing model content is part of the deferred duplicate/re-import
     # handling, not this gate.
-    all_diagnostics = validate(factory, result.unresolved_types, result.mistyped, result.unresolved_ends)
+    all_diagnostics = validate(
+        factory,
+        result.unresolved_types,
+        result.mistyped,
+        result.unresolved_ends,
+        result.unresolved_frame_refs,
+    )
     validation_diagnostics = tuple(
         d for d in all_diagnostics if d not in preexisting_set
     )

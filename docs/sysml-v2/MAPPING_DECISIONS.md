@@ -1077,3 +1077,27 @@ referenced concern -- so this slice adds the kernel subsetting relationships.
   connect clause / unresolved usage type) and is reported by validation. The
   canonical `RequirementFrame` entry carries the referenced qualified name, so the
   declare and reference forms have distinct fingerprints.
+
+### Completion Phase 6d-2: review findings fix (verified 2026-06-22)
+
+Two review findings on 6d-2, both fixed.
+
+- **(High) KPAR import did not thread `unresolved_frame_refs`.** `import_user_kpar`
+  built its `unresolved_references` list and ran its gating `validate(...)` without
+  `result.unresolved_frame_refs`, so a user KPAR containing `requirement def R {
+  frame missing; }` imported clean (no unresolved record, no gate). Fixed:
+  `project_import.py` now adds each unresolved frame reference to the
+  provenance-rich unresolved list (reason `unresolved-frame-reference`) AND passes
+  `result.unresolved_frame_refs` to `validate`, so the import is gated like every
+  other unresolved reference (matching the cli/round-trip paths).
+- **(Medium) frame-reference validation was mapping-context only.** A stored/API-
+  mutated model could hold a framed anonymous ConcernUsage whose
+  ReferenceSubsetting points at a non-ConcernUsage; `validate(factory)` passed and
+  export emitted invalid text (`frame p;`). Fixed: `_check_frame_references` gained
+  a MODEL-DERIVED check -- when a ReferenceSubsetting exists under a framed concern,
+  its referenced feature must be EXACTLY ONE ConcernUsage (`_sole`, not first-value
+  `_single`). The two checks are disjoint (mapping-context fires only when NO
+  subsetting was created; model-derived only when one exists), so there is no
+  double-report. `framed_concern_reference` now uses exact-one too, and export
+  emits the reference form only when the target is a ConcernUsage -- a corrupted
+  reference is skipped (reported by validation), never emitted as invalid text.

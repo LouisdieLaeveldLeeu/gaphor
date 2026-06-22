@@ -137,6 +137,24 @@ def test_broken_connection_endpoint_carries_provenance(tmp_path):
     assert ref.declaration == "connection c connect a to missing;"
 
 
+def test_broken_frame_reference_is_recorded_and_gated(tmp_path):
+    # A framed-concern reference (`frame <existing>`) that does not resolve to a
+    # ConcernUsage is an unresolved reference too (Phase 6d-2): it must be recorded
+    # with provenance AND gate the import, not pass clean.
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(archive, {"R.sysml": "requirement def R { frame missing; }"})
+
+    result = import_user_kpar(archive)
+
+    ref = next(r for r in result.unresolved_references if r.type_name == "missing")
+    assert ref.reason == "unresolved-frame-reference"
+    assert ref.member == f"{ROOT_DIR}/R.sysml"
+    assert ref.line == 1
+    assert any(
+        d.rule == "broken-frame-reference" for d in result.validation_diagnostics
+    )
+
+
 def test_imported_elements_carry_per_element_provenance(tmp_path):
     archive = tmp_path / "proj.kpar"
     _write_user_kpar(archive, {"V.sysml": "part def Engine;\npart e : Engine;"})

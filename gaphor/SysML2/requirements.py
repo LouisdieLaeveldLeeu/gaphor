@@ -201,8 +201,14 @@ def add_framed_concern(
 def framed_concern_reference(concern: sysml2.ConcernUsage) -> kerml.Feature | None:
     """The existing concern that `concern` REFERENCES via a ReferenceSubsetting
     (the `frame <existing>` form, Phase 6d-2), or None for a declared framed
-    concern (`frame concern <name>`)."""
+    concern (`frame concern <name>`).
+
+    Uses EXACT-ONE semantics: a ReferenceSubsetting with zero or multiple
+    referenced features (a corrupted/API-mutated model) reads as None rather than
+    silently taking the first, so export/round-trip never emit a half-formed
+    reference (validation reports the corruption)."""
     subsetting = kk.reference_subsetting(concern)
     if subsetting is None:
         return None
-    return kk._single(subsetting.referencedFeature)
+    referenced = list(subsetting.referencedFeature)
+    return referenced[0] if len(referenced) == 1 else None

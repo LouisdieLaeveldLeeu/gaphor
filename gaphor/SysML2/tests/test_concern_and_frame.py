@@ -432,6 +432,39 @@ def test_add_reference_subsetting_helper(element_factory):
     assert subsetting in a.ownedRelationship  # owned by the referencing feature
 
 
+def _corrupt_frame_reference_to_part(factory):
+    """Point a framed concern's ReferenceSubsetting at a PartUsage (a non-concern),
+    as a stored/API-mutated model would -- returns the requirement's root."""
+    R = _req_def(factory, "R")
+    (framed,) = list(requirements.framed_concerns(R))
+    subsetting = kk.reference_subsetting(framed)
+    for old in list(subsetting.referencedFeature):
+        kerml.ReferenceSubsetting.referencedFeature.delete(subsetting, old)
+    part = factory.create(sysml2.PartUsage)
+    part.declaredName = "p"
+    subsetting.referencedFeature = part
+
+
+def test_corrupted_frame_reference_is_reported_model_derived():
+    # A ReferenceSubsetting pointing at a non-ConcernUsage must be caught WITHOUT
+    # mapping context (a stored/API-mutated model), via exact-one semantics.
+    factory, _ = _map(
+        "concern def Safety;\nconcern g : Safety;\nrequirement def R { frame g; }"
+    )
+    _corrupt_frame_reference_to_part(factory)
+    assert any(d.rule == "broken-frame-reference" for d in validate(factory))
+
+
+def test_corrupted_frame_reference_not_exported_as_invalid_text():
+    factory, result = _map(
+        "concern def Safety;\nconcern g : Safety;\nrequirement def R { frame g; }"
+    )
+    _corrupt_frame_reference_to_part(factory)
+    text = export_namespace(result.root)
+    assert "frame" not in text  # the broken reference is skipped, not emitted
+    assert "requirement def R;" in text
+
+
 def test_reqid_page_applies_to_concern(element_factory, event_manager):
     cdef = element_factory.create(sysml2.ConcernDefinition)
     cdef.declaredName = "Safety"

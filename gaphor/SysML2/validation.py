@@ -177,14 +177,22 @@ def _check_requirement_parameters(factory: ElementFactory) -> Iterator[Diagnosti
 def _check_frame_references(
     factory: ElementFactory, unresolved_frame_refs: dict[str, str]
 ) -> Iterator[Diagnostic]:
-    """A framed-concern REFERENCE (`frame <existing>`) must resolve to a
-    ConcernUsage (Phase 6d-2).
+    """A framed-concern REFERENCE (`frame <existing>`) must target a ConcernUsage
+    (Phase 6d-2).
 
-    Mapping context: the mapper resolves `frame <ref>` nearest-first and records
-    the names that did NOT resolve to a ConcernUsage (missing, or a wrong-kind
-    target such as a ConcernDefinition or a part). Each is reported here; like the
-    other reference rules (unresolved types, connection ends) this needs mapping
-    context, so a reloaded model has none to report.
+    Two complementary checks for DISJOINT cases (no double-reporting):
+
+    - Mapping context: the mapper resolves `frame <ref>` nearest-first and, when a
+      name does NOT resolve to a ConcernUsage (missing, or a wrong-kind target such
+      as a ConcernDefinition or a part), records it WITHOUT creating a
+      ReferenceSubsetting. Each such name is reported here. Like the other reference
+      rules (unresolved types, connection ends) this needs mapping context, so a
+      reloaded model has none to report.
+    - Model-derived: when a ReferenceSubsetting DOES exist under a framed concern
+      (a stored/API-mutated model the mapper never produced), its referenced
+      feature must be EXACTLY ONE ConcernUsage (`_sole`, not first-value): a zero,
+      multiple, or wrong-kind target is reported so a corrupted reference cannot
+      validate clean and then export invalid text (e.g. `frame p;`).
     """
     for concern_id, name in unresolved_frame_refs.items():
         yield Diagnostic(
@@ -194,6 +202,20 @@ def _check_frame_references(
             "concern usage",
             concern_id,
         )
+    for membership in factory.select(sysml2.FramedConcernMembership):
+        concern = _sole(membership.memberElement)
+        if not isinstance(concern, sysml2.ConcernUsage):
+            continue  # the membership-member kind is checked elsewhere
+        subsetting = kk.reference_subsetting(concern)
+        if subsetting is None:
+            continue  # a declared frame, or an unresolved import (mapping context)
+        if not isinstance(_sole(subsetting.referencedFeature), sysml2.ConcernUsage):
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-frame-reference",
+                "framed concern reference does not target exactly one concern usage",
+                membership.id,
+            )
 
 
 def _check_constraint_body(factory: ElementFactory) -> Iterator[Diagnostic]:
