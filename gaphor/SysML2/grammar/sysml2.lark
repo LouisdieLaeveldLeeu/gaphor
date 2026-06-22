@@ -20,6 +20,8 @@ member: part_definition
       | attribute_usage
       | action_definition
       | action_usage
+      | succession_usage
+      | flow_usage
       | constraint_definition
       | constraint_usage
       | requirement_definition
@@ -52,11 +54,23 @@ attribute_definition: "attribute" "def" NAME ";"
 // `[<dir>] attribute <name> [ ":" <type> ] ;`
 attribute_usage: DIRECTION? "attribute" NAME (":" type_ref)? ";"
 
-// `action def <name> ;`
-action_definition: "action" "def" NAME ";"
+// `action def <name> ( ";" | "{" <body> "}" )` and
+// `[<dir>] action <name> [ ":" <type> ] ( ";" | "{" <body> "}" )` (Phase 7).
+// An action body holds nested members (steps + directed in/out parameters + other
+// usages, owned as the action's FEATURES via FeatureMembership) plus successions
+// and flows; it reuses the shared `member` list, so any nested usage kind works.
+action_definition: "action" "def" NAME (";" | action_body)
+action_usage: DIRECTION? "action" NAME (":" type_ref)? (";" | action_body)
+action_body: "{" member* "}"
 
-// `[<dir>] action <name> [ ":" <type> ] ;`
-action_usage: DIRECTION? "action" NAME (":" type_ref)? ";"
+// Action control flow and item flow (Phase 7), as binary connector usages reusing
+// the connector ends (`connection_end`). The explicit forms only:
+//   `succession [<name>] first <end> then <end> ;`  -> SuccessionAsUsage
+//   `flow [<name>] from <end> to <end> ;`           -> FlowUsage
+// The chained `first/then`-only flow form, `flow def`, `of` payloads, and the
+// advanced action nodes (if/for/fork/join/accept/send/assign) are out of scope.
+succession_usage: "succession" NAME? "first" connection_end "then" connection_end ";"
+flow_usage: "flow" NAME? "from" connection_end "to" connection_end ";"
 
 // `constraint def <name> ( ";" | "{" <body> "}" )`
 constraint_definition: "constraint" "def" NAME (";" | constraint_body)

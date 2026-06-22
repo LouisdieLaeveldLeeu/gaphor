@@ -30,10 +30,12 @@ from gaphor.SysML2.kerml import DataType as _DataType
 from gaphor.SysML2.kerml import Feature as _Feature
 from gaphor.SysML2.kerml import FeatureMembership as _FeatureMembership
 from gaphor.SysML2.kerml import FeatureTyping as _FeatureTyping
+from gaphor.SysML2.kerml import Flow as _Flow
 from gaphor.SysML2.kerml import ParameterMembership as _ParameterMembership
 from gaphor.SysML2.kerml import Predicate as _Predicate
 from gaphor.SysML2.kerml import Step as _Step
 from gaphor.SysML2.kerml import Structure as _Structure
+from gaphor.SysML2.kerml import Succession as _Succession
 
 
 class PortionKind(enum.StrEnum):
@@ -147,6 +149,10 @@ class ConnectionUsage(ConnectorAsUsage, PartUsage):
     pass
 
 
+class FlowUsage(ActionUsage, ConnectorAsUsage, _Flow):
+    pass
+
+
 class RequirementConstraintMembership(_FeatureMembership):
     kind = _enumeration("kind", RequirementConstraintKind, RequirementConstraintKind.assumption)
 
@@ -176,6 +182,10 @@ class StakeholderMembership(_ParameterMembership):
 
 
 class SubjectMembership(_ParameterMembership):
+    pass
+
+
+class SuccessionAsUsage(ConnectorAsUsage, _Succession):
     pass
 
 

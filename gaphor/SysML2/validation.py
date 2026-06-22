@@ -360,8 +360,11 @@ def _check_connection_end_integrity(factory: ElementFactory) -> Iterator[Diagnos
 
     The textual mapper already keeps ends atomic and feature-typed, so a model
     built from text never trips this; it is the safety net for the other routes.
+    Covers EVERY binary connector usage -- connection, interface, succession, and
+    flow (all `ConnectorAsUsage`) -- so an action's succession/flow ends are guarded
+    the same way (Phase 7).
     """
-    for connection in factory.select(sysml2.ConnectionUsage):
+    for connection in factory.select(sysml2.ConnectorAsUsage):
         source = kk._single(connection.source)
         target = kk._single(connection.target)
         name = connection.declaredName
@@ -370,10 +373,10 @@ def _check_connection_end_integrity(factory: ElementFactory) -> Iterator[Diagnos
                 yield Diagnostic(
                     Severity.ERROR,
                     "non-feature-connection-end",
-                    f"connection {name!r} has a {role} end that is not a feature "
+                    f"connector {name!r} has a {role} end that is not a feature "
                     f"(a {type(end).__name__})"
                     if name
-                    else f"connection {role} end is not a feature "
+                    else f"connector {role} end is not a feature "
                     f"(a {type(end).__name__})",
                     connection.id,
                 )
@@ -384,9 +387,9 @@ def _check_connection_end_integrity(factory: ElementFactory) -> Iterator[Diagnos
             yield Diagnostic(
                 Severity.ERROR,
                 "incomplete-connection",
-                f"connection {name!r} has a {present} end but no {missing} end"
+                f"connector {name!r} has a {present} end but no {missing} end"
                 if name
-                else f"connection has a {present} end but no {missing} end",
+                else f"connector has a {present} end but no {missing} end",
                 connection.id,
             )
 
@@ -394,8 +397,9 @@ def _check_connection_end_integrity(factory: ElementFactory) -> Iterator[Diagnos
 def _check_connection_ends(
     factory: ElementFactory, unresolved_ends: dict[str, list[str]]
 ) -> Iterator[Diagnostic]:
-    """A connection whose declared connector end did not resolve to a feature is
-    a broken/mismatched endpoint (the mapper records these)."""
+    """A connector usage (connection / succession / flow) whose declared end did
+    not resolve to a feature is a broken/mismatched endpoint (the mapper records
+    these)."""
     for connection_id, ends in unresolved_ends.items():
         element = factory.lookup(connection_id)
         name = element.declaredName if element is not None else None
@@ -403,10 +407,10 @@ def _check_connection_ends(
             yield Diagnostic(
                 Severity.ERROR,
                 "broken-connection-end",
-                f"connection {name!r} declares endpoint {end!r} which does not "
+                f"connector {name!r} declares endpoint {end!r} which does not "
                 f"resolve to a feature"
                 if name
-                else f"connection endpoint {end!r} does not resolve to a feature",
+                else f"connector endpoint {end!r} does not resolve to a feature",
                 connection_id,
             )
 

@@ -58,19 +58,50 @@ class AttributeUsage:
 
 @dataclass(frozen=True)
 class ActionDefinition:
-    """`action def <name> ;`"""
+    """`action def <name> ( ; | { <body> } )`
+
+    `members` are the action body's nested members -- steps, directed in/out
+    parameters, successions, flows, and other usages (Phase 7)."""
 
     name: str
+    members: tuple["Member", ...] = ()
     line: int | None = _line
 
 
 @dataclass(frozen=True)
 class ActionUsage:
-    """`[<dir>] action <name> [ : <type> ] ;`"""
+    """`[<dir>] action <name> [ : <type> ] ( ; | { <body> } )`"""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    members: tuple["Member", ...] = ()
+    line: int | None = _line
+
+
+@dataclass(frozen=True)
+class SuccessionUsage:
+    """`succession [<name>] first <end> then <end> ;` (Phase 7).
+
+    A binary control-flow connector usage: `source`/`target` are the two step
+    references (qualified-name segments)."""
+
+    source: tuple[str, ...]  # the `first` end
+    target: tuple[str, ...]  # the `then` end
+    name: str | None = None
+    line: int | None = _line
+
+
+@dataclass(frozen=True)
+class FlowUsage:
+    """`flow [<name>] from <end> to <end> ;` (Phase 7).
+
+    A binary item-flow connector usage: `source`/`target` are the two feature
+    references (qualified-name segments)."""
+
+    source: tuple[str, ...]  # the `from` end
+    target: tuple[str, ...]  # the `to` end
+    name: str | None = None
     line: int | None = _line
 
 
@@ -300,7 +331,8 @@ class PackageDefinition:
 # A member is any construct that can appear in a (package) body.
 Member = (
     "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage "
-    "| ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage "
+    "| ActionDefinition | ActionUsage | SuccessionUsage | FlowUsage "
+    "| ConstraintDefinition | ConstraintUsage "
     "| RequirementDefinition | RequirementUsage | ConcernDefinition | ConcernUsage "
     "| PortDefinition | PortUsage "
     "| ConnectionDefinition | ConnectionUsage | InterfaceDefinition "
@@ -314,7 +346,8 @@ class Package:
 
     members: tuple[
         "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage"
-        " | ActionDefinition | ActionUsage | ConstraintDefinition | ConstraintUsage"
+        " | ActionDefinition | ActionUsage | SuccessionUsage | FlowUsage"
+        " | ConstraintDefinition | ConstraintUsage"
         " | RequirementDefinition | RequirementUsage | ConcernDefinition | ConcernUsage"
         " | PortDefinition | PortUsage"
         " | ConnectionDefinition | ConnectionUsage | InterfaceDefinition"

@@ -518,18 +518,37 @@ RequirementDefinition and RequirementUsage can be considered for promotion out o
 `alpha`, subject to the normal nine-cell support rule and the remaining
 expression-semantics limits.
 
-### Phase 7 -- Action Semantics
+### Phase 7 -- Action Semantics -- DONE (bounded; rows stay `alpha`)
 
-Complete the action behavior surface:
+Delivered the action behavior surface (the four ROADMAP bullets), grounded in the
+pinned XMI and the Sensmetry pilot's normative action body:
 
-- action bodies and nested steps;
-- succession and flow connection semantics;
-- action parameters;
-- validation, export, round-trip, diagram, and UI-edit coverage for the new
-  surface.
+- **action bodies and nested steps** -- `action def A { ... }` / `action a [: T]
+  { ... }` reuse the shared `member` grammar, so a body holds nested action steps
+  and any other usage, owned as the action's FEATURES via FeatureMembership (vs the
+  OwningMembership used for package members);
+- **action parameters** -- directed (`in`/`out`/`inout`) nested usages in the body
+  (reusing the Phase 8b direction support; e.g. `in attribute t : Real;`);
+- **succession and flow** -- `succession [name] first <end> then <end>;` ->
+  SuccessionAsUsage and `flow [name] from <end> to <end>;` -> FlowUsage, binary
+  connector usages whose ends reuse the connection-end resolution. New metamodel:
+  KerML Succession + Flow (kernel 33 -> 35) and SysML SuccessionAsUsage + FlowUsage;
+- **coverage** -- validation (the connection-end integrity rules now cover ALL
+  ConnectorAsUsage, so succession/flow ends are guarded; unresolved ends reported),
+  export, round-trip (the canonical form now recurses into action bodies and
+  fingerprints succession/flow with their ends), persistence, and diagram (line
+  items for succession/flow, mirroring the connection line; action boxes for
+  bodies).
 
-Exit: ActionDefinition and ActionUsage can be promoted from `alpha` when all
-claimed cells pass.
+OUT of scope (documented; rows stay `alpha`): the advanced action nodes
+(`if`/`while`/`for`/`fork`/`join`/`merge`/`decision`, `accept`/`send`/`assign`/
+`terminate`, `perform`), the chained `first/then`-only flow form, `flow def`
+(needs KerML Interaction), item usages, and `of`-item flow payloads.
+
+Exit: bodies/steps, directed parameters, succession, and flow are implemented and
+tested end to end. ActionDefinition/ActionUsage STAY `alpha` (under-claim): the
+advanced action-node surface above is unimplemented, so the construct is not yet
+complete; promotion waits until that surface lands.
 
 ### Phase 8 -- Port Semantics
 
@@ -727,7 +746,7 @@ counted here.
 15. Phase 6b -- Requirement Parameters -- DONE
 16. Phase 6c -- Lightweight Requirement Parameters (`reqId`, `actor`, `stakeholder`) -- DONE
 17. Phase 6d -- Framed Concern And the Concern Construct -- DONE (6d-1 + 6d-2)
-18. Phase 7 -- Action Semantics -- PLANNED
+18. Phase 7 -- Action Semantics -- DONE (bounded: bodies/steps, parameters, succession, flow; advanced nodes deferred; rows stay `alpha`)
 19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- PLANNED
 20. Phase 5b -- Aliases -- PLANNED
 21. Phase 5c -- Inherited Members -- PLANNED

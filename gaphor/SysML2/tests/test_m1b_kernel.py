@@ -73,10 +73,13 @@ def test_kernel_has_expected_class_count():
     # whose body/language are Strings; the honest carrier for an opaque constraint
     # body) for Phase 6a, FeatureMembership/ParameterMembership (the membership
     # roots the SysML requirement-parameter memberships generalize) for Phase 6b,
-    # and Subsetting/ReferenceSubsetting (the feature-specialization roots the
+    # Subsetting/ReferenceSubsetting (the feature-specialization roots the
     # framed-concern REFERENCE form generalizes; both -> Specialization, adding the
-    # stored subsetted/subsetting feature ends) for Phase 6d-2.
-    assert len(_all_kernel_classes()) == 33
+    # stored subsetted/subsetting feature ends) for Phase 6d-2, and Succession/Flow
+    # (the KerML connector roots the SysML action succession/flow usages generalize;
+    # Succession -> Connector and Flow -> Connector + Step, their ends derived like
+    # Connector, so no new stored closure) for Phase 7.
+    assert len(_all_kernel_classes()) == 35
 
 
 # --- required behaviour 1: namespace + membership round-trip -----------------

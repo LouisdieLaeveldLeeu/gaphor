@@ -1140,3 +1140,51 @@ Export, round-trip, and the model-derived validation check all call it (plus
 `is_referencing_frame` to tell a declared frame from a broken reference), so they
 can no longer disagree; a corrupt reference is reported and skipped on export,
 never misrepresented.
+
+### Completion Phase 7: Action Semantics (verified 2026-06-22)
+
+The action behavior surface -- bodies/steps, directed parameters, succession, and
+flow -- done as one phase (the user chose "one big Phase 7") but scoped to the four
+ROADMAP bullets, grounded in the pinned XMI and the Sensmetry pilot's action body.
+Advanced action nodes are deliberately out (rows stay `alpha`).
+
+- **Metamodel (generated; kernel 33 -> 35).** Seeded KerML Succession (-> Connector)
+  and Flow (-> Connector + Step), and SysML SuccessionAsUsage (-> ConnectorAsUsage +
+  Succession) and FlowUsage (-> ConnectorAsUsage + Flow + ActionUsage). All
+  connector ends are derived (like Connector), so no new stored closure. The pinned
+  2025-02 XMI names are FlowUsage/SuccessionAsUsage (NOT the 2024-12 pilot's
+  "FlowConnection*"); we follow the pinned names.
+- **Action bodies = nested members owned via FeatureMembership.** `action def A
+  { ... }` / `action a [: T] { ... }` reuse the shared `member` grammar. The mapper's
+  `_build_members` gained a `membership_type` parameter: package members are owned
+  via OwningMembership (unchanged), but an action body's members (the action's
+  FEATURES -- steps, directed parameters, successions, flows) are owned via
+  FeatureMembership. The recursion that already descended into packages now also
+  descends into ActionDefinition/ActionUsage with FeatureMembership.
+- **Parameters.** A directed (`in`/`out`/`inout`) nested usage IS an action
+  parameter -- reuses the Phase 8b `Feature::direction` already on usages; no new
+  construct. Item-typed parameters (`out item x`) are out (no item usage in grammar).
+- **Succession / flow = binary connector usages.** `succession [name] first <end>
+  then <end>` and `flow [name] from <end> to <end>` map to SuccessionAsUsage /
+  FlowUsage and REUSE the connection-end machinery: their two ends are recorded in
+  `connection_ends` and resolved nearest-first (from the action's scope, so steps
+  resolve), set on the connector's `Relationship.source`/`target`. Only the explicit
+  forms are supported; the bare chained `first/then` flow form is out.
+- **Validation.** `_check_connection_end_integrity` was generalized from
+  ConnectionUsage to ALL `ConnectorAsUsage` (connection, interface, succession,
+  flow), so a succession/flow with a non-feature or one-ended end is reported
+  (non-feature-connection-end / incomplete-connection); an unresolved end is the
+  mapping-context broken-connection-end. Messages reworded "connection" -> "connector"
+  (rule names unchanged, so existing tests hold).
+- **Export / round-trip.** Action def/usage emit ` { <members> }` (recursive,
+  indented) or `;`; succession/flow emit their explicit forms via `_end_name`
+  (skipped when an end is missing/non-feature, like a broken connection). The
+  canonical `visit` now recurses into action bodies (their members' qualified names
+  encode the action path) and records SuccessionAsUsage/FlowUsage with their
+  resolved end qualified names, so bodies and connectors round-trip.
+- **Diagram.** SuccessionAsUsageItem/FlowUsageItem are LinePresentations (subclass
+  ConnectionUsageItem with head=source/tail=target), registered exact-type; drop
+  registrations project them. Action bodies project as the existing action box; the
+  interactive connect adapter for succession/flow ends is deferred.
+- **Claim.** ActionDefinition/ActionUsage STAY `alpha` (under-claim): the advanced
+  action-node surface is unimplemented. New SuccessionAsUsage/FlowUsage rows alpha.

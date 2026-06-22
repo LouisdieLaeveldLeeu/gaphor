@@ -85,6 +85,20 @@ def drop_action_usage(
     return _project_element(element, diagram, x, y)
 
 
+@drop.register(sysml2.SuccessionAsUsage, Diagram)
+def drop_succession(
+    element: sysml2.SuccessionAsUsage, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
+@drop.register(sysml2.FlowUsage, Diagram)
+def drop_flow(
+    element: sysml2.FlowUsage, diagram: Diagram, x: float, y: float
+) -> Presentation | None:
+    return _project_element(element, diagram, x, y)
+
+
 @drop.register(sysml2.ConstraintDefinition, Diagram)
 def drop_constraint_definition(
     element: sysml2.ConstraintDefinition, diagram: Diagram, x: float, y: float

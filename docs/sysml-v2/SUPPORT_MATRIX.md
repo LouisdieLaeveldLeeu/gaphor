@@ -33,7 +33,7 @@ vocabulary. Evidence for these rows: generated from the pinned OMG XMI, created
 via `ElementFactory`, persist/reload, and behaviour tests for ownership,
 membership, typing, imports, delete cascade, and qualified names.
 
-M1b status (internal-only): the listed KerML kernel classes are generated from the normative MOF XMI through Gaphor's coder, and every generated kernel class has a tested create-via-`ElementFactory` and `.gaphor` save/reload (parametrized over the whole stored-reference closure — 33 classes: the original 12-class minimal kernel plus Classifier/Class/Structure and FeatureTyping (added in M2 so the kernel can serve as the supermodel the SysML layer generalizes and carry the stored typing relation), Package and DataType (the nesting namespace and the AttributeDefinition supermodel root), and the expression roots BooleanExpression/Predicate with their self-contained closure Expression/Step/Function/Behavior (added for Phase E so the SysML constraint/requirement layer generalizes a real KerML super instead of dropping it), the relationship roots AssociationStructure/Connector with their closure Association (added for Phase G so the SysML connection layer generalizes a real KerML super; Connector's end properties are derived and never persisted), Conjugation (added for Phase 8a so the SysML port-conjugation layer generalizes a real KerML super; its originalType/conjugatedType reference Type and `conjugator` is derived, so it adds no new stored closure), TextualRepresentation (added for Phase 6a as the honest carrier for a preserved opaque constraint body; an AnnotatingElement whose body/language are Strings, so it adds no new stored closure), FeatureMembership/ParameterMembership (added for Phase 6b as the membership roots the SysML requirement-parameter memberships generalize; FeatureMembership -> OwningMembership and ParameterMembership -> FeatureMembership, adding no new stored closure), and Subsetting/ReferenceSubsetting (added for Phase 6d-2 as the feature-specialization roots the framed-concern reference form generalizes; both -> Specialization, adding the stored subsetted/subsetting feature ends)). The five required kernel behaviours — namespace membership, type/feature relation, import resolution, delete-owner cascade, rename-updates-qualifiedName — are tested through a behaviour layer (`kerml_kernel.py`), along with delete-direction tests proving non-owning references do not cascade. These rows are `Create-API`+`Persist`; their Parse, text Import, scoped Validate, Export, Round-trip, Diagram, and UI-edit cells are `n/a` (not applicable by design — a structural kernel base has no textual concrete syntax), the final state decided in Phase H, not work pending a later milestone. Derived KerML features (owner, ownedElement, owningNamespace, member, qualifiedName, ...) are not persisted; they are computed in the behaviour layer. The closure also includes `Relationship`, `AnnotatingElement`, and `Comment` plus the `FeatureDirectionKind`/`VisibilityKind` enumerations; these are generated and persistence-tested but not called out as individual rows until a milestone gives them behaviour.
+M1b status (internal-only): the listed KerML kernel classes are generated from the normative MOF XMI through Gaphor's coder, and every generated kernel class has a tested create-via-`ElementFactory` and `.gaphor` save/reload (parametrized over the whole stored-reference closure — 35 classes: the original 12-class minimal kernel plus Classifier/Class/Structure and FeatureTyping (added in M2 so the kernel can serve as the supermodel the SysML layer generalizes and carry the stored typing relation), Package and DataType (the nesting namespace and the AttributeDefinition supermodel root), and the expression roots BooleanExpression/Predicate with their self-contained closure Expression/Step/Function/Behavior (added for Phase E so the SysML constraint/requirement layer generalizes a real KerML super instead of dropping it), the relationship roots AssociationStructure/Connector with their closure Association (added for Phase G so the SysML connection layer generalizes a real KerML super; Connector's end properties are derived and never persisted), Conjugation (added for Phase 8a so the SysML port-conjugation layer generalizes a real KerML super; its originalType/conjugatedType reference Type and `conjugator` is derived, so it adds no new stored closure), TextualRepresentation (added for Phase 6a as the honest carrier for a preserved opaque constraint body; an AnnotatingElement whose body/language are Strings, so it adds no new stored closure), FeatureMembership/ParameterMembership (added for Phase 6b as the membership roots the SysML requirement-parameter memberships generalize; FeatureMembership -> OwningMembership and ParameterMembership -> FeatureMembership, adding no new stored closure), Subsetting/ReferenceSubsetting (added for Phase 6d-2 as the feature-specialization roots the framed-concern reference form generalizes; both -> Specialization, adding the stored subsetted/subsetting feature ends), and Succession/Flow (added for Phase 7 as the KerML connector roots the SysML action succession/flow usages generalize; Succession -> Connector and Flow -> Connector + Step, their ends derived like Connector, so no new stored closure)). The five required kernel behaviours — namespace membership, type/feature relation, import resolution, delete-owner cascade, rename-updates-qualifiedName — are tested through a behaviour layer (`kerml_kernel.py`), along with delete-direction tests proving non-owning references do not cascade. These rows are `Create-API`+`Persist`; their Parse, text Import, scoped Validate, Export, Round-trip, Diagram, and UI-edit cells are `n/a` (not applicable by design — a structural kernel base has no textual concrete syntax), the final state decided in Phase H, not work pending a later milestone. Derived KerML features (owner, ownedElement, owningNamespace, member, qualifiedName, ...) are not persisted; they are computed in the behaviour layer. The closure also includes `Relationship`, `AnnotatingElement`, and `Comment` plus the `FeatureDirectionKind`/`VisibilityKind` enumerations; these are generated and persistence-tested but not called out as individual rows until a milestone gives them behaviour.
 
 | Construct | Parse | Import | Create-API | Persist | Validate | Export | Round-trip | Diagram | UI-edit | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -53,6 +53,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML ActionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML ActionUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML SuccessionAsUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML FlowUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML ConstraintDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML ConstraintUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML RequirementDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
@@ -83,6 +85,9 @@ references, never ids or raw text). M2 establishes the harness
 | SysML AttributeUsage (typed) | yes | `test_roundtrip.py` |
 | SysML ActionDefinition | yes | `test_roundtrip.py::test_action_definition_and_usage_round_trip` |
 | SysML ActionUsage (typed) | yes | `test_roundtrip.py` |
+| SysML action body (nested steps + directed parameters) | yes | `test_action_semantics.py::test_action_semantics_round_trip` |
+| SysML SuccessionAsUsage (`succession first/then`) | yes | `test_action_semantics.py::test_action_semantics_round_trip` |
+| SysML FlowUsage (`flow from/to`) | yes | `test_action_semantics.py::test_action_semantics_round_trip` |
 | SysML ConstraintDefinition | yes | `test_roundtrip.py::test_constraint_definition_and_usage_round_trip` |
 | SysML ConstraintUsage (typed) | yes | `test_roundtrip.py` |
 | SysML RequirementDefinition | yes | `test_roundtrip.py::test_requirement_definition_and_usage_round_trip` |
@@ -229,6 +234,24 @@ re-emitted as invalid text (mirroring an unresolved usage type / connect clause)
 Requirement/Concern rows STAY `alpha` (constraint expression SEMANTICS and
 structured requirement-parameter UI-edit remain). See `test_concern_and_frame.py`.
 This is the Phase-6d-2 gate decision, taken explicitly per the roadmap.
+
+Phase 7 adds the action behavior surface (grounded in the pinned XMI and the
+Sensmetry pilot's action body): action BODIES with nested steps, directed
+`in`/`out` parameters, `succession [name] first <end> then <end>`, and
+`flow [name] from <end> to <end>`. An action body reuses the shared member grammar,
+so it nests action steps and any other usage, owned as the action's FEATURES via
+FeatureMembership; succession/flow are binary connector usages (SuccessionAsUsage ->
+KerML Succession; FlowUsage -> KerML Flow; kernel 33 -> 35) whose ends reuse the
+connection-end resolution and the (now generalized to all `ConnectorAsUsage`)
+end-integrity validation. Export/round-trip recurse into action bodies and
+fingerprint succession/flow with their ends; succession/flow project as connection-
+style lines, action bodies as boxes. New SuccessionAsUsage/FlowUsage rows at
+`alpha`. ActionDefinition/ActionUsage STAY `alpha` (under-claim): the advanced
+action-node surface (if/while/for/fork/join/merge/decision, accept/send/assign/
+terminate, perform), the chained `first/then`-only flow form, `flow def`, item
+usages, and `of`-item payloads are deliberately out of scope, so the construct is
+not yet complete. See `test_action_semantics.py`. This is the Phase-7 gate
+decision, taken explicitly per the roadmap.
 
 PortDefinition and PortUsage are `supported` for the declaration-and-typing
 surface INCLUDING conjugation (`port def Fuel; port p : Fuel; port q : ~Fuel;`).

@@ -101,6 +101,13 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                         _usage_type_qualified_name(member) or "",
                     )
                 )
+            # FlowUsage IS an ActionUsage and SuccessionAsUsage IS a ConnectorAsUsage
+            # -- binary connectors recorded with their resolved ends, matched before
+            # ActionUsage so a flow is not fingerprinted as a plain action (Phase 7).
+            elif isinstance(member, sysml2.FlowUsage):
+                entries.add(_connector_entry("FlowUsage", member))
+            elif isinstance(member, sysml2.SuccessionAsUsage):
+                entries.add(_connector_entry("SuccessionAsUsage", member))
             elif isinstance(member, sysml2.ActionDefinition):
                 entries.add(("ActionDefinition", kk.qualified_name(member)))
             elif isinstance(member, sysml2.ActionUsage):
@@ -227,8 +234,29 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                     ):
                         entries.add((tag, req_qn, i, constraints.body_text(c) or ""))
 
+            # An action body's nested members (steps, parameters, successions,
+            # flows) are the action's FEATURES; recurse so they are fingerprinted
+            # too (their qualified names encode the action path), like packages
+            # (Phase 7).
+            if isinstance(member, (sysml2.ActionDefinition, sysml2.ActionUsage)):
+                visit(member)
+
     visit(root)
     return frozenset(entries)
+
+
+def _connector_entry(tag: str, member: kerml.Element) -> tuple[str, ...]:
+    """Canonical entry for a binary connector usage (succession / flow): its
+    qualified name plus the resolved source/target qualified names (empty when an
+    end is unset), so the connector and its ends round-trip (Phase 7)."""
+    source = kk._single(member.source)
+    target = kk._single(member.target)
+    return (
+        tag,
+        kk.qualified_name(member),
+        kk.qualified_name(source) if source is not None else "",
+        kk.qualified_name(target) if target is not None else "",
+    )
 
 
 def _usage_type_qualified_name(usage: sysml2.PartUsage) -> str | None:

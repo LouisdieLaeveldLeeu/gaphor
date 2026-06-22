@@ -505,6 +505,13 @@ KERNEL_SEED = (
     # feature ends.
     "Subsetting",
     "ReferenceSubsetting",
+    # Succession and Flow are the KerML connector roots the SysML action control/
+    # item flow usages generalize (Phase 7): SuccessionAsUsage -> Succession and
+    # FlowUsage -> Flow. Succession -> Connector and Flow -> Connector + Step, all
+    # already in the kernel, so they add only the connector ends (derived, like
+    # Connector) -- no new stored closure.
+    "Succession",
+    "Flow",
 )
 
 
@@ -1049,6 +1056,13 @@ SYSML_SEED = (
     "ConcernDefinition",
     "ConcernUsage",
     "FramedConcernMembership",
+    # Action control-flow and item-flow usages (Phase 7). SuccessionAsUsage ->
+    # ConnectorAsUsage + KerML Succession; FlowUsage -> ConnectorAsUsage + KerML
+    # Flow + ActionUsage. Both are binary connectors that reuse the connector
+    # source/target ends (derived) -- the action body's `succession first A then B`
+    # and `flow from A to B`.
+    "SuccessionAsUsage",
+    "FlowUsage",
 )
 
 # KerML classes that the generated SysML kernel must already provide as a

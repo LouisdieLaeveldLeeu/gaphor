@@ -21,6 +21,10 @@ from gaphor.SysML2.grammar import ast
 # from an optional type_ref (both reduce to tuples otherwise).
 _Connect = namedtuple("_Connect", "source target")
 
+# Carrier for an action body's member list, so it is distinguishable from an
+# optional type_ref (a tuple) on an action usage (Phase 7).
+_ActionBody = namedtuple("_ActionBody", "members")
+
 
 def _split_direction(items):
     """Pop a leading DIRECTION token (a usage's `in`/`out`/`inout` prefix).
@@ -137,17 +141,51 @@ class _ASTBuilder(Transformer):
             name=str(name), type_name=type_name, direction=direction, line=name.line
         )
 
+    def action_body(self, items):
+        return _ActionBody(tuple(items))
+
     def action_definition(self, items):
-        (name,) = items
-        return ast.ActionDefinition(name=str(name), line=name.line)
+        name = items[0]
+        body = items[1] if len(items) > 1 else None
+        members = body.members if body is not None else ()
+        return ast.ActionDefinition(
+            name=str(name), members=members, line=name.line
+        )
 
     def action_usage(self, items):
         direction, items = _split_direction(items)
         name = items[0]
-        type_name = items[1] if len(items) > 1 else None
+        type_name = None
+        members: tuple = ()
+        for extra in items[1:]:
+            if isinstance(extra, _ActionBody):
+                members = extra.members
+            else:
+                type_name = extra
         return ast.ActionUsage(
-            name=str(name), type_name=type_name, direction=direction, line=name.line
+            name=str(name),
+            type_name=type_name,
+            direction=direction,
+            members=members,
+            line=name.line,
         )
+
+    def succession_usage(self, items):
+        # `succession [NAME] first <end> then <end>` -- NAME (a Token) optional;
+        # the two ends are connection_end qualified-name tuples.
+        name = str(items[0]) if isinstance(items[0], Token) else None
+        line = items[0].line if isinstance(items[0], Token) else None
+        ends = [it for it in items if not isinstance(it, Token)]
+        return ast.SuccessionUsage(
+            source=ends[0], target=ends[1], name=name, line=line
+        )
+
+    def flow_usage(self, items):
+        # `flow [NAME] from <end> to <end>` -- NAME (a Token) optional.
+        name = str(items[0]) if isinstance(items[0], Token) else None
+        line = items[0].line if isinstance(items[0], Token) else None
+        ends = [it for it in items if not isinstance(it, Token)]
+        return ast.FlowUsage(source=ends[0], target=ends[1], name=name, line=line)
 
     def constraint_body(self, items):
         # `{` body_element* `}` -- reassemble the inner text VERBATIM (opaque,

@@ -56,7 +56,7 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     if isinstance(element, sysml2.AttributeDefinition):
         return f"{pad}attribute def {element.declaredName};\n"
     if isinstance(element, sysml2.ActionDefinition):
-        return f"{pad}action def {element.declaredName};\n"
+        return f"{pad}action def {element.declaredName}{_action_body(element, depth, root)}\n"
     if isinstance(element, sysml2.ConcernDefinition):
         return (
             f"{pad}concern def {_short_name_prefix(element)}{element.declaredName}"
@@ -84,9 +84,20 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     if isinstance(element, sysml2.AttributeUsage):
         dir_ = _direction_prefix(element)
         return f"{pad}{dir_}attribute {_usage_decl(element, root)};\n"
+    # FlowUsage IS an ActionUsage and SuccessionAsUsage IS a ConnectorAsUsage; both
+    # are binary connectors, checked BEFORE ActionUsage so a flow is not emitted as
+    # a plain action (Phase 7). A broken/incomplete connector has no valid textual
+    # form, so it is skipped (validation reports it), mirroring connections.
+    if isinstance(element, sysml2.FlowUsage):
+        return _connector_line(element, "flow", "from", "to", pad, root)
+    if isinstance(element, sysml2.SuccessionAsUsage):
+        return _connector_line(element, "succession", "first", "then", pad, root)
     if isinstance(element, sysml2.ActionUsage):
         dir_ = _direction_prefix(element)
-        return f"{pad}{dir_}action {_usage_decl(element, root)};\n"
+        return (
+            f"{pad}{dir_}action {_usage_decl(element, root)}"
+            f"{_action_body(element, depth, root)}\n"
+        )
     if isinstance(element, sysml2.ConcernUsage):
         dir_ = _direction_prefix(element)
         return (
@@ -111,6 +122,43 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
         dir_ = _direction_prefix(element)
         return f"{pad}{dir_}port {_usage_decl(element, root)};\n"
     return ""
+
+
+def _action_body(action: kerml.Element, depth: int, root: kerml.Namespace) -> str:
+    """` { <members> }` for an action with body members, else `;` (Phase 7).
+
+    The body members are the action's FEATURES (steps, directed parameters,
+    successions, flows); each is re-exported recursively at one deeper indent. An
+    action with no members renders `;` (an empty `{ }` body carries no semantics and
+    is not distinguished from none)."""
+    pad = _INDENT * depth
+    inner = "".join(_export_member(m, depth + 1, root) for m in kk.members(action))
+    return f" {{\n{inner}{pad}}}" if inner else ";"
+
+
+def _connector_line(
+    connector: kerml.Feature,
+    keyword: str,
+    src_kw: str,
+    tgt_kw: str,
+    pad: str,
+    root: kerml.Namespace,
+) -> str:
+    """`<keyword> [<name>] <src_kw> <end> <tgt_kw> <end>;` for a binary connector
+    usage (succession / flow), or `""` when an end is missing or non-feature.
+
+    A one-ended/broken connector has no valid textual form, so it is skipped
+    (validation's incomplete/non-feature rules report it) rather than emitted as
+    invalid text -- mirroring a broken connection's connect clause (Phase 7)."""
+    source = kk._single(connector.source)
+    target = kk._single(connector.target)
+    if not (isinstance(source, kerml.Feature) and isinstance(target, kerml.Feature)):
+        return ""
+    name = f"{connector.declaredName} " if connector.declaredName else ""
+    return (
+        f"{pad}{keyword} {name}{src_kw} {_end_name(connector, source, root)} "
+        f"{tgt_kw} {_end_name(connector, target, root)};\n"
+    )
 
 
 def _short_name_prefix(req: kerml.Element) -> str:

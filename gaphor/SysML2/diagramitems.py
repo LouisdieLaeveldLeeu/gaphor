@@ -366,6 +366,30 @@ class InterfaceUsageItem(ConnectionUsageItem):
 
 
 @represents(
+    sysml2.SuccessionAsUsage,
+    head=kerml.Relationship.source,  # the `first` end
+    tail=kerml.Relationship.target,  # the `then` end
+)
+class SuccessionAsUsageItem(ConnectionUsageItem):
+    """A diagram view onto a `SuccessionAsUsage`: a line bound to its two step ends
+    (head=source `first`, tail=target `then`). A binary connector usage, so it
+    reuses the connection line via the same Relationship source/target ends
+    (Phase 7). The diagram registry is exact-type, so it needs its own item."""
+
+
+@represents(
+    sysml2.FlowUsage,
+    head=kerml.Relationship.source,  # the `from` end
+    tail=kerml.Relationship.target,  # the `to` end
+)
+class FlowUsageItem(ConnectionUsageItem):
+    """A diagram view onto a `FlowUsage`: a line bound to its two feature ends
+    (head=source `from`, tail=target `to`). A FlowUsage IS an ActionUsage, but it is
+    a binary connector, so it projects as the connection line, not the action box
+    (registered for FlowUsage exactly so it wins) (Phase 7)."""
+
+
+@represents(
     kerml.FeatureTyping,
     head=kerml.FeatureTyping.typedFeature,  # the typed feature (usage) end
     tail=kerml.FeatureTyping.type,  # the type (definition) end

@@ -159,6 +159,10 @@ class FeatureTyping(Specialization):
     typedFeature: relation_many[Feature]
 
 
+class Flow(Connector, Step):
+    pass
+
+
 class Function(Behavior):
     pass
 
@@ -188,6 +192,10 @@ class Subsetting(Specialization):
 
 class ReferenceSubsetting(Subsetting):
     referencedFeature: relation_many[Feature]
+
+
+class Succession(Connector):
+    pass
 
 
 class TextualRepresentation(AnnotatingElement):

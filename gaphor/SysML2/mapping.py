@@ -422,6 +422,7 @@ def _build_members(
     subject_typings: list,
     frame_references: list,
     on_element=None,
+    membership_type: type = kerml.OwningMembership,
 ) -> dict[str, kerml.Element]:
     """Create each AST member as an owned member of `namespace`, recursing into
     sub-packages. Returns this level's elements by name.
@@ -453,6 +454,18 @@ def _build_members(
             element = factory.create(sysml2.ActionUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name, False))
+        elif isinstance(member, ast.SuccessionUsage):
+            # A binary control-flow connector; its two ends resolve through the
+            # SAME nearest-first connection-end machinery as a connection (Phase 7).
+            element = factory.create(sysml2.SuccessionAsUsage)
+            connection_ends.append(
+                (element, namespace, member.source, member.target)
+            )
+        elif isinstance(member, ast.FlowUsage):
+            element = factory.create(sysml2.FlowUsage)
+            connection_ends.append(
+                (element, namespace, member.source, member.target)
+            )
         elif isinstance(member, ast.ConstraintDefinition):
             element = factory.create(sysml2.ConstraintDefinition)
         elif isinstance(member, ast.ConstraintUsage):
@@ -521,7 +534,9 @@ def _build_members(
             element = factory.create(kerml.Package)
         else:  # pragma: no cover - AST node types are exhaustive
             raise TypeError(f"unsupported AST member: {member!r}")
-        element.declaredName = member.name
+        # A succession/flow connector may be anonymous (no declared name).
+        if member.name is not None:
+            element.declaredName = member.name
         # A usage may carry a feature direction (`in`/`out`/`inout`); definitions
         # do not (no `direction` field). Undirected stays None (the nullable
         # default), distinct from any direction.
@@ -533,9 +548,7 @@ def _build_members(
         body = getattr(member, "body", None)
         if body is not None:
             constraints.set_body_text(element, body)
-        kk.add_owned_member(
-            namespace, element, factory.create(kerml.OwningMembership)
-        )
+        kk.add_owned_member(namespace, element, factory.create(membership_type))
         if on_element is not None:
             on_element(element, member)
         if isinstance(member, ast.PackageDefinition):
@@ -549,7 +562,24 @@ def _build_members(
                 frame_references,
                 on_element,
             )
-        by_name[member.name] = element
+        elif isinstance(member, (ast.ActionDefinition, ast.ActionUsage)):
+            # An action body's nested members are the action's FEATURES (steps,
+            # directed parameters, successions, flows), owned via FeatureMembership
+            # rather than the namespace OwningMembership used for package members
+            # (Phase 7).
+            _build_members(
+                member.members,
+                element,
+                factory,
+                typed_usages,
+                connection_ends,
+                subject_typings,
+                frame_references,
+                on_element,
+                membership_type=kerml.FeatureMembership,
+            )
+        if member.name is not None:
+            by_name[member.name] = element
     return by_name
 
 
