@@ -1126,3 +1126,17 @@ framed concern (one owning a ReferenceSubsetting) to be a SINGLE ANONYMOUS
 reference: exactly one subsetting to a ConcernUsage AND no declaredName AND no own
 FeatureTyping. Export emits the reference form only for an anonymous usage, so a
 mixed/corrupted frame is skipped (and reported), never misrepresented as `frame g;`.
+
+### Completion Phase 6d-2: follow-up finding 3 (verified 2026-06-22)
+
+A fourth-round Medium finding: export and validation had DRIFTED on what counts as
+a reference. Validation rejected an anonymous framed concern that also owned a
+FeatureTyping (anonymous-but-typed), but export only checked `not declaredName`, so
+it still emitted `frame g;` -- silently dropping the corrupt own type. Fixed by
+making `requirements.framed_concern_reference` the SINGLE shared predicate: it
+returns the referenced ConcernUsage only for a well-formed reference (exactly one
+ReferenceSubsetting to exactly one ConcernUsage, anonymous AND untyped), else None.
+Export, round-trip, and the model-derived validation check all call it (plus
+`is_referencing_frame` to tell a declared frame from a broken reference), so they
+can no longer disagree; a corrupt reference is reported and skipped on export,
+never misrepresented.

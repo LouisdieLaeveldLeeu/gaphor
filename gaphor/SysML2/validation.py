@@ -49,6 +49,7 @@ from gaphor.core.modeling import ElementFactory
 from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
+from gaphor.SysML2 import requirements
 from gaphor.SysML2 import sysml2
 from gaphor.SysML2.mapping import is_managed_usage_kind, type_matches_usage_kind
 
@@ -206,21 +207,14 @@ def _check_frame_references(
         concern = _sole(membership.memberElement)
         if not isinstance(concern, sysml2.ConcernUsage):
             continue  # the membership-member kind is checked elsewhere
-        subsettings = list(kk.reference_subsettings(concern))
-        if not subsettings:
+        if not requirements.is_referencing_frame(concern):
             continue  # a declared frame, or an unresolved import (mapping context)
-        # A referencing framed concern owns EXACTLY ONE ReferenceSubsetting (to
-        # EXACTLY ONE ConcernUsage) and is otherwise ANONYMOUS: per the model
-        # contract the reference form (`frame <existing>`) owns an anonymous
-        # ConcernUsage. So a second appended subsetting, OR a declaredName / own
-        # FeatureTyping alongside a reference (a mixed declare+reference state), is
-        # a corruption -- otherwise export would silently drop the extra reference
-        # or the declared name/type.
-        valid_reference = len(subsettings) == 1 and isinstance(
-            _sole(subsettings[0].referencedFeature), sysml2.ConcernUsage
-        )
-        anonymous = not concern.declaredName and kk.feature_type(concern) is None
-        if not (valid_reference and anonymous):
+        # A framed concern that owns a ReferenceSubsetting must be a WELL-FORMED
+        # reference (the shared predicate export uses): exactly one subsetting to
+        # exactly one ConcernUsage, and otherwise anonymous (no declaredName, no own
+        # FeatureTyping). Otherwise export would silently drop the extra reference
+        # or the declared name/type, so it is reported here instead.
+        if requirements.framed_concern_reference(concern) is None:
             yield Diagnostic(
                 Severity.ERROR,
                 "broken-frame-reference",

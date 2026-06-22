@@ -149,11 +149,12 @@ def _requirement_tail(req: kerml.Element, root: kerml.Namespace) -> str:
             parts.append(f"{keyword} {_parameter_decl(feature, root)};")
     for concern in requirements.framed_concerns(req):
         referenced = requirements.framed_concern_reference(concern)
-        if isinstance(referenced, sysml2.ConcernUsage) and not concern.declaredName:
-            # REFERENCE form (`frame <existing>`): an ANONYMOUS usage referencing an
-            # existing concern; emit a name that re-resolves.
+        if referenced is not None:
+            # REFERENCE form (`frame <existing>`): a well-formed anonymous usage
+            # referencing an existing concern (the shared predicate also enforces
+            # anonymity/untyped); emit a name that re-resolves.
             parts.append(f"frame {_end_name(req, referenced, root)};")
-        elif referenced is None and concern.declaredName:
+        elif concern.declaredName and not requirements.is_referencing_frame(concern):
             # DECLARE form (`frame concern <name> [: <C>]`).
             parts.append(f"frame concern {_parameter_decl(concern, root)};")
         # else: a broken framed concern -- an unresolved `frame <ref>` (anonymous,

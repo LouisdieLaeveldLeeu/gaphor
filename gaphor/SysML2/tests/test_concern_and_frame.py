@@ -484,6 +484,25 @@ def test_multiple_reference_subsettings_on_a_framed_concern_is_reported():
     assert "frame g;" not in export_namespace(result.root)
 
 
+def test_typed_anonymous_frame_reference_is_reported():
+    # The reference form's usage is anonymous AND untyped (its type comes from the
+    # referenced concern). An anonymous reference that ALSO owns a FeatureTyping is
+    # corrupt: validation must report it, and export must not emit `frame g;`
+    # silently dropping the own type. Export uses the SAME predicate as validation.
+    factory, result = _map(
+        "concern def C;\nconcern g : C;\nrequirement def R { frame g; }"
+    )
+    R = _req_def(factory, "R")
+    (framed,) = list(requirements.framed_concerns(R))
+    assert not framed.declaredName  # a proper anonymous reference so far
+    C = next(d for d in factory.select(sysml2.ConcernDefinition) if d.declaredName == "C")
+    kk.set_feature_type(framed, C)  # corrupt: give the anonymous reference an own type
+    assert kk.feature_type(framed) is C
+
+    assert any(d.rule == "broken-frame-reference" for d in validate(factory))
+    assert "frame g;" not in export_namespace(result.root)
+
+
 def test_named_framed_concern_that_also_references_is_reported():
     # The reference form owns an ANONYMOUS usage; a declared (named/typed) framed
     # concern that ALSO owns a ReferenceSubsetting is a mixed corruption. It must be

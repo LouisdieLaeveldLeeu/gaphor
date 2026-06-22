@@ -198,17 +198,36 @@ def add_framed_concern(
     return membership
 
 
-def framed_concern_reference(concern: sysml2.ConcernUsage) -> kerml.Feature | None:
-    """The existing concern that `concern` REFERENCES via a ReferenceSubsetting
-    (the `frame <existing>` form, Phase 6d-2), or None for a declared framed
-    concern (`frame concern <name>`).
+def framed_concern_reference(
+    concern: sysml2.ConcernUsage,
+) -> sysml2.ConcernUsage | None:
+    """The ConcernUsage that `concern` validly REFERENCES as an anonymous
+    framed-concern reference (`frame <existing>`, Phase 6d-2), or None.
 
-    Uses EXACT-ONE semantics: a ReferenceSubsetting with zero or multiple
-    referenced features (a corrupted/API-mutated model) reads as None rather than
-    silently taking the first, so export/round-trip never emit a half-formed
-    reference (validation reports the corruption)."""
-    subsetting = kk.reference_subsetting(concern)
-    if subsetting is None:
+    The SINGLE predicate shared by export, round-trip, and validation, so the three
+    cannot disagree on what counts as a reference. Returns the referenced concern
+    ONLY when `concern` is a WELL-FORMED reference: it owns EXACTLY ONE
+    ReferenceSubsetting to EXACTLY ONE ConcernUsage AND is otherwise ANONYMOUS (no
+    declaredName, no own FeatureTyping -- the reference form's usage carries no
+    independent declaration; its type comes from the referenced concern). A declared
+    frame, or ANY corrupt/mixed state (multiple subsettings, a wrong-kind target, or
+    a name / own type alongside a reference), returns None -- so export never emits
+    it as `frame <ref>` (silently dropping the declared/typed state) and validation
+    reports it."""
+    subsettings = list(kk.reference_subsettings(concern))
+    if len(subsettings) != 1:
         return None
-    referenced = list(subsetting.referencedFeature)
-    return referenced[0] if len(referenced) == 1 else None
+    referenced = list(subsettings[0].referencedFeature)
+    target = referenced[0] if len(referenced) == 1 else None
+    if not isinstance(target, sysml2.ConcernUsage):
+        return None
+    if concern.declaredName or kk.feature_type(concern) is not None:
+        return None
+    return target
+
+
+def is_referencing_frame(concern: sysml2.ConcernUsage) -> bool:
+    """Whether `concern` owns any ReferenceSubsetting -- i.e. it is (or attempts to
+    be) the `frame <existing>` reference form, well-formed or not. A declared frame
+    (`frame concern <name>`) owns none."""
+    return any(kk.reference_subsettings(concern))
