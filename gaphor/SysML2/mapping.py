@@ -136,9 +136,9 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
         root, typed_usages, ambiguous
     )
-    unresolved_ends = _resolve_connection_ends(connection_ends)
+    unresolved_ends = _resolve_connection_ends(connection_ends, ambiguous)
     unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
-    unresolved_frame_refs = _resolve_frame_references(frame_references)
+    unresolved_frame_refs = _resolve_frame_references(frame_references, ambiguous)
     return MappingResult(
         root=root,
         elements_by_name=top_level,
@@ -205,9 +205,9 @@ def map_project_members(named_packages, factory: ElementFactory):
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
         root, typed_usages, ambiguous
     )
-    unresolved_ends = _resolve_connection_ends(connection_ends)
+    unresolved_ends = _resolve_connection_ends(connection_ends, ambiguous)
     unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
-    unresolved_frame_refs = _resolve_frame_references(frame_references)
+    unresolved_frame_refs = _resolve_frame_references(frame_references, ambiguous)
     for relationship_id, source_id in relationship_sources.items():
         if source_id in provenance:
             provenance[relationship_id] = provenance[source_id]
@@ -279,17 +279,18 @@ def _resolve_typed_usages(
     return unresolved_types, mistyped, relationship_sources
 
 
-def _resolve_connection_ends(connection_ends: list) -> dict[str, list[str]]:
+def _resolve_connection_ends(
+    connection_ends: list, ambiguous: dict[str, str]
+) -> dict[str, list[str]]:
     """Resolve binary connector endpoints to features (mapping phase 2).
 
-    Each endpoint name is resolved nearest-first from the connection's namespace.
-    A binary connection's ends are ATOMIC: source and target are set together
-    only when BOTH names resolve to a `Feature` (a usage). If either name does not
-    resolve, or resolves to a non-feature (a package or a definition), the broken
-    name(s) are recorded and NEITHER end is set -- the connect clause is reported
-    as broken (`broken-connection-end`) rather than materialised half-formed. This
-    keeps the model from ever holding a one-ended binary connection, which has no
-    valid textual form and would otherwise be dropped silently on export.
+    Each endpoint name is resolved nearest-first from the connection's namespace
+    (imports included). A binary connection's ends are ATOMIC: source and target
+    are set together only when BOTH names resolve to a `Feature` (a usage). An end
+    visible from more than one import is recorded `ambiguous` (Phase 5a); an end
+    that does not resolve, or resolves to a non-feature, is recorded broken
+    (`broken-connection-end`). Either way NEITHER end is set -- the connection has
+    no valid textual form and is reported rather than materialised half-formed.
     """
     unresolved_ends: dict[str, list[str]] = {}
     for connection, namespace, source_name, target_name in connection_ends:
@@ -300,32 +301,41 @@ def _resolve_connection_ends(connection_ends: list) -> dict[str, list[str]]:
             (target_name, "target"),
         ):
             target = _resolve_type(namespace, name)
-            if isinstance(target, kerml.Feature):
+            if target is _AMBIGUOUS:
+                ambiguous[connection.id] = "::".join(name)
+            elif isinstance(target, kerml.Feature):
                 resolved[setter] = target
             else:
                 broken.append("::".join(name))
-        if broken:
-            unresolved_ends[connection.id] = broken
-        else:
+        if len(resolved) == 2:
             for setter, feature in resolved.items():
                 setattr(connection, setter, feature)
+        elif broken:
+            unresolved_ends[connection.id] = broken
+        # else: an ambiguous end (no plain-broken end) -- reported via `ambiguous`,
+        # not double-reported as a broken end; ends left unset.
     return unresolved_ends
 
 
-def _resolve_frame_references(frame_references: list) -> dict[str, str]:
+def _resolve_frame_references(
+    frame_references: list, ambiguous: dict[str, str]
+) -> dict[str, str]:
     """Resolve each framed-concern REFERENCE to an existing ConcernUsage (phase 2).
 
     `frame <ref>` owns an anonymous ConcernUsage that REFERENCES an existing
-    concern. The name is resolved nearest-first from the requirement's namespace; a
-    name that resolves to a ConcernUsage gets a ReferenceSubsetting linking the
-    anonymous usage to it, otherwise it is recorded unresolved (a name resolving to
-    a non-ConcernUsage -- e.g. a ConcernDefinition or a part -- is wrong-kind and
-    also recorded, never silently dropped).
+    concern. The name is resolved nearest-first from the requirement's namespace
+    (imports included); a name that resolves to a ConcernUsage gets a
+    ReferenceSubsetting linking the anonymous usage to it. A name visible from more
+    than one import is recorded `ambiguous` (Phase 5a); a name that does not resolve,
+    or resolves to a non-ConcernUsage (a ConcernDefinition or a part), is recorded
+    unresolved -- never silently dropped.
     """
     unresolved: dict[str, str] = {}
     for concern, namespace, target in frame_references:
         referenced = _resolve_type(namespace, target)
-        if isinstance(referenced, sysml2.ConcernUsage):
+        if referenced is _AMBIGUOUS:
+            ambiguous[concern.id] = "::".join(target)
+        elif isinstance(referenced, sysml2.ConcernUsage):
             kk.add_reference_subsetting(concern, referenced)
         else:
             unresolved[concern.id] = "::".join(target)

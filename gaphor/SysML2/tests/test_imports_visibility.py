@@ -158,6 +158,31 @@ def test_ambiguous_name_from_two_imports_is_reported():
     assert kk.feature_type(_part(factory, "t")) is None
 
 
+def test_ambiguous_imported_connector_end_is_reported():
+    # An ambiguous imported connector endpoint is `ambiguous-name`, NOT
+    # broken-connection-end (the ends are still left unset).
+    factory, result = _map(
+        "package A { part x; }\npackage B { part x; }\n"
+        "package C { import A::*; import B::*; part p; "
+        "connection c connect x to p; }"
+    )
+    diagnostics = _validate(factory, result)
+    assert any(d.rule == "ambiguous-name" for d in diagnostics)
+    assert not any(d.rule == "broken-connection-end" for d in diagnostics)
+
+
+def test_ambiguous_imported_frame_reference_is_reported():
+    # An ambiguous imported framed-concern reference is `ambiguous-name`, NOT
+    # broken-frame-reference.
+    factory, result = _map(
+        "concern def K;\npackage A { concern cc : K; }\npackage B { concern cc : K; }\n"
+        "package C { import A::*; import B::*; requirement def R { frame cc; } }"
+    )
+    diagnostics = _validate(factory, result)
+    assert any(d.rule == "ambiguous-name" for d in diagnostics)
+    assert not any(d.rule == "broken-frame-reference" for d in diagnostics)
+
+
 def test_same_element_two_imports_is_not_ambiguous():
     # Importing the SAME element by wildcard AND by name is one candidate, not an
     # ambiguity.
