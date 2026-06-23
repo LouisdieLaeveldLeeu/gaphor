@@ -84,7 +84,9 @@ echo "Running pytest headless (xvfb): ${PYTEST_ARGS[*]}"
 # signalling work correctly (xvfb-run can hang as PID 1 in a container).
 #
 # --no-root was used at build time; install the project itself now (cheap) so
-# `import gaphor.SysML2` resolves against the bind-mounted source.
+# `import gaphor.SysML2` resolves against the bind-mounted source. The Poetry venv
+# is outside /workspace (see Dockerfile), so this never creates a root-owned
+# .venv in the host worktree.
 #
 # pytest args are passed as positional parameters ("$@") into the inner shell,
 # not interpolated into the command string, so quoted args (e.g. -k "a or b")
@@ -96,6 +98,8 @@ docker run --rm --init \
     --volume "$REPO_ROOT:/workspace:Z" \
     --workdir /workspace \
     --env GSETTINGS_SCHEMA_DIR=/tmp/glib-schemas \
+    --env POETRY_VIRTUALENVS_IN_PROJECT=false \
+    --env POETRY_VIRTUALENVS_PATH=/opt/poetry-venvs \
     "$IMAGE" \
     bash -lc '
         poetry install --with dev >/dev/null

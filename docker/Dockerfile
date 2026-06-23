@@ -42,9 +42,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # it gdk-pixbuf cannot load them -- e.g. test_diagrampage.test_placement_cursor).
 # libglib2.0-bin provides glib-compile-schemas for the GSettings schema below.
 
-# Pin Poetry via pipx (decoupled from the project venv). virtualenvs.in-project
-# keeps the resolved environment next to the checkout for transparency.
+# Pin Poetry via pipx (decoupled from the project venv). Keep the project venv
+# outside /workspace: test runs bind-mount the live checkout there, and an
+# in-project .venv would be root-owned host-side state that can corrupt or shadow
+# the baked image environment.
 ENV PATH="/root/.local/bin:${PATH}"
+ENV POETRY_VIRTUALENVS_IN_PROJECT=false \
+    POETRY_VIRTUALENVS_PATH=/opt/poetry-venvs
 # Make pip resilient to transient network blips during the build (the install
 # layer otherwise fails the whole image build on a single dropped download,
 # which made docker/run-tests.sh non-deterministic).
@@ -54,7 +58,8 @@ ENV PIP_RETRIES=5 \
 # Poetry pinned to match the project's existing pin in
 # .github/github-requirements.txt and the version that resolved poetry.lock.
 RUN pipx install poetry==2.4.1 \
-    && poetry config virtualenvs.in-project true \
+    && poetry config virtualenvs.in-project false \
+    && poetry config virtualenvs.path /opt/poetry-venvs \
     && poetry config installer.max-workers 4
 
 WORKDIR /workspace
