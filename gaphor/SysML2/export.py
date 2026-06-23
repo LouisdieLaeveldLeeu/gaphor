@@ -21,10 +21,63 @@ _INDENT = "    "
 
 def export_namespace(root: kerml.Namespace) -> str:
     """Render the members of `root` as SysML v2 text."""
-    return "".join(_export_member(member, 0, root) for member in kk.members(root))
+    return _export_members(root, 0, root)
+
+
+def _export_members(
+    namespace: kerml.Namespace, depth: int, root: kerml.Namespace
+) -> str:
+    """A namespace body: its import statements then its members (Phase 5a)."""
+    return _export_imports(namespace, depth, root) + "".join(
+        _export_member(member, depth, root) for member in kk.members(namespace)
+    )
 
 
 def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) -> str:
+    """A member line, prefixed with `private ` when its membership is private (the
+    member default is public, so only private is emitted) (Phase 5a)."""
+    line = _export_member_line(element, depth, root)
+    if line and _member_visibility(element) == kerml.VisibilityKind.private:
+        pad = _INDENT * depth
+        return f"{pad}private {line[len(pad):]}"
+    return line
+
+
+def _member_visibility(element: kerml.Element) -> kerml.VisibilityKind | None:
+    membership = kk._single(element.owningRelationship)
+    return membership.visibility if membership is not None else None
+
+
+def _export_imports(
+    namespace: kerml.Namespace, depth: int, root: kerml.Namespace
+) -> str:
+    pad = _INDENT * depth
+    out = []
+    for relationship in namespace.ownedRelationship:
+        if isinstance(relationship, kerml.Import):
+            decl = _import_decl(relationship, root)
+            if decl:
+                out.append(f"{pad}{decl}\n")
+    return "".join(out)
+
+
+def _import_decl(imp: kerml.Import, root: kerml.Namespace) -> str:
+    """`[public ]import <path>[::*];` for an import, or `""` when unresolved.
+
+    The import default is PRIVATE, so only a `public` import emits a prefix; an
+    unresolved import (no target) has no textual form and is skipped (validation's
+    unresolved-import rule reports it), mirroring a broken connector end."""
+    target = kk._single(imp.target)
+    if target is None:
+        return ""
+    prefix = "public " if imp.visibility == kerml.VisibilityKind.public else ""
+    star = "::*" if kk.is_import_all(imp) else ""
+    return f"{prefix}import {_path_from_root(target, root)}{star};"
+
+
+def _export_member_line(
+    element: kerml.Element, depth: int, root: kerml.Namespace
+) -> str:
     pad = _INDENT * depth
     # A ConjugatedPortDefinition is the implicit conjugate of a PortDefinition; it
     # has no concrete syntax of its own (it surfaces only as `~Original` on a port
@@ -35,9 +88,7 @@ def _export_member(element: kerml.Element, depth: int, root: kerml.Namespace) ->
     # Package check first: PartDefinition/PartUsage are also Namespaces, but a
     # Package is the only member rendered as a nesting container.
     if isinstance(element, kerml.Package):
-        inner = "".join(
-            _export_member(m, depth + 1, root) for m in kk.members(element)
-        )
+        inner = _export_members(element, depth + 1, root)
         if inner:
             return f"{pad}package {element.declaredName} {{\n{inner}{pad}}}\n"
         return f"{pad}package {element.declaredName} {{ }}\n"
@@ -132,7 +183,7 @@ def _action_body(action: kerml.Element, depth: int, root: kerml.Namespace) -> st
     action with no members renders `;` (an empty `{ }` body carries no semantics and
     is not distinguished from none)."""
     pad = _INDENT * depth
-    inner = "".join(_export_member(m, depth + 1, root) for m in kk.members(action))
+    inner = _export_members(action, depth + 1, root)
     return f" {{\n{inner}{pad}}}" if inner else ";"
 
 

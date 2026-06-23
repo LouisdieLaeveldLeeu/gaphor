@@ -260,6 +260,19 @@ usages, and `of`-item payloads are deliberately out of scope, so the construct i
 not yet complete. See `test_action_semantics.py`. This is the Phase-7 gate
 decision, taken explicitly per the roadmap.
 
+Phase 5a deepens NAME RESOLUTION with imports and visibility (no construct row
+moves -- it deepens resolution for already-supported constructs). `import A::B;`
+(named) and `import A::*;` (import-all) become `kerml.Import` relationships, and a
+`public`/`private` prefix on members/imports sets `Membership`/`Import.visibility`
+(member default public, import default private). Nearest-first resolution now
+consults a scope's imports after its owned members -- a wildcard brings only PUBLIC
+members, an own member shadows an import -- and reports `ambiguous-name` when a name
+is visible from more than one import. Imports + the `private` prefix export,
+round-trip, and persist (a persistence-robust `is_import_all` helper normalizes the
+boolean that `.gaphor` reloads as a string). Transitive re-export through `public`
+imports, recursive imports (`::**`), and import aliases (Phase 5b) are out of
+scope. See `test_imports_visibility.py`.
+
 PortDefinition and PortUsage are `supported` for the declaration-and-typing
 surface INCLUDING conjugation (`port def Fuel; port p : Fuel; port q : ~Fuel;`).
 Phase F first built the unconjugated surface (every cell implemented and

@@ -7,6 +7,7 @@ with the offending location, so callers never get a partially-built AST.
 
 from __future__ import annotations
 
+import dataclasses
 from collections import namedtuple
 from functools import lru_cache
 from pathlib import Path
@@ -409,7 +410,22 @@ class _ASTBuilder(Transformer):
         (name,) = items
         return ast.PackageDefinition(name=str(name), members=(), line=name.line)
 
+    def import_statement(self, items):
+        # `import <qualified_name> [WILDCARD]` -> ast.Import. WILDCARD (`::*`) marks
+        # the import-all form. Visibility is applied by `member` (the shared prefix).
+        target = items[0]
+        wildcard = len(items) > 1
+        return ast.Import(target=target, wildcard=wildcard)
+
+    def member_body(self, items):
+        return items[0]
+
     def member(self, items):
+        # `VISIBILITY? member_body` -- a leading `public`/`private` token sets the
+        # member's (or import's) visibility, applied uniformly here.
+        if len(items) == 2:
+            visibility, node = str(items[0]), items[1]
+            return dataclasses.replace(node, visibility=visibility)
         return items[0]
 
     def package_body(self, members):

@@ -50,7 +50,7 @@ def _run_validate(args: argparse.Namespace) -> int:
 
     factory = ElementFactory()
     result = map_package(pkg, factory)
-    diagnostics = validate(factory, result.unresolved_types, result.mistyped, result.unresolved_ends, result.unresolved_frame_refs)
+    diagnostics = validate(factory, result.unresolved_types, result.mistyped, result.unresolved_ends, result.unresolved_frame_refs, result.ambiguous)
     for d in diagnostics:
         print(f"{d.severity}: {d.rule}: {d.message}", file=sys.stderr)
     return ERROR_EXIT_CODE if has_errors(diagnostics) else 0
@@ -75,7 +75,7 @@ def _run_import(args: argparse.Namespace) -> int:
     result = map_package(pkg, factory)
 
     # Validate before persisting: invalid input is never silently imported.
-    diagnostics = validate(factory, result.unresolved_types, result.mistyped, result.unresolved_ends, result.unresolved_frame_refs)
+    diagnostics = validate(factory, result.unresolved_types, result.mistyped, result.unresolved_ends, result.unresolved_frame_refs, result.ambiguous)
     for d in diagnostics:
         print(f"{d.severity}: {d.rule}: {d.message}", file=sys.stderr)
     if has_errors(diagnostics) and not args.allow_invalid:

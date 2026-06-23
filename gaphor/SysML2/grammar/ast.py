@@ -25,6 +25,7 @@ class PartDefinition:
     """`part def <name> ;`"""
 
     name: str
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -35,6 +36,7 @@ class PartUsage:
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -43,6 +45,7 @@ class AttributeDefinition:
     """`attribute def <name> ;`"""
 
     name: str
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -53,6 +56,7 @@ class AttributeUsage:
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -65,6 +69,7 @@ class ActionDefinition:
 
     name: str
     members: tuple["Member", ...] = ()
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -76,6 +81,7 @@ class ActionUsage:
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     members: tuple["Member", ...] = ()
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -89,6 +95,7 @@ class SuccessionUsage:
     source: tuple[str, ...]  # the `first` end
     target: tuple[str, ...]  # the `then` end
     name: str | None = None
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -102,6 +109,7 @@ class FlowUsage:
     source: tuple[str, ...]  # the `from` end
     target: tuple[str, ...]  # the `to` end
     name: str | None = None
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -114,6 +122,7 @@ class ConstraintDefinition:
 
     name: str
     body: str | None = None
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -128,6 +137,7 @@ class ConstraintUsage:
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     body: str | None = None  # opaque constraint body text, or None
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -193,6 +203,7 @@ class RequirementDefinition:
     actors: tuple[ActorClause, ...] = ()
     stakeholders: tuple[StakeholderClause, ...] = ()
     framedConcerns: tuple[FrameClause | FrameReference, ...] = ()
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -210,6 +221,7 @@ class RequirementUsage:
     actors: tuple[ActorClause, ...] = ()
     stakeholders: tuple[StakeholderClause, ...] = ()
     framedConcerns: tuple[FrameClause | FrameReference, ...] = ()
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -228,6 +240,7 @@ class ConcernDefinition:
     actors: tuple[ActorClause, ...] = ()
     stakeholders: tuple[StakeholderClause, ...] = ()
     framedConcerns: tuple[FrameClause | FrameReference, ...] = ()
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -247,6 +260,7 @@ class ConcernUsage:
     actors: tuple[ActorClause, ...] = ()
     stakeholders: tuple[StakeholderClause, ...] = ()
     framedConcerns: tuple[FrameClause | FrameReference, ...] = ()
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -255,6 +269,7 @@ class PortDefinition:
     """`port def <name> ;`"""
 
     name: str
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -269,6 +284,7 @@ class PortUsage:
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     conjugated: bool = False
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -277,6 +293,7 @@ class ConnectionDefinition:
     """`connection def <name> ;`"""
 
     name: str
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -292,6 +309,7 @@ class ConnectionUsage:
     source: tuple[str, ...] | None = None  # endpoint 1, or None
     target: tuple[str, ...] | None = None  # endpoint 2, or None
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -300,6 +318,7 @@ class InterfaceDefinition:
     """`interface def <name> ;`"""
 
     name: str
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -316,6 +335,7 @@ class InterfaceUsage:
     source: tuple[str, ...] | None = None  # endpoint 1, or None
     target: tuple[str, ...] | None = None  # endpoint 2, or None
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -325,6 +345,22 @@ class PackageDefinition:
 
     name: str
     members: tuple["Member", ...] = field(default_factory=tuple)
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
+    line: int | None = _line
+
+
+@dataclass(frozen=True)
+class Import:
+    """`[<vis>] import <QName> [ ::* ] ;` (Phase 5a).
+
+    `target` is the imported qualified name; `wildcard` is True for the `::*`
+    import-all form (the namespace's public members) and False for a named import
+    (the single element). `visibility` is the import's own public/private (default
+    private, the KerML import default), set by the shared member visibility prefix."""
+
+    target: tuple[str, ...]  # qualified name segments
+    wildcard: bool = False
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
@@ -336,7 +372,7 @@ Member = (
     "| RequirementDefinition | RequirementUsage | ConcernDefinition | ConcernUsage "
     "| PortDefinition | PortUsage "
     "| ConnectionDefinition | ConnectionUsage | InterfaceDefinition "
-    "| InterfaceUsage | PackageDefinition"
+    "| InterfaceUsage | PackageDefinition | Import"
 )
 
 

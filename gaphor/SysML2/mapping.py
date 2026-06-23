@@ -101,6 +101,9 @@ class MappingResult:
     # framed-concern ConcernUsage id -> the `frame <ref>` name that did not resolve
     # to a ConcernUsage, for the framed-concern-reference validation rule (6d-2).
     unresolved_frame_refs: dict[str, str] = field(default_factory=dict)
+    # element id -> the (qualified) name that was visible from MORE THAN ONE import
+    # and so did not bind, for the ambiguous-name validation rule (Phase 5a).
+    ambiguous: dict[str, str] = field(default_factory=dict)
 
 
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
@@ -114,6 +117,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     connection_ends: list = []
     subject_typings: list = []
     frame_references: list = []
+    imports: list = []
     top_level = _build_members(
         pkg.members,
         root,
@@ -122,13 +126,18 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
         connection_ends,
         subject_typings,
         frame_references,
+        imports,
     )
 
+    # Resolve imports FIRST so the typed-usage/subject passes can see imported
+    # members (Phase 5a).
+    _resolve_imports(imports)
+    ambiguous: dict[str, str] = {}
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
-        root, typed_usages
+        root, typed_usages, ambiguous
     )
     unresolved_ends = _resolve_connection_ends(connection_ends)
-    unresolved_types.update(_resolve_subject_types(subject_typings))
+    unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
     unresolved_frame_refs = _resolve_frame_references(frame_references)
     return MappingResult(
         root=root,
@@ -136,6 +145,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
         unresolved_types=unresolved_types,
         mistyped=mistyped,
         relationship_sources=relationship_sources,
+        ambiguous=ambiguous,
         unresolved_ends=unresolved_ends,
         unresolved_frame_refs=unresolved_frame_refs,
     )
@@ -168,6 +178,7 @@ def map_project_members(named_packages, factory: ElementFactory):
     connection_ends: list = []
     subject_typings: list = []
     frame_references: list = []
+    imports: list = []
     top_level: dict[str, kerml.Element] = {}
     provenance: dict[str, tuple] = {}
     for label, pkg in named_packages:
@@ -184,15 +195,18 @@ def map_project_members(named_packages, factory: ElementFactory):
                 connection_ends,
                 subject_typings,
                 frame_references,
+                imports,
                 record,
             )
         )
 
+    _resolve_imports(imports)
+    ambiguous: dict[str, str] = {}
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
-        root, typed_usages
+        root, typed_usages, ambiguous
     )
     unresolved_ends = _resolve_connection_ends(connection_ends)
-    unresolved_types.update(_resolve_subject_types(subject_typings))
+    unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
     unresolved_frame_refs = _resolve_frame_references(frame_references)
     for relationship_id, source_id in relationship_sources.items():
         if source_id in provenance:
@@ -204,6 +218,7 @@ def map_project_members(named_packages, factory: ElementFactory):
             unresolved_types=unresolved_types,
             mistyped=mistyped,
             relationship_sources=relationship_sources,
+            ambiguous=ambiguous,
             unresolved_ends=unresolved_ends,
             unresolved_frame_refs=unresolved_frame_refs,
         ),
@@ -212,7 +227,7 @@ def map_project_members(named_packages, factory: ElementFactory):
 
 
 def _resolve_typed_usages(
-    root: kerml.Namespace, typed_usages: list
+    root: kerml.Namespace, typed_usages: list, ambiguous: dict[str, str]
 ) -> tuple[dict[str, str], dict[str, tuple[str, str]], dict[str, str]]:
     """Resolve usage typing for the collected usages (mapping phase 2).
 
@@ -232,13 +247,18 @@ def _resolve_typed_usages(
     relationship_sources: dict[str, str] = {}
     for usage, namespace, type_name, conjugated in typed_usages:
         target = _resolve_type(namespace, type_name)
+        display_name = ("~" if conjugated else "") + "::".join(type_name)
+        # A name visible from more than one import is ambiguous: report it and do
+        # not bind (no library fallback, no typing) (Phase 5a).
+        if target is _AMBIGUOUS:
+            ambiguous[usage.id] = display_name
+            continue
         # Only fall back to the standard library when the name resolves to
         # NOTHING in the user model. A user name that resolves to a non-Type
         # (e.g. a local `package Real`) shadows the library and stays
         # unresolved/wrong-kind -- the library never overrides user content.
         if target is None:
             target = _library_value_type(usage, type_name, root)
-        display_name = ("~" if conjugated else "") + "::".join(type_name)
         if not isinstance(target, kerml.Type):
             unresolved_types[usage.id] = display_name
             continue
@@ -310,6 +330,24 @@ def _resolve_frame_references(frame_references: list) -> dict[str, str]:
         else:
             unresolved[concern.id] = "::".join(target)
     return unresolved
+
+
+def _resolve_imports(imports: list) -> None:
+    """Resolve each import's target (mapping phase 2), OWNED members only.
+
+    A named `import A::B` resolves to any element; a wildcard `import A::*` must
+    resolve to a Namespace. Resolution uses `use_imports=False` so an import never
+    resolves through another import (no transitive import chains in Phase 5a). A
+    target that does not resolve leaves the import with no `target`, which
+    `_check_unresolved_imports` reports model-derived. Imports are resolved BEFORE
+    the typed-usage/subject passes so those can see imported members.
+    """
+    for imp, namespace, target_name, wildcard in imports:
+        target = _resolve_type(namespace, target_name, use_imports=False)
+        if wildcard and not isinstance(target, kerml.Namespace):
+            target = None
+        if isinstance(target, kerml.Element):
+            imp.target = target
 
 
 def _build_requirement_body(
@@ -395,18 +433,23 @@ def _build_requirement_body(
             record(constraint)
 
 
-def _resolve_subject_types(subject_typings: list) -> dict[str, str]:
+def _resolve_subject_types(
+    subject_typings: list, ambiguous: dict[str, str]
+) -> dict[str, str]:
     """Resolve each requirement SUBJECT's declared type (mapping phase 2).
 
     A subject may be typed by ANY Type (it is a parameter, not a kind-specific
     usage), so there is no kind check; a name that resolves to a Type sets the
-    FeatureTyping, otherwise it is recorded unresolved. (Actor/stakeholder are
+    FeatureTyping, otherwise it is recorded unresolved. A name visible from more
+    than one import is recorded ambiguous (Phase 5a). (Actor/stakeholder are
     PartUsage and resolve through the kind-checked `_resolve_typed_usages` path.)
     """
     unresolved: dict[str, str] = {}
     for feature, namespace, type_name in subject_typings:
         target = _resolve_type(namespace, type_name)
-        if isinstance(target, kerml.Type):
+        if target is _AMBIGUOUS:
+            ambiguous[feature.id] = "::".join(type_name)
+        elif isinstance(target, kerml.Type):
             kk.set_feature_type(feature, target)
         else:
             unresolved[feature.id] = "::".join(type_name)
@@ -421,6 +464,7 @@ def _build_members(
     connection_ends: list,
     subject_typings: list,
     frame_references: list,
+    imports: list,
     on_element=None,
     owner_is_type: bool = False,
 ) -> dict[str, kerml.Element]:
@@ -429,13 +473,30 @@ def _build_members(
 
     Typed usages (including requirement actor/stakeholder PartUsages) are recorded
     in `typed_usages`, connection endpoints in `connection_ends`, requirement
-    SUBJECT types in `subject_typings`, and framed-concern references in
-    `frame_references` for phase-2 resolution. If `on_element` is given, it is
-    called as `on_element(element, ast_node)` for every created element (including
-    nested ones), so callers can record per-element provenance from the AST node
-    (e.g. its source line)."""
+    SUBJECT types in `subject_typings`, framed-concern references in
+    `frame_references`, and import targets in `imports` for phase-2 resolution. If
+    `on_element` is given, it is called as `on_element(element, ast_node)` for every
+    created element (including nested ones), so callers can record per-element
+    provenance from the AST node (e.g. its source line)."""
     by_name: dict[str, kerml.Element] = {}
     for member in members:
+        if isinstance(member, ast.Import):
+            # An import is a Relationship owned directly by the namespace (not via a
+            # Membership and not named); its target qualified name resolves in
+            # phase 2 (Phase 5a).
+            imp = factory.create(kerml.Import)
+            imp.isImportAll = member.wildcard
+            imp.visibility = (
+                kerml.VisibilityKind(member.visibility)
+                if member.visibility is not None
+                else kerml.VisibilityKind.private  # KerML import default
+            )
+            namespace.ownedRelationship = imp
+            imp.owningRelatedElement = namespace
+            imports.append((imp, namespace, member.target, member.wildcard))
+            if on_element is not None:
+                on_element(imp, member)
+            continue
         if isinstance(member, ast.PartDefinition):
             element: kerml.Element = factory.create(sysml2.PartDefinition)
         elif isinstance(member, ast.AttributeDefinition):
@@ -558,6 +619,13 @@ def _build_members(
             membership: kerml.OwningMembership = factory.create(kerml.FeatureMembership)
         else:
             membership = factory.create(kerml.OwningMembership)
+        # Member visibility (Phase 5a): set explicitly from the declared prefix,
+        # defaulting to PUBLIC (the SysML member default) -- the generated
+        # `Membership.visibility` default is private, so this must be set or every
+        # member would be private (un-importable).
+        membership.visibility = kerml.VisibilityKind(
+            getattr(member, "visibility", None) or "public"
+        )
         kk.add_owned_member(namespace, element, membership)
         if on_element is not None:
             on_element(element, member)
@@ -570,6 +638,7 @@ def _build_members(
                 connection_ends,
                 subject_typings,
                 frame_references,
+                imports,
                 on_element,
             )
         elif isinstance(member, (ast.ActionDefinition, ast.ActionUsage)):
@@ -585,6 +654,7 @@ def _build_members(
                 connection_ends,
                 subject_typings,
                 frame_references,
+                imports,
                 on_element,
                 owner_is_type=True,
             )
@@ -593,22 +663,33 @@ def _build_members(
     return by_name
 
 
+# Sentinel returned by `_resolve_type` when the first name segment is visible from
+# MORE THAN ONE import at the nearest scope that has it (Phase 5a). Distinct from
+# None (not found): callers record an `ambiguous-name` diagnostic and do not bind.
+_AMBIGUOUS = object()
+
+
 def _resolve_type(
-    namespace: kerml.Namespace, type_name: tuple[str, ...]
-) -> kerml.Element | None:
-    """Resolve a (qualified) type name with nearest-first scoping.
+    namespace: kerml.Namespace,
+    type_name: tuple[str, ...],
+    use_imports: bool = True,
+):
+    """Resolve a (qualified) type name with nearest-first scoping, including
+    imported memberships (Phase 5a).
 
-    The first segment is looked up by walking outward from the usage's own
-    namespace through each enclosing namespace to the model root; the nearest
-    declaration wins (an inner scope shadows an outer one). The remaining
-    segments are then navigated as members from that match. This resolves names
-    declared in enclosing packages and relative-qualified names (e.g. a sibling
-    `A::Engine` referenced from within the same enclosing package), not only
-    same-namespace names and root-qualified names.
+    At each scope from the usage's own namespace outward to the root: an OWNED
+    member wins first (own scope, any visibility); otherwise, if `use_imports`, the
+    scope's IMPORTS are consulted -- a wildcard `import A::*` brings A's PUBLIC
+    members, a named `import A::B` brings B by its name. The nearest scope that has
+    the name wins (inner shadows outer; owned shadows imported). If the name is
+    visible from more than one import at that scope and they resolve to DIFFERENT
+    elements, returns `_AMBIGUOUS`. The remaining `::` segments are navigated as
+    members from the match. `use_imports=False` resolves an import's OWN target
+    (owned members only), so imports do not resolve through other imports.
 
-    Deferred to follow-up phases (they need grammar/semantic support that does
-    not exist yet): imports and imported memberships, aliases, inherited members,
-    visibility, implicit specialization, and feature chains.
+    Deferred to later phases: aliases (5b), inherited members (5c), implicit
+    specialization (5d), feature chains (5e), and transitive re-export through
+    public imports.
     """
     first, *rest = type_name
     scope: kerml.Namespace | None = namespace
@@ -620,7 +701,62 @@ def _resolve_type(
         # for an earlier usage would change how a later name resolves).
         if found is not None and not _is_library_proxy(found):
             return _descend(found, rest)
+        if use_imports:
+            candidates = _imported_candidates(scope, first)
+            if len(candidates) > 1:
+                return _AMBIGUOUS
+            if len(candidates) == 1:
+                return _descend(candidates[0], rest)
         scope = kk.owning_namespace(scope)
+    return None
+
+
+def _imported_candidates(
+    namespace: kerml.Namespace, name: str
+) -> list[kerml.Element]:
+    """Distinct elements named `name` visible through `namespace`'s own imports.
+
+    A wildcard import (`import A::*`, isImportAll) brings the PUBLIC members of the
+    imported namespace; a named import (`import A::B`) brings the imported element
+    by its own name. Honors imported-member visibility (a private member is not
+    brought in by a wildcard). Deduplicated by id, so the same element imported two
+    ways is one candidate; two DIFFERENT elements means an ambiguity.
+    """
+    found: dict[str, kerml.Element] = {}
+    for relationship in namespace.ownedRelationship:
+        if not isinstance(relationship, kerml.Import):
+            continue
+        target = kk._single(relationship.target)
+        if target is None:
+            continue
+        if kk.is_import_all(relationship):
+            if isinstance(target, kerml.Namespace):
+                member = _public_member_named(target, name)
+                if member is not None:
+                    found[member.id] = member
+        elif kk.effective_name(target) == name and not _is_library_proxy(target):
+            found[target.id] = target
+    return list(found.values())
+
+
+def _public_member_named(
+    namespace: kerml.Namespace, name: str
+) -> kerml.Element | None:
+    """A PUBLIC owned member of `namespace` with effective name `name`, else None.
+
+    Used for wildcard-import resolution: only public members are importable, so a
+    `private` member is invisible to `import <ns>::*`.
+    """
+    for membership in kk.owned_memberships(namespace):
+        if membership.visibility != kerml.VisibilityKind.public:
+            continue
+        member = kk._single(membership.memberElement)
+        if (
+            member is not None
+            and not _is_library_proxy(member)
+            and kk.effective_name(member) == name
+        ):
+            return member
     return None
 
 

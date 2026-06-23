@@ -257,6 +257,20 @@ def resolve_qualified_name(root: Namespace, qualified: str) -> Element | None:
     return current
 
 
+def is_import_all(imp: Import) -> bool:
+    """Whether `imp` is a wildcard (`import A::*`) import.
+
+    Robust to persistence: a generated `_attribute[bool]` reloads from `.gaphor` as
+    the STRING ``"True"``/``"False"`` (non-empty, so a bare truthiness test would
+    read ``"False"`` as True), so the value is normalized here. Used everywhere
+    `isImportAll` is read as a boolean (resolver, export, round-trip).
+    """
+    value = imp.isImportAll
+    if isinstance(value, str):
+        return value.lower() in ("true", "1")
+    return bool(value)
+
+
 def imported_elements(namespace: Namespace) -> Iterator[Element]:
     """Elements imported by the namespace's owned Imports.
 

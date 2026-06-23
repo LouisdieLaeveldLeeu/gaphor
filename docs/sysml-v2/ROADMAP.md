@@ -328,14 +328,39 @@ no reachable ambiguity to report; ambiguity diagnostics land with imports
 Exit (reached): the resolver is no longer limited to same-namespace and simple
 root-qualified names for the grammar we support today.
 
-### Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- PLANNED
+### Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- DONE
 
-Add `import` (and `public`/`private` visibility) syntax and resolve names through
-imported memberships, honouring visibility, with ambiguity diagnostics when a
-name is visible from more than one import. Prerequisite: grammar for import
-statements and member visibility, plus the imported-membership/visibility
-semantic contract. Exit: imported names resolve with visibility and ambiguity
-reporting.
+Added `import` statements and `public`/`private` visibility, resolving names
+through imported memberships and honouring visibility, with ambiguity diagnostics.
+The existing Import/VisibilityKind/Membership.visibility metamodel sufficed (no new
+classes; kernel stays 35):
+
+- **grammar/AST/parser**: `[<vis>] import <QName> [::*] ;` (named element or the
+  `::*` import-all of a namespace; `::*` is a single WILDCARD terminal so it does
+  not collide with the `::` separator) plus a uniform `public`/`private` prefix on
+  every member (and import), applied centrally in the `member` transformer;
+- **mapping**: each import becomes a `kerml.Import` (isImportAll + visibility),
+  its target resolved in phase 2 owned-members-only (so imports do not resolve
+  through other imports); each member's `OwningMembership.visibility` is set from
+  the prefix, defaulting to PUBLIC (the SysML member default; the generated default
+  is private, so it is set explicitly);
+- **resolution**: nearest-first now consults a scope's imports after its owned
+  members -- a wildcard brings only the target namespace's PUBLIC members, a named
+  import brings the element; an OWN member shadows an import, a nearer scope shadows
+  a farther one; a name visible from MORE THAN ONE import (distinct targets) is
+  reported `ambiguous-name` and does not bind;
+- **export/round-trip/persist**: import statements and the `private` member prefix
+  re-emit; canonical records Import and private-member-visibility entries. A
+  persistence-robust `is_import_all` helper normalizes the boolean `isImportAll`
+  (it reloads from `.gaphor` as a string).
+
+OUT of scope (deferred): transitive re-export through `public` imports (a public
+import is recorded but its names are not re-resolved across import chains),
+recursive imports (`::**`), and import aliases.
+
+Exit: imported names resolve with visibility and ambiguity reporting -- done and
+tested (`test_imports_visibility.py`). No support-matrix cell moves (resolution is
+deepened for already-supported constructs).
 
 ### Phase 5b -- Aliases -- PLANNED
 
@@ -751,7 +776,7 @@ counted here.
 16. Phase 6c -- Lightweight Requirement Parameters (`reqId`, `actor`, `stakeholder`) -- DONE
 17. Phase 6d -- Framed Concern And the Concern Construct -- DONE (6d-1 + 6d-2)
 18. Phase 7 -- Action Semantics -- DONE (bounded: bodies/steps, parameters, succession, flow; advanced nodes deferred; rows stay `alpha`)
-19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- PLANNED
+19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- DONE
 20. Phase 5b -- Aliases -- PLANNED
 21. Phase 5c -- Inherited Members -- PLANNED
 22. Phase 5d -- Implicit Specialization -- PLANNED

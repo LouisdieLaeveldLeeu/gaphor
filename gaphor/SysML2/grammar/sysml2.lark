@@ -14,7 +14,14 @@ start: package_body
 
 package_body: member*
 
-member: part_definition
+// Every member (and import) may carry a `public`/`private` visibility prefix
+// (Phase 5a); the prefix is applied uniformly here so each member kind does not
+// repeat it. An unmarked member defaults to PUBLIC (the SysML member default);
+// an unmarked import defaults to PRIVATE (the KerML import default).
+member: VISIBILITY? member_body
+VISIBILITY: "public" | "private"
+
+member_body: part_definition
       | part_usage
       | attribute_definition
       | attribute_usage
@@ -35,6 +42,13 @@ member: part_definition
       | interface_definition
       | interface_usage
       | package_definition
+      | import_statement
+
+// `import <QName>;` (a named element) or `import <QName>::*;` (import-all: the
+// public members of the namespace). `::*` is a single WILDCARD terminal so it does
+// not collide with the `::` qualified-name separator (Phase 5a).
+import_statement: "import" qualified_name WILDCARD? ";"
+WILDCARD: /::\s*\*/
 
 // A usage may carry a feature direction prefix (`in` / `out` / `inout`), which
 // maps to KerML `Feature::direction` (Phase 8b). Definitions are Classifiers, not

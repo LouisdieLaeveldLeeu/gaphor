@@ -74,6 +74,7 @@ def validate(
     mistyped: dict[str, tuple[str, str]] | None = None,
     unresolved_ends: dict[str, list[str]] | None = None,
     unresolved_frame_refs: dict[str, str] | None = None,
+    ambiguous: dict[str, str] | None = None,
 ) -> list[Diagnostic]:
     """Run the scoped M2 validation rules over all elements in `factory`.
 
@@ -95,6 +96,10 @@ def validate(
     `unresolved_frame_refs` maps a framed-concern ConcernUsage id -> the
     `frame <ref>` name that did not resolve to a ConcernUsage (Phase 6d-2). The
     framed-concern-reference rule reports them; mapping context only.
+
+    `ambiguous` maps an element id -> a (qualified) name that was visible from MORE
+    THAN ONE import and so did not bind (Phase 5a). The ambiguous-name rule reports
+    them; mapping context only.
     """
     diagnostics: list[Diagnostic] = []
     diagnostics.extend(_check_missing_owner(factory))
@@ -105,6 +110,7 @@ def validate(
         _check_usage_without_valid_type(factory, unresolved_types or {})
     )
     diagnostics.extend(_check_type_kind_mismatch(factory, mistyped or {}))
+    diagnostics.extend(_check_ambiguous_names(factory, ambiguous or {}))
     diagnostics.extend(_check_connection_ends(factory, unresolved_ends or {}))
     diagnostics.extend(_check_connection_end_integrity(factory))
     diagnostics.extend(_check_conjugated_typing(factory))
@@ -492,6 +498,25 @@ def _check_unresolved_imports(factory: ElementFactory) -> Iterator[Diagnostic]:
                 "import does not reference a resolvable element",
                 imp.id,
             )
+
+
+def _check_ambiguous_names(
+    factory: ElementFactory, ambiguous: dict[str, str]
+) -> Iterator[Diagnostic]:
+    """A name visible from MORE THAN ONE import is ambiguous (Phase 5a).
+
+    Mapping context: the resolver records a (qualified) name that resolved to more
+    than one distinct element through different imports at the same scope, and did
+    NOT bind. Reported here; like the other reference rules this needs mapping
+    context, so a reloaded model has none to report.
+    """
+    for element_id, name in ambiguous.items():
+        yield Diagnostic(
+            Severity.ERROR,
+            "ambiguous-name",
+            f"{name!r} is visible from more than one import (ambiguous)",
+            element_id,
+        )
 
 
 def _check_broken_typing(factory: ElementFactory) -> Iterator[Diagnostic]:

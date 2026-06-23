@@ -46,6 +46,20 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
     entries: set[tuple[str, ...]] = set()
 
     def visit(namespace: kerml.Namespace) -> None:
+        # Imports are owned relationships (not members), recorded with their target,
+        # wildcard, and visibility so a namespace's imports round-trip (Phase 5a).
+        for relationship in namespace.ownedRelationship:
+            if isinstance(relationship, kerml.Import):
+                target = kk._single(relationship.target)
+                entries.add(
+                    (
+                        "Import",
+                        kk.qualified_name(namespace),
+                        kk.qualified_name(target) if target is not None else "",
+                        kk.is_import_all(relationship),
+                        str(relationship.visibility),
+                    )
+                )
         for member in kk.members(namespace):
             # Package check first (Part* are also Namespaces). ConnectionDefinition
             # / ConnectionUsage subclass PartDefinition / PartUsage, so the more
@@ -160,6 +174,16 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                         _port_usage_type_qualified_name(member) or "",
                     )
                 )
+
+            # Member visibility is a SEPARATE entry, recorded only when PRIVATE (the
+            # member default is public), so a `private` member's fingerprint differs
+            # from a public one without changing the base tuple (Phase 5a).
+            membership = kk._single(member.owningRelationship)
+            if (
+                membership is not None
+                and membership.visibility == kerml.VisibilityKind.private
+            ):
+                entries.add(("Visibility", kk.qualified_name(member), "private"))
 
             # A feature direction is recorded as a SEPARATE entry (only when set),
             # so a directed usage's fingerprint differs from the undirected one
@@ -328,6 +352,7 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
         result.mistyped,
         result.unresolved_ends,
         result.unresolved_frame_refs,
+        result.ambiguous,
     )
     source_model_diagnostics = validate(factory)
     root_id = result.root.id

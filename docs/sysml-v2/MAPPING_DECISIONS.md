@@ -1213,3 +1213,51 @@ Two findings on the Phase 7 commit, both fixed.
   edit that the matrix's `UI-edit=yes` definition requires (the interactive connect
   adapter was explicitly deferred). The two rows are corrected to `UI-edit=no`
   (Diagram stays `yes` -- projection is real); the matrix note states it explicitly.
+
+### Completion Phase 5a: Imports, Imported Memberships, Visibility & Ambiguity (verified 2026-06-23)
+
+Resolution deepening (the first of the 5a-5e series carved out of the original
+Phase 5). No new metamodel -- Import, VisibilityKind, and Membership.visibility
+already existed (kernel stays 35); 5a wires grammar + mapping + an import-aware
+resolver onto them.
+
+- **Grammar / visibility prefix.** `[<vis>] import <QName> [::*] ;`. `::*` is a
+  single `WILDCARD` terminal (`/::\s*\*/`), NOT `"::" "*"`, to avoid a shift/reduce
+  conflict with the `::` qualified-name separator. The `public`/`private` prefix is
+  hoisted to ONE place: `member: VISIBILITY? member_body`, and the `member`
+  transformer applies it to whatever node (any member, or an import) via
+  `dataclasses.replace`, so each member rule does not repeat it. A `visibility`
+  field was added to every member AST node + a new `ast.Import`.
+- **Visibility defaults (set explicitly).** A MEMBER defaults to PUBLIC (the SysML
+  default) and an IMPORT to PRIVATE (the KerML default). The generated
+  `Membership.visibility`/`Import.visibility` default is private, so the mapper sets
+  member visibility explicitly (public unless declared private) -- otherwise every
+  member would be private and un-importable.
+- **Import target resolution (phase 2, owned-only).** `_resolve_imports` resolves
+  each import's target with `_resolve_type(..., use_imports=False)`, so an import
+  never resolves THROUGH another import (no transitive chains); a wildcard must land
+  on a Namespace. Unresolved imports keep no target and are reported by the existing
+  model-derived `unresolved-import` rule. Imports are resolved BEFORE the
+  typed-usage/subject passes so those can see imported members.
+- **Import-aware resolver + ambiguity.** `_resolve_type` now, at each scope, checks
+  owned members first (any visibility -- own scope), then the scope's imports: a
+  wildcard contributes the target namespace's PUBLIC members (`_public_member_named`
+  honours member visibility, so a `private` member is not imported), a named import
+  contributes the element by its name. Distinct candidates are de-duplicated by id;
+  MORE THAN ONE distinct candidate returns the `_AMBIGUOUS` sentinel, which the type
+  and subject resolvers record in `MappingResult.ambiguous` for the new
+  `ambiguous-name` rule (threaded through `validate`, the CLI, round-trip, and KPAR
+  import). An own member shadows an import; a nearer scope shadows a farther one.
+- **Persistence-robust boolean.** A generated `_attribute[bool]` reloads from
+  `.gaphor` as the STRING `"True"`/`"False"` (non-empty, so a bare truthiness test
+  reads `"False"` as True). `kerml_kernel.is_import_all` normalizes it; used by the
+  resolver, export, and round-trip so `isImportAll` survives save/reload. (Visibility
+  is a StrEnum, which compares equal to its string form, so it needed no helper.)
+- **Export / round-trip.** A namespace body emits its import statements then its
+  members; a member emits a `private ` prefix only when private (public is the
+  default), an import a `public ` prefix only when public. The canonical form gained
+  `Import` (namespace, target, wildcard, visibility) and private-member `Visibility`
+  entries. An unresolved import (no target) is skipped on export (reported by
+  validation), mirroring a broken connector end.
+- **Deferred (noted).** Transitive re-export through `public` imports, recursive
+  imports (`::**`), and import aliases (Phase 5b).
