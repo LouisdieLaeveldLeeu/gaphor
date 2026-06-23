@@ -119,6 +119,45 @@ def test_succession_and_flow_ends_resolve_in_action_scope():
     assert not result.unresolved_ends
 
 
+def test_action_body_nested_definition_owned_via_owning_membership():
+    # An action body may nest a DEFINITION or package (non-features): those are
+    # owned via a plain OwningMembership, while usages (the action's features) use
+    # FeatureMembership -- so a FeatureMembership never points at a non-feature.
+    factory, result = _map(
+        "action def A { part def P; package Nested; in attribute x; action step; }"
+    )
+    A = _action_def(factory, "A")
+    owner = {
+        kk._single(r.memberElement): r
+        for r in A.ownedRelationship
+        if isinstance(r, kerml.OwningMembership)
+    }
+    by_name = {m.declaredName: m for m in owner}
+    assert type(owner[by_name["P"]]) is kerml.OwningMembership  # definition
+    assert type(owner[by_name["Nested"]]) is kerml.OwningMembership  # package
+    assert isinstance(owner[by_name["x"]], kerml.FeatureMembership)  # usage
+    assert isinstance(owner[by_name["step"]], kerml.FeatureMembership)  # usage
+    assert not has_errors(_validate(factory, result))
+
+
+def test_nested_definition_in_action_body_round_trips():
+    # A nested action definition (a non-feature member) and a step typed by it.
+    result = round_trip("action def A { action def Sub; action step : Sub; part def P; }")
+    assert result.preserved
+    assert result.valid
+
+
+def test_broken_feature_membership_reported_model_derived():
+    # A plain FeatureMembership wired to a non-feature (here via API) is caught
+    # WITHOUT mapping context.
+    factory, _ = _map("action def A { action step; }")
+    A = _action_def(factory, "A")
+    kk.add_owned_member(
+        A, factory.create(kerml.Package), factory.create(kerml.FeatureMembership)
+    )
+    assert any(d.rule == "broken-feature-membership" for d in validate(factory))
+
+
 def test_well_formed_action_validates_clean():
     factory, result = _map(
         "action def Sub;\naction def Boil { action heat; action stir : Sub; "

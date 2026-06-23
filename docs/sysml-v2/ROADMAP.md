@@ -525,8 +525,10 @@ pinned XMI and the Sensmetry pilot's normative action body:
 
 - **action bodies and nested steps** -- `action def A { ... }` / `action a [: T]
   { ... }` reuse the shared `member` grammar, so a body holds nested action steps
-  and any other usage, owned as the action's FEATURES via FeatureMembership (vs the
-  OwningMembership used for package members);
+  and any other usage. An action IS a Type, so body members are owned PER KIND:
+  usages (Features) via FeatureMembership; nested definitions/packages (non-features)
+  via ordinary OwningMembership -- a FeatureMembership never points at a non-feature
+  (model-derived `broken-feature-membership` guards it);
 - **action parameters** -- directed (`in`/`out`/`inout`) nested usages in the body
   (reusing the Phase 8b direction support; e.g. `in attribute t : Real;`);
 - **succession and flow** -- `succession [name] first <end> then <end>;` ->
@@ -536,9 +538,11 @@ pinned XMI and the Sensmetry pilot's normative action body:
 - **coverage** -- validation (the connection-end integrity rules now cover ALL
   ConnectorAsUsage, so succession/flow ends are guarded; unresolved ends reported),
   export, round-trip (the canonical form now recurses into action bodies and
-  fingerprints succession/flow with their ends), persistence, and diagram (line
-  items for succession/flow, mirroring the connection line; action boxes for
-  bodies).
+  fingerprints succession/flow with their ends), persistence, and diagram
+  PROJECTION (line items for succession/flow, mirroring the connection line; action
+  boxes for bodies). NOTE: succession/flow are `UI-edit=no` -- projection/drop only,
+  not the toolbox create-tool + property-page edit `UI-edit=yes` requires (the
+  interactive connect adapter for their ends is deferred).
 
 OUT of scope (documented; rows stay `alpha`): the advanced action nodes
 (`if`/`while`/`for`/`fork`/`join`/`merge`/`decision`, `accept`/`send`/`assign`/

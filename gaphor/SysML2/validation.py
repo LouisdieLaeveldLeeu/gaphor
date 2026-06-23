@@ -113,6 +113,7 @@ def validate(
     diagnostics.extend(
         _check_frame_references(factory, unresolved_frame_refs or {})
     )
+    diagnostics.extend(_check_feature_membership_members(factory))
     return diagnostics
 
 
@@ -220,6 +221,33 @@ def _check_frame_references(
                 "broken-frame-reference",
                 "framed concern reference must be a single anonymous reference to "
                 "a concern usage",
+                membership.id,
+            )
+
+
+def _check_feature_membership_members(
+    factory: ElementFactory,
+) -> Iterator[Diagnostic]:
+    """A (plain) `FeatureMembership` relates a Type to one of its FEATURES, so its
+    member must be EXACTLY ONE `Feature`.
+
+    Model-derived safety net: an action body's feature members (steps, parameters,
+    successions, flows) are owned via FeatureMembership, while nested
+    definitions/packages are NON-features owned via OwningMembership; this guards a
+    FeatureMembership wired to a non-feature outside the textual path (a hand-edited
+    .gaphor or an API mutation). Only the EXACT type is checked: the
+    Parameter/Subject/Actor/Stakeholder/RequirementConstraint/FramedConcern
+    membership subtypes have their own kind-specific rules, so they are skipped here
+    to avoid double-reporting.
+    """
+    for membership in factory.select(kerml.FeatureMembership):
+        if type(membership) is not kerml.FeatureMembership:
+            continue
+        if not isinstance(_sole(membership.memberElement), kerml.Feature):
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-feature-membership",
+                "feature membership does not own exactly one feature",
                 membership.id,
             )
 

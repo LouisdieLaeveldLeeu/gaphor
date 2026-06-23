@@ -422,7 +422,7 @@ def _build_members(
     subject_typings: list,
     frame_references: list,
     on_element=None,
-    membership_type: type = kerml.OwningMembership,
+    owner_is_type: bool = False,
 ) -> dict[str, kerml.Element]:
     """Create each AST member as an owned member of `namespace`, recursing into
     sub-packages. Returns this level's elements by name.
@@ -548,7 +548,17 @@ def _build_members(
         body = getattr(member, "body", None)
         if body is not None:
             constraints.set_body_text(element, body)
-        kk.add_owned_member(namespace, element, factory.create(membership_type))
+        # When the owner is a Type (an action body), its FEATURES (usages: parts,
+        # actions, parameters, successions, flows) are owned via FeatureMembership;
+        # NON-feature members (nested definitions, packages) are ordinary namespace
+        # members via OwningMembership. A non-Type namespace (package) owns
+        # everything via OwningMembership. So a FeatureMembership never points at a
+        # non-feature (Phase 7 review fix).
+        if owner_is_type and isinstance(element, kerml.Feature):
+            membership: kerml.OwningMembership = factory.create(kerml.FeatureMembership)
+        else:
+            membership = factory.create(kerml.OwningMembership)
+        kk.add_owned_member(namespace, element, membership)
         if on_element is not None:
             on_element(element, member)
         if isinstance(member, ast.PackageDefinition):
@@ -563,10 +573,10 @@ def _build_members(
                 on_element,
             )
         elif isinstance(member, (ast.ActionDefinition, ast.ActionUsage)):
-            # An action body's nested members are the action's FEATURES (steps,
-            # directed parameters, successions, flows), owned via FeatureMembership
-            # rather than the namespace OwningMembership used for package members
-            # (Phase 7).
+            # An action IS a Type, so its body members are owned per-kind: usages
+            # (Features -- steps, directed parameters, successions, flows) via
+            # FeatureMembership, nested definitions/packages via OwningMembership
+            # (Phase 7). `owner_is_type=True` selects that split per member.
             _build_members(
                 member.members,
                 element,
@@ -576,7 +586,7 @@ def _build_members(
                 subject_typings,
                 frame_references,
                 on_element,
-                membership_type=kerml.FeatureMembership,
+                owner_is_type=True,
             )
         if member.name is not None:
             by_name[member.name] = element

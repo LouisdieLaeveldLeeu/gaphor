@@ -53,8 +53,8 @@ M1b status (internal-only): the listed KerML kernel classes are generated from t
 | SysML AttributeUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | supported |
 | SysML ActionDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML ActionUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML SuccessionAsUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
-| SysML FlowUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
+| SysML SuccessionAsUsage | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
+| SysML FlowUsage | yes | yes | yes | yes | yes | yes | yes | yes | no | alpha |
 | SysML ConstraintDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML ConstraintUsage | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
 | SysML RequirementDefinition | yes | yes | yes | yes | yes | yes | yes | yes | yes | alpha |
@@ -239,14 +239,21 @@ Phase 7 adds the action behavior surface (grounded in the pinned XMI and the
 Sensmetry pilot's action body): action BODIES with nested steps, directed
 `in`/`out` parameters, `succession [name] first <end> then <end>`, and
 `flow [name] from <end> to <end>`. An action body reuses the shared member grammar,
-so it nests action steps and any other usage, owned as the action's FEATURES via
-FeatureMembership; succession/flow are binary connector usages (SuccessionAsUsage ->
-KerML Succession; FlowUsage -> KerML Flow; kernel 33 -> 35) whose ends reuse the
-connection-end resolution and the (now generalized to all `ConnectorAsUsage`)
-end-integrity validation. Export/round-trip recurse into action bodies and
-fingerprint succession/flow with their ends; succession/flow project as connection-
-style lines, action bodies as boxes. New SuccessionAsUsage/FlowUsage rows at
-`alpha`. ActionDefinition/ActionUsage STAY `alpha` (under-claim): the advanced
+so it nests action steps and any other usage; an action IS a Type, so its body
+members are owned per kind -- USAGES (Features: steps, directed parameters,
+successions, flows) via FeatureMembership, and nested DEFINITIONS/packages
+(non-features) via ordinary OwningMembership -- so a FeatureMembership never points
+at a non-feature (guarded model-derived by `broken-feature-membership`).
+Succession/flow are binary connector usages (SuccessionAsUsage -> KerML Succession;
+FlowUsage -> KerML Flow; kernel 33 -> 35) whose ends reuse the connection-end
+resolution and the (now generalized to all `ConnectorAsUsage`) end-integrity
+validation. Export/round-trip recurse into action bodies and fingerprint
+succession/flow with their ends; succession/flow PROJECT as connection-style lines
+(Diagram=yes via drop), action bodies as boxes. SuccessionAsUsage/FlowUsage are
+`UI-edit=no`: they have projection/drop only, NOT the toolbox create-tool +
+property-page edit that `UI-edit=yes` requires (the interactive connect adapter for
+their ends is deferred). New SuccessionAsUsage/FlowUsage rows at `alpha`.
+ActionDefinition/ActionUsage STAY `alpha` (under-claim): the advanced
 action-node surface (if/while/for/fork/join/merge/decision, accept/send/assign/
 terminate, perform), the chained `first/then`-only flow form, `flow def`, item
 usages, and `of`-item payloads are deliberately out of scope, so the construct is

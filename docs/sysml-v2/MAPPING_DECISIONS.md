@@ -1188,3 +1188,28 @@ Advanced action nodes are deliberately out (rows stay `alpha`).
   interactive connect adapter for succession/flow ends is deferred.
 - **Claim.** ActionDefinition/ActionUsage STAY `alpha` (under-claim): the advanced
   action-node surface is unimplemented. New SuccessionAsUsage/FlowUsage rows alpha.
+
+### Completion Phase 7: review findings fix (verified 2026-06-22)
+
+Two findings on the Phase 7 commit, both fixed.
+
+- **(High) action-body ownership was FeatureMembership for EVERY member.** The
+  action body reuses the shared `member` grammar, and the mapper owned all nested
+  members via FeatureMembership -- so `action def A { part def P; package Nested;
+  action step; }` created FeatureMembership -> PartDefinition and FeatureMembership
+  -> Package (both NON-features), which validated clean and re-exported. Fixed with
+  mapping SEPARATION (the option the finding preferred over restricting the
+  grammar): `_build_members` now takes `owner_is_type` instead of a fixed
+  `membership_type`, and owns each member PER KIND -- a Feature (usage) under a Type
+  (action body) via FeatureMembership; a non-feature (nested definition/package), or
+  anything under a non-Type namespace (package body), via OwningMembership. So a
+  FeatureMembership only ever points at a Feature, and nested definitions remain
+  valid namespace members. Added a model-derived `broken-feature-membership` rule (a
+  plain FeatureMembership -- EXACT type, so the requirement membership subtypes keep
+  their own rules -- must own exactly one Feature) as the safety net for
+  hand-edited/API models.
+- **(Medium) SuccessionAsUsage/FlowUsage claimed UI-edit=yes.** The implementation
+  adds only diagram PROJECTION/drop, not the toolbox create-tool + property-page
+  edit that the matrix's `UI-edit=yes` definition requires (the interactive connect
+  adapter was explicitly deferred). The two rows are corrected to `UI-edit=no`
+  (Diagram stays `yes` -- projection is real); the matrix note states it explicitly.
