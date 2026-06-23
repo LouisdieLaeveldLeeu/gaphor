@@ -105,6 +105,7 @@ def validate(
     diagnostics.extend(_check_missing_owner(factory))
     diagnostics.extend(_check_duplicate_names(factory))
     diagnostics.extend(_check_unresolved_imports(factory))
+    diagnostics.extend(_check_unresolved_aliases(factory, ambiguous or {}))
     diagnostics.extend(_check_broken_typing(factory))
     diagnostics.extend(
         _check_usage_without_valid_type(factory, unresolved_types or {})
@@ -471,13 +472,21 @@ def _check_missing_owner(factory: ElementFactory) -> Iterator[Diagnostic]:
 
 
 def _check_duplicate_names(factory: ElementFactory) -> Iterator[Diagnostic]:
-    """No two members of the same namespace may share an effective name."""
+    """No two members of the same namespace may share a name.
+
+    A name in a namespace is an owned member's effective name OR an alias's alias
+    name (`memberName`), so an alias that collides with an owned member or another
+    alias is a duplicate too (Phase 5b).
+    """
     for namespace in factory.select(kerml.Namespace):
-        names = Counter(
-            kk.effective_name(m)
-            for m in kk.members(namespace)
-            if kk.effective_name(m) is not None
-        )
+        names: Counter[str] = Counter()
+        for membership in kk.owned_memberships(namespace):
+            member = kk._single(membership.memberElement)
+            if member is None:
+                continue
+            name = membership.memberName or kk.effective_name(member)
+            if name is not None:
+                names[name] += 1
         for name, count in names.items():
             if count > 1:
                 yield Diagnostic(
@@ -497,6 +506,34 @@ def _check_unresolved_imports(factory: ElementFactory) -> Iterator[Diagnostic]:
                 "unresolved-import",
                 "import does not reference a resolvable element",
                 imp.id,
+            )
+
+
+def _check_unresolved_aliases(
+    factory: ElementFactory, ambiguous: dict[str, str]
+) -> Iterator[Diagnostic]:
+    """Every alias must reference an element that exists (Phase 5b).
+
+    Model-derived: an alias is a non-owning Membership carrying a `memberName`
+    (`kk.is_alias`); it must resolve to a `memberElement`. An alias whose target
+    never resolved has none and is reported here -- EXCEPT one whose target was
+    AMBIGUOUS (visible from more than one import): that is reported `ambiguous-name`
+    and must not be double-reported as unresolved (Phase 5b, mirroring connection
+    ends / frame references). On a reloaded model the ambiguous context is gone, so
+    such an alias is reported unresolved instead -- still an error, reclassified.
+    """
+    for membership in factory.select(kerml.Membership):
+        if (
+            kk.is_alias(membership)
+            and kk._single(membership.memberElement) is None
+            and membership.id not in ambiguous
+        ):
+            yield Diagnostic(
+                Severity.ERROR,
+                "unresolved-alias",
+                f"alias {membership.memberName!r} does not reference a "
+                "resolvable element",
+                membership.id,
             )
 
 

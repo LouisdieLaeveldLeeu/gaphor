@@ -32,6 +32,7 @@ from gaphor.SysML2.kerml import (
     ReferenceSubsetting,
     Relationship,
     Type,
+    VisibilityKind,
 )
 
 QUALIFIED_NAME_SEPARATOR = "::"
@@ -169,17 +170,86 @@ def owned_memberships(namespace: Namespace) -> Iterator[Membership]:
 
 
 def members(namespace: Namespace) -> Iterator[Element]:
-    """Member elements: the memberElements of the namespace's memberships."""
+    """Owned member elements: the memberElements of the namespace's OWNING
+    memberships.
+
+    Excludes alias memberships (non-owning Memberships, Phase 5b): an alias's
+    memberElement lives in another namespace, so it is not one of THIS namespace's
+    owned/declared members. Callers that render or count a namespace's own members
+    (export, round-trip, duplicate detection) want exactly the owned ones; name
+    resolution that must see aliases uses `owned_member_named`.
+    """
     for membership in owned_memberships(namespace):
+        if not isinstance(membership, OwningMembership):
+            continue
         member = _single(membership.memberElement)
         if member is not None:
             yield member
 
 
+def is_alias(membership: Membership) -> bool:
+    """True for an alias membership (Phase 5b): a non-owning Membership carrying a
+    `memberName`.
+
+    An alias gives an existing (foreign) element an additional name in a namespace
+    without owning it. OwningMembership and its subkinds (FeatureMembership,
+    Subject/Actor/Stakeholder/FramedConcern memberships) OWN their member and are
+    never aliases.
+    """
+    return (
+        isinstance(membership, Membership)
+        and not isinstance(membership, OwningMembership)
+        and bool(membership.memberName)
+    )
+
+
+def aliases(namespace: Namespace) -> Iterator[Membership]:
+    """Alias memberships owned by `namespace` (Phase 5b)."""
+    for membership in owned_memberships(namespace):
+        if is_alias(membership):
+            yield membership
+
+
+def add_alias(
+    namespace: Namespace,
+    name: str,
+    alias: Membership,
+    visibility: VisibilityKind | None = None,
+) -> Membership:
+    """Make `alias` (a plain Membership) name an element in `namespace` (Phase 5b).
+
+    An alias is a NON-owning Membership: it gives a foreign element an additional
+    name (`memberName`) in this namespace without owning it. The target
+    (`memberElement`) is a non-owning reference, resolved and set later via
+    `set_alias_target` (mapping phase 2); until then the alias is unresolved.
+    """
+    namespace.ownedRelationship = alias
+    alias.owningRelatedElement = namespace
+    alias.memberName = name
+    if visibility is not None:
+        alias.visibility = visibility
+    return alias
+
+
+def set_alias_target(alias: Membership, target: Element) -> None:
+    """Set the (non-owning) element an alias references (mapping phase 2)."""
+    alias.memberElement = target
+
+
 def owned_member_named(namespace: Namespace, name: str) -> Element | None:
-    """Same-namespace name resolution: find a member by effective name."""
-    for member in members(namespace):
-        if effective_name(member) == name:
+    """Same-namespace name resolution: a member by its name in this namespace.
+
+    An owned member matches by its element's effective name; an ALIAS matches by
+    its alias name (`memberName`) and resolves to the (foreign) element it
+    references (Phase 5b). So `alias E for Lib::Engine;` makes `E` resolve to
+    `Lib::Engine` wherever a name resolves in this namespace.
+    """
+    for membership in owned_memberships(namespace):
+        member = _single(membership.memberElement)
+        if member is None:
+            continue
+        member_name = membership.memberName or effective_name(member)
+        if member_name == name:
             return member
     return None
 

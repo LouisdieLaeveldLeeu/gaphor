@@ -273,6 +273,18 @@ boolean that `.gaphor` reloads as a string). Transitive re-export through `publi
 imports, recursive imports (`::**`), and import aliases (Phase 5b) are out of
 scope. See `test_imports_visibility.py`.
 
+Phase 5b deepens NAME RESOLUTION with aliases (no construct row moves -- it
+deepens resolution for already-supported constructs). `alias E for Lib::Engine;`
+(with the shared `public`/`private` prefix) becomes a NON-owning `kerml.Membership`
+(memberName = the alias, memberElement = the referenced target, not owned). A name
+bound by an alias resolves wherever the alias is in scope: a usage typed by the
+alias name, a wildcard `import <ns>::*` that re-exports a public alias, and an
+alias targeting an imported name all resolve to the aliased element; alias-to-alias
+chains settle to a fixpoint. Validation adds `unresolved-alias` (and counts alias
+names in duplicate-name); an alias target visible from more than one import is
+`ambiguous-name`. Aliases export (`alias N for path;`, `private` when private),
+round-trip, and persist. See `test_aliases.py`.
+
 PortDefinition and PortUsage are `supported` for the declaration-and-typing
 surface INCLUDING conjugation (`port def Fuel; port p : Fuel; port q : ~Fuel;`).
 Phase F first built the unconjugated surface (every cell implemented and

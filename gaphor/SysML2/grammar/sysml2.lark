@@ -43,12 +43,18 @@ member_body: part_definition
       | interface_usage
       | package_definition
       | import_statement
+      | alias_statement
 
 // `import <QName>;` (a named element) or `import <QName>::*;` (import-all: the
 // public members of the namespace). `::*` is a single WILDCARD terminal so it does
 // not collide with the `::` qualified-name separator (Phase 5a).
 import_statement: "import" qualified_name WILDCARD? ";"
 WILDCARD: /::\s*\*/
+
+// `alias <Name> for <QName>;` gives an existing element an additional name in this
+// namespace (a non-owning Membership: memberName=<Name>, memberElement=<QName>).
+// The shared VISIBILITY? prefix on `member` applies (Phase 5b).
+alias_statement: "alias" NAME "for" qualified_name ";"
 
 // A usage may carry a feature direction prefix (`in` / `out` / `inout`), which
 // maps to KerML `Feature::direction` (Phase 8b). Definitions are Classifiers, not

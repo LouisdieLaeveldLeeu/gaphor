@@ -118,6 +118,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     subject_typings: list = []
     frame_references: list = []
     imports: list = []
+    aliases: list = []
     top_level = _build_members(
         pkg.members,
         root,
@@ -127,12 +128,15 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
         subject_typings,
         frame_references,
         imports,
+        aliases,
     )
 
     # Resolve imports FIRST so the typed-usage/subject passes can see imported
-    # members (Phase 5a).
+    # members (Phase 5a); resolve aliases NEXT so a usage typed by an alias name
+    # sees the alias's target, and so alias-to-alias chains settle (Phase 5b).
     _resolve_imports(imports)
     ambiguous: dict[str, str] = {}
+    _resolve_aliases(aliases, ambiguous)
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
         root, typed_usages, ambiguous
     )
@@ -179,6 +183,7 @@ def map_project_members(named_packages, factory: ElementFactory):
     subject_typings: list = []
     frame_references: list = []
     imports: list = []
+    aliases: list = []
     top_level: dict[str, kerml.Element] = {}
     provenance: dict[str, tuple] = {}
     for label, pkg in named_packages:
@@ -196,12 +201,14 @@ def map_project_members(named_packages, factory: ElementFactory):
                 subject_typings,
                 frame_references,
                 imports,
+                aliases,
                 record,
             )
         )
 
     _resolve_imports(imports)
     ambiguous: dict[str, str] = {}
+    _resolve_aliases(aliases, ambiguous)
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
         root, typed_usages, ambiguous
     )
@@ -360,6 +367,42 @@ def _resolve_imports(imports: list) -> None:
             imp.target = target
 
 
+def _resolve_aliases(aliases: list, ambiguous: dict[str, str]) -> None:
+    """Resolve each alias's target (mapping phase 2), import-aware (Phase 5b).
+
+    An alias's target resolves with the SAME nearest-first, import-aware rule as a
+    typed usage (`_resolve_type`): it may name an own member, an imported member, or
+    another alias. Because an alias may target another alias, resolution is iterated
+    to a fixpoint -- each pass binds any alias whose target now resolves, repeating
+    while progress is made. An alias whose target is visible from more than one
+    import is recorded `ambiguous` (the alias does not bind); an alias whose target
+    never resolves is left without a `memberElement`, which
+    `_check_unresolved_aliases` reports model-derived. A cycle (an alias chain that
+    never resolves) simply makes no progress and is reported unresolved.
+
+    Aliases are resolved AFTER imports and BEFORE typed usages so a usage typed by
+    an alias name (or by an aliased target) sees the bound target.
+    """
+    pending = list(aliases)
+    while pending:
+        still: list = []
+        progressed = False
+        for alias, namespace, target_name in pending:
+            target = _resolve_type(namespace, target_name)
+            if target is _AMBIGUOUS:
+                ambiguous[alias.id] = "::".join(target_name)
+                progressed = True
+                continue
+            if isinstance(target, kerml.Element):
+                kk.set_alias_target(alias, target)
+                progressed = True
+            else:
+                still.append((alias, namespace, target_name))
+        if not progressed:
+            break
+        pending = still
+
+
 def _build_requirement_body(
     requirement,
     member,
@@ -475,6 +518,7 @@ def _build_members(
     subject_typings: list,
     frame_references: list,
     imports: list,
+    aliases: list,
     on_element=None,
     owner_is_type: bool = False,
 ) -> dict[str, kerml.Element]:
@@ -506,6 +550,22 @@ def _build_members(
             imports.append((imp, namespace, member.target, member.wildcard))
             if on_element is not None:
                 on_element(imp, member)
+            continue
+        if isinstance(member, ast.Alias):
+            # An alias is a NON-owning Membership owned by the namespace: it names a
+            # foreign element (memberName) without owning it. Its target qualified
+            # name resolves in phase 2 (Phase 5b). Default visibility public (the
+            # member default), overridden by the shared prefix.
+            alias = factory.create(kerml.Membership)
+            kk.add_alias(
+                namespace,
+                member.name,
+                alias,
+                kerml.VisibilityKind(member.visibility or "public"),
+            )
+            aliases.append((alias, namespace, member.target))
+            if on_element is not None:
+                on_element(alias, member)
             continue
         if isinstance(member, ast.PartDefinition):
             element: kerml.Element = factory.create(sysml2.PartDefinition)
@@ -649,6 +709,7 @@ def _build_members(
                 subject_typings,
                 frame_references,
                 imports,
+                aliases,
                 on_element,
             )
         elif isinstance(member, (ast.ActionDefinition, ast.ActionUsage)):
@@ -665,6 +726,7 @@ def _build_members(
                 subject_typings,
                 frame_references,
                 imports,
+                aliases,
                 on_element,
                 owner_is_type=True,
             )
@@ -697,9 +759,12 @@ def _resolve_type(
     members from the match. `use_imports=False` resolves an import's OWN target
     (owned members only), so imports do not resolve through other imports.
 
-    Deferred to later phases: aliases (5b), inherited members (5c), implicit
-    specialization (5d), feature chains (5e), and transitive re-export through
-    public imports.
+    An ALIAS is resolved transparently: `owned_member_named` matches an alias by
+    its alias name and returns the (foreign) element it references (Phase 5b), so a
+    name bound by an alias resolves wherever the alias is in scope.
+
+    Deferred to later phases: inherited members (5c), implicit specialization (5d),
+    feature chains (5e), and transitive re-export through public imports.
     """
     first, *rest = type_name
     scope: kerml.Namespace | None = namespace
@@ -752,20 +817,22 @@ def _imported_candidates(
 def _public_member_named(
     namespace: kerml.Namespace, name: str
 ) -> kerml.Element | None:
-    """A PUBLIC owned member of `namespace` with effective name `name`, else None.
+    """A PUBLIC member of `namespace` named `name`, else None.
 
     Used for wildcard-import resolution: only public members are importable, so a
-    `private` member is invisible to `import <ns>::*`.
+    `private` member is invisible to `import <ns>::*`. An owned member matches by
+    its element's effective name; a public ALIAS matches by its alias name and
+    brings in the (foreign) element it references, so `import <ns>::*` re-exports
+    that namespace's aliases too (Phase 5b).
     """
     for membership in kk.owned_memberships(namespace):
         if membership.visibility != kerml.VisibilityKind.public:
             continue
         member = kk._single(membership.memberElement)
-        if (
-            member is not None
-            and not _is_library_proxy(member)
-            and kk.effective_name(member) == name
-        ):
+        if member is None or _is_library_proxy(member):
+            continue
+        member_name = membership.memberName or kk.effective_name(member)
+        if member_name == name:
             return member
     return None
 

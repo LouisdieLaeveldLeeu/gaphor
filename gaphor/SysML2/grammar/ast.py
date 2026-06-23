@@ -364,6 +364,22 @@ class Import:
     line: int | None = _line
 
 
+@dataclass(frozen=True)
+class Alias:
+    """`[<vis>] alias <Name> for <QName> ;` (Phase 5b).
+
+    Gives an existing element an additional name in the namespace: `name` is the
+    alias, `target` the aliased element's qualified name. Maps to a non-owning
+    `Membership` (memberName=name, memberElement=target). `visibility` is the
+    alias's own public/private (default public, the member default), set by the
+    shared member visibility prefix."""
+
+    name: str
+    target: tuple[str, ...]  # aliased element's qualified name segments
+    visibility: str | None = None  # "public" / "private", or None (unmarked)
+    line: int | None = _line
+
+
 # A member is any construct that can appear in a (package) body.
 Member = (
     "PartDefinition | PartUsage | AttributeDefinition | AttributeUsage "
@@ -372,7 +388,7 @@ Member = (
     "| RequirementDefinition | RequirementUsage | ConcernDefinition | ConcernUsage "
     "| PortDefinition | PortUsage "
     "| ConnectionDefinition | ConnectionUsage | InterfaceDefinition "
-    "| InterfaceUsage | PackageDefinition | Import"
+    "| InterfaceUsage | PackageDefinition | Import | Alias"
 )
 
 

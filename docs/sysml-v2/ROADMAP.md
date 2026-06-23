@@ -362,11 +362,46 @@ Exit: imported names resolve with visibility and ambiguity reporting -- done and
 tested (`test_imports_visibility.py`). No support-matrix cell moves (resolution is
 deepened for already-supported constructs).
 
-### Phase 5b -- Aliases -- PLANNED
+### Phase 5b -- Aliases -- DONE
 
-Add alias declarations and resolve a name through its alias to the aliased
-element. Prerequisite: alias grammar + the alias-membership semantic contract.
-Exit: an alias resolves to its target wherever the target would resolve.
+Added `alias` declarations and resolution of a name through its alias to the
+aliased element. The existing Membership metamodel sufficed (no new classes;
+kernel stays 35):
+
+- **grammar/AST/parser**: `[<vis>] alias <Name> for <QName> ;`, sharing the
+  uniform `public`/`private` member prefix (default public);
+- **mapping**: an alias becomes a NON-owning `kerml.Membership`
+  (`memberName` = the alias, `memberElement` = the referenced target, NOT owned),
+  its target resolved in phase 2 with the same import-aware, nearest-first rule as
+  a typed usage. Aliases resolve AFTER imports and BEFORE typed usages, and are
+  iterated to a fixpoint so alias-to-alias chains settle regardless of declaration
+  order; an alias target visible from more than one import is `ambiguous-name`;
+- **resolution**: `owned_member_named` matches an alias by its alias name and
+  returns the foreign element it references, so a name bound by an alias resolves
+  wherever the alias is in scope (a usage typed by the alias name, a wildcard
+  `import <ns>::*` that re-exports a public alias, an alias targeting an imported
+  name);
+- **validation**: `unresolved-alias` (an alias whose target never resolved;
+  suppressed when the target was ambiguous, so no double report), and
+  duplicate-name now counts alias names (an alias colliding with an owned member or
+  another alias is a duplicate);
+- **export/round-trip/persist**: an alias re-emits as `alias <name> for <path>;`
+  (rendered from the membership, NOT by re-rendering the foreign target; `private`
+  prefixed when private); canonical records an Alias entry; the non-owning
+  membership + memberName + visibility survive save/reload.
+
+`members()` is scoped to OWNING memberships so an alias's foreign target is not
+mistaken for one of the namespace's own members (a no-op for all prior cases,
+where every membership already owns its member).
+
+OUT of scope (deferred): aliases inside action bodies are not fingerprinted by
+round-trip (consistent with the existing visit, which recurses only into
+packages); a NAMED import of an alias (`import <ns>::E`) imports the underlying
+element under its real name, not the alias name.
+
+Exit: an alias resolves to its target wherever the target would resolve -- done
+and tested (`test_aliases.py`). No support-matrix cell moves (resolution is
+deepened for already-supported constructs).
 
 ### Phase 5c -- Inherited Members -- PLANNED
 

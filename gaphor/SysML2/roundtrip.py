@@ -60,6 +60,20 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                         str(relationship.visibility),
                     )
                 )
+        # An alias is a non-owning membership (not an owned member), recorded with
+        # its alias name, resolved target, and visibility so it round-trips and a
+        # private alias differs from a public one (Phase 5b).
+        for alias in kk.aliases(namespace):
+            target = kk._single(alias.memberElement)
+            entries.add(
+                (
+                    "Alias",
+                    kk.qualified_name(namespace),
+                    alias.memberName,
+                    kk.qualified_name(target) if target is not None else "",
+                    str(alias.visibility),
+                )
+            )
         for member in kk.members(namespace):
             # Package check first (Part* are also Namespaces). ConnectionDefinition
             # / ConnectionUsage subclass PartDefinition / PartUsage, so the more

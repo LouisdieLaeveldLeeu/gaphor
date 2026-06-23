@@ -27,9 +27,43 @@ def export_namespace(root: kerml.Namespace) -> str:
 def _export_members(
     namespace: kerml.Namespace, depth: int, root: kerml.Namespace
 ) -> str:
-    """A namespace body: its import statements then its members (Phase 5a)."""
-    return _export_imports(namespace, depth, root) + "".join(
-        _export_member(member, depth, root) for member in kk.members(namespace)
+    """A namespace body: its imports, then its owned members and aliases (Phase 5b).
+
+    Owned members are rendered by kind; an alias is rendered as `alias N for path;`
+    (NOT by re-rendering its foreign target). Both are produced from the namespace's
+    memberships in declaration order so the body keeps its source order.
+    """
+    out = [_export_imports(namespace, depth, root)]
+    for membership in kk.owned_memberships(namespace):
+        if isinstance(membership, kerml.OwningMembership):
+            member = kk._single(membership.memberElement)
+            if member is not None:
+                out.append(_export_member(member, depth, root))
+        elif kk.is_alias(membership):
+            out.append(_export_alias(membership, depth, root))
+    return "".join(out)
+
+
+def _export_alias(
+    membership: kerml.Membership, depth: int, root: kerml.Namespace
+) -> str:
+    """`[private ]alias <name> for <path>;` for an alias, or `""` when unresolved.
+
+    The member default is public, so only a private alias emits a prefix; an
+    unresolved alias (no target) has no textual form and is skipped (validation's
+    unresolved-alias rule reports it), mirroring an unresolved import (Phase 5b)."""
+    target = kk._single(membership.memberElement)
+    if target is None:
+        return ""
+    pad = _INDENT * depth
+    prefix = (
+        "private "
+        if membership.visibility == kerml.VisibilityKind.private
+        else ""
+    )
+    return (
+        f"{pad}{prefix}alias {membership.memberName} for "
+        f"{_path_from_root(target, root)};\n"
     )
 
 

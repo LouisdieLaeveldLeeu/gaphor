@@ -417,6 +417,13 @@ class _ASTBuilder(Transformer):
         wildcard = len(items) > 1
         return ast.Import(target=target, wildcard=wildcard)
 
+    def alias_statement(self, items):
+        # `alias <NAME> for <qualified_name>` -> ast.Alias. Visibility is applied by
+        # `member` (the shared prefix), like every other member (Phase 5b).
+        name = items[0]
+        target = items[1]
+        return ast.Alias(name=str(name), target=target, line=name.line)
+
     def member_body(self, items):
         return items[0]
 

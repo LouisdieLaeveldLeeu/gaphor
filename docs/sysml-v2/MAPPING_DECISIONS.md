@@ -1261,3 +1261,63 @@ resolver onto them.
   validation), mirroring a broken connector end.
 - **Deferred (noted).** Transitive re-export through `public` imports, recursive
   imports (`::**`), and import aliases (Phase 5b).
+
+### Completion Phase 5b: Aliases (verified 2026-06-23)
+
+Resolution deepening (the second of the 5a-5e series). No new metamodel --
+Membership already carries `memberName`/`memberElement`/`visibility` (kernel stays
+35); 5b wires grammar + mapping + the resolver onto them.
+
+- **Grammar / AST / parser.** `[<vis>] alias <NAME> for <QName> ;`, added as a
+  `member_body` alternative so it reuses the shared `public`/`private` member prefix
+  (default public). New `ast.Alias(name, target, visibility, line)`; the
+  `alias_statement` transformer builds it, the `member` transformer applies the
+  prefix like every other member.
+- **Alias = NON-owning Membership.** An alias maps to a plain `kerml.Membership`
+  (NOT an OwningMembership): it gives a foreign element an additional name
+  (`memberName`) in the namespace WITHOUT owning it (`memberElement` is a non-owning
+  reference; the target stays owned by its real namespace). Kernel helpers
+  centralize the contract: `add_alias` (wire the non-owning membership +
+  memberName + visibility), `set_alias_target` (bind the target in phase 2),
+  `is_alias` (non-owning Membership with a memberName -- excludes every
+  OwningMembership subkind, so Subject/Actor/Stakeholder/FramedConcern memberships
+  are never mistaken for aliases), and `aliases` (a namespace's alias memberships).
+- **Resolution through aliases.** `owned_member_named` now iterates memberships and
+  matches `membership.memberName or effective_name(member)`, so an alias resolves by
+  its alias name to the foreign element it references; a normal owned member
+  (memberName unset) still matches by element name. This makes an alias resolve
+  wherever a name resolves: a usage typed by the alias name, an alias to an imported
+  name, and -- via `_public_member_named` also matching memberName -- a wildcard
+  `import <ns>::*` that re-exports a public alias.
+- **Target resolution (phase 2, import-aware, fixpoint).** `_resolve_aliases` runs
+  AFTER imports and BEFORE typed usages. Each alias target resolves with the full
+  import-aware `_resolve_type` (an alias may target an own/imported/aliased name).
+  Because an alias may target another alias, resolution iterates to a fixpoint --
+  each pass binds any alias whose target now resolves, repeating while progress is
+  made -- so alias-to-alias chains settle regardless of declaration order; a cycle
+  makes no progress and stays unresolved.
+- **`members()` scoped to owned.** `kerml_kernel.members` now yields only the
+  memberElements of OWNING memberships, excluding aliases (whose target lives in
+  another namespace). A no-op for every pre-alias case (every membership owned its
+  member), it stops export / round-trip / duplicate-detection from treating a
+  foreign aliased element as one of the namespace's own members. Name resolution
+  that must see aliases uses `owned_member_named`, not `members()`.
+- **Validation.** New model-derived `unresolved-alias` (an alias whose target never
+  resolved, i.e. no memberElement) -- SUPPRESSED when the target was ambiguous
+  (recorded in `ambiguous` -> reported `ambiguous-name`), so an ambiguous alias is
+  not double-reported (the same contract as connection ends / frame references from
+  the 5a finding). `duplicate-name` now counts the name-in-namespace of every
+  membership (`memberName or effective_name`), so an alias colliding with an owned
+  member or another alias is caught.
+- **Export / round-trip / persist.** A namespace body now renders from its
+  memberships: owning memberships by member kind, alias memberships as
+  `[private ]alias <name> for <path>;` (from the membership, NOT by re-rendering the
+  foreign target; an unresolved alias is skipped, reported by validation, mirroring
+  an unresolved import). The canonical form gained an `Alias` entry (namespace,
+  alias name, target, visibility). The non-owning membership + memberName +
+  visibility + target survive save/reload, and resolution through a reloaded alias
+  still finds the target.
+- **Deferred (noted).** Aliases inside action bodies are not fingerprinted by
+  round-trip (the visit recurses only into packages, as for all members); a NAMED
+  import of an alias (`import <ns>::E`) imports the underlying element under its real
+  name, not the alias name. See `test_aliases.py`.
