@@ -1468,3 +1468,32 @@ resolution. One new metamodel class: `Redefinition` (kernel 36 -> 37).
 - **Deferred (noted).** Redefinition on non-part usages and in non-part-def bodies;
   multiplicity / type-conformance checks between the redefining and redefined feature
   (only Feature-kind is enforced). See `test_redefinition.py`.
+
+### Completion Phase 5c-2: Redefinition review findings fix (verified 2026-06-24)
+
+Two review findings on Phase 5c-2.
+
+- **High -- a feature could redefine itself.** The `exclude` (the redefining feature)
+  was applied only to the FIRST name segment in `_resolve_type`; `_descend` resolved
+  later `::` segments with a plain `owned_member_named`, so `part x :>> C::x`
+  descended back to the redefining feature and created a self-redefinition with no
+  diagnostic. Fixed by (1) threading `exclude` through `_descend` so the exclusion
+  holds at EVERY segment, and (2) detecting self in `_resolve_redefinitions`: when the
+  name does not resolve to another Feature but WOULD resolve (without the exclusion)
+  to the redefining feature itself -- `:>> C::x`, or a bare `:>> x` with no inherited
+  `x` -- it is recorded in `MappingResult.self_redefinitions` and reported
+  `self-redefinition`, binding nothing. A model-derived counterpart in
+  `_check_broken_specializations` reports a persisted/API-built Redefinition whose two
+  ends are the same feature, so a reloaded model is covered too.
+- **Medium -- heritage owning ends were unchecked.** The model-derived integrity
+  check verified only the TARGET end (superclassifier / subsettedFeature /
+  redefinedFeature); a Redefinition owned by `x` with `redefinedFeature=y` but no
+  `redefiningFeature` produced no diagnostic and still exported as `part x :>> y`.
+  Generalized the finding (it applies symmetrically to all three heritage kinds):
+  `_check_broken_specializations` now also requires each relationship's OWNING end to
+  be present and to BE its owner -- `subclassifier`, `subsettingFeature`,
+  `redefiningFeature` must equal the relationship's `owningRelatedElement` -- so a
+  half-stored heritage relation is reported (`broken-subclassification` /
+  `broken-subsetting` / `broken-redefinition`) rather than silently mis-emitted.
+
+See `test_redefinition.py` and `test_inherited_members.py` (the owning-end cases).

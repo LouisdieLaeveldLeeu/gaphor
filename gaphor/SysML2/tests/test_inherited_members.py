@@ -295,6 +295,31 @@ def test_broken_persisted_subsetting_is_reported():
     assert any(d.rule == "broken-subsetting" for d in diagnostics)
 
 
+def test_subsetting_without_owning_end_is_reported():
+    # subsettedFeature set but no subsettingFeature: the owning end is missing, so the
+    # stored relation is half-formed (5c-2 finding: owning ends are now checked too).
+    factory = ElementFactory()
+    x = factory.create(sysml2.PartUsage)
+    y = factory.create(sysml2.PartUsage)
+    sub = factory.create(kerml.Subsetting)
+    sub.subsettedFeature = y
+    x.ownedRelationship = sub
+    sub.owningRelatedElement = x
+    assert any(d.rule == "broken-subsetting" for d in validate(factory))
+
+
+def test_subclassification_without_owning_end_is_reported():
+    factory = ElementFactory()
+    car = factory.create(sysml2.PartDefinition)
+    vehicle = factory.create(sysml2.PartDefinition)
+    sc = factory.create(kerml.Subclassification)
+    sc.superclassifier = vehicle
+    car.ownedRelationship = sc
+    sc.owningRelatedElement = car
+    # No subclassifier (owning end) -> broken.
+    assert any(d.rule == "broken-subclassification" for d in validate(factory))
+
+
 def test_healthy_heritage_has_no_broken_diagnostics():
     factory, result = _map(
         "part def Vehicle { part wheel; }\n"

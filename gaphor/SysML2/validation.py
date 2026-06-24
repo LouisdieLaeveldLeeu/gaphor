@@ -78,6 +78,7 @@ def validate(
     unresolved_supertypes: dict[str, list[str]] | None = None,
     unresolved_subsettings: dict[str, str] | None = None,
     unresolved_redefinitions: dict[str, str] | None = None,
+    self_redefinitions: dict[str, str] | None = None,
 ) -> list[Diagnostic]:
     """Run the scoped M2 validation rules over all elements in `factory`.
 
@@ -108,11 +109,14 @@ def validate(
     that did not resolve to a Classifier (a `:> A, B` with both bad reports both),
     `unresolved_subsettings` maps a usage id -> the `:> y` name that did not resolve
     to a Feature (Phase 5c), and `unresolved_redefinitions` a usage id -> the `:>> y`
-    name that did not resolve (Phase 5c-2). The mapper records these (an AMBIGUOUS
+    name that did not resolve (Phase 5c-2). `self_redefinitions` maps a usage id ->
+    a `:>> y` name that denotes the redefining feature ITSELF (a feature cannot
+    redefine itself, Phase 5c-2 finding fix). The mapper records these (an AMBIGUOUS
     supertype/subsetted/redefined name goes to `ambiguous` instead, so there is no
     double report); mapping context only. Separately, `_check_broken_specializations`
     is MODEL-DERIVED and reports a persisted Subclassification/Subsetting/Redefinition
-    whose end was cleared, independent of mapping context.
+    with a missing/wrong-owner end, or a self-redefinition, independent of mapping
+    context.
     """
     diagnostics: list[Diagnostic] = []
     diagnostics.extend(_check_missing_owner(factory))
@@ -141,6 +145,7 @@ def validate(
     diagnostics.extend(
         _check_unresolved_redefinitions(unresolved_redefinitions or {})
     )
+    diagnostics.extend(_check_self_redefinitions(self_redefinitions or {}))
     diagnostics.extend(_check_broken_specializations(factory))
     return diagnostics
 
@@ -614,30 +619,60 @@ def _check_unresolved_redefinitions(
         )
 
 
+def _check_self_redefinitions(
+    self_redefinitions: dict[str, str]
+) -> Iterator[Diagnostic]:
+    """A usage `:>> y` whose redefined name denotes the redefining feature ITSELF
+    (Phase 5c-2 finding fix). Mapping context: a feature cannot redefine itself, so
+    `:>> C::x` naming this very feature (or a bare `:>> x` with no inherited `x`) is
+    reported here and binds nothing. The model-derived counterpart in
+    `_check_broken_specializations` catches a persisted/API-built self-redefinition.
+    """
+    for element_id, name in self_redefinitions.items():
+        yield Diagnostic(
+            Severity.ERROR,
+            "self-redefinition",
+            f"a feature cannot redefine itself ({name!r})",
+            element_id,
+        )
+
+
 def _check_broken_specializations(factory: ElementFactory) -> Iterator[Diagnostic]:
-    """A persisted Subclassification must reference a supertype, a (plain) Subsetting
-    a subsetted feature, and a Redefinition a redefined feature (Phase 5c/5c-2).
+    """A persisted heritage relationship must carry BOTH stored ends, and its OWNING
+    end must be the feature/type that owns it (Phase 5c/5c-2).
 
     Model-derived (needs no mapping context): the mapper only CREATES these when the
-    target resolves, so this catches a hand- or API-mutated / corrupt heritage
-    relationship -- e.g. a Subclassification whose `superclassifier` was cleared, a
-    Subsetting whose `subsettedFeature`, or a Redefinition whose `redefinedFeature`
-    was deleted -- that export would otherwise silently drop (it reads only
-    resolvable ends). ReferenceSubsetting (the framed-concern form) and Redefinition
+    target resolves and wires the owning end to the owner, so this catches a hand- or
+    API-mutated / corrupt relationship -- a Subclassification missing its
+    `superclassifier` (target) or whose `subclassifier` (source) is not its owner; a
+    Subsetting missing `subsettedFeature` or whose `subsettingFeature` is not its
+    owner; a Redefinition missing `redefinedFeature` or whose `redefiningFeature` is
+    not its owner -- that export would otherwise silently drop or mis-emit (it reads
+    the owner + the target end). A Redefinition whose two ends are the SAME feature is
+    a self-redefinition. ReferenceSubsetting (the framed-concern form) and Redefinition
     are Subsetting subkinds checked separately, so PLAIN Subsetting is matched by
     exact type.
     """
-    for subclassification in factory.select(kerml.Subclassification):
-        if kk._single(subclassification.superclassifier) is None:
+    for sc in factory.select(kerml.Subclassification):
+        owner = kk._single(sc.owningRelatedElement)
+        if kk._single(sc.superclassifier) is None:
             yield Diagnostic(
                 Severity.ERROR,
                 "broken-subclassification",
                 "subclassification does not reference a supertype",
-                subclassification.id,
+                sc.id,
+            )
+        if kk._single(sc.subclassifier) is not owner:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-subclassification",
+                "subclassification's subtype end is not its owner",
+                sc.id,
             )
     for subsetting in factory.select(kerml.Subsetting):
         if type(subsetting) is not kerml.Subsetting:
             continue  # ReferenceSubsetting / Redefinition checked elsewhere
+        owner = kk._single(subsetting.owningRelatedElement)
         if kk._single(subsetting.subsettedFeature) is None:
             yield Diagnostic(
                 Severity.ERROR,
@@ -645,12 +680,36 @@ def _check_broken_specializations(factory: ElementFactory) -> Iterator[Diagnosti
                 "subsetting does not reference a subsetted feature",
                 subsetting.id,
             )
+        if kk._single(subsetting.subsettingFeature) is not owner:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-subsetting",
+                "subsetting's subsetting-feature end is not its owner",
+                subsetting.id,
+            )
     for redefinition in factory.select(kerml.Redefinition):
-        if kk._single(redefinition.redefinedFeature) is None:
+        owner = kk._single(redefinition.owningRelatedElement)
+        redefined = kk._single(redefinition.redefinedFeature)
+        redefining = kk._single(redefinition.redefiningFeature)
+        if redefined is None:
             yield Diagnostic(
                 Severity.ERROR,
                 "broken-redefinition",
                 "redefinition does not reference a redefined feature",
+                redefinition.id,
+            )
+        if redefining is not owner:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-redefinition",
+                "redefinition's redefining-feature end is not its owner",
+                redefinition.id,
+            )
+        if redefining is not None and redefining is redefined:
+            yield Diagnostic(
+                Severity.ERROR,
+                "self-redefinition",
+                "a feature cannot redefine itself",
                 redefinition.id,
             )
 

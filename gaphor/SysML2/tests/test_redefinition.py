@@ -40,6 +40,7 @@ def _validate(factory, result):
         result.unresolved_supertypes,
         result.unresolved_subsettings,
         result.unresolved_redefinitions,
+        result.self_redefinitions,
     )
 
 
@@ -173,8 +174,57 @@ def test_healthy_redefinition_has_no_broken_diagnostics():
     )
     diagnostics = _validate(factory, result)
     assert not any(
-        d.rule in {"broken-redefinition", "broken-subsetting"} for d in diagnostics
+        d.rule in {"broken-redefinition", "broken-subsetting", "self-redefinition"}
+        for d in diagnostics
     )
+
+
+# --- 5c-2 review findings ----------------------------------------------------
+
+
+def test_qualified_self_redefinition_is_rejected():
+    # `:>> C::x` names the redefining feature itself (the exclusion must hold across
+    # qualified segments, not just the first name) -> self-redefinition, no binding.
+    factory, result = _map("part def C { part x :>> C::x; }")
+    x = _part_in(factory, "x", "C")
+    assert x.id in result.self_redefinitions
+    assert not list(kk.redefinitions(x))
+    assert any(d.rule == "self-redefinition" for d in _validate(factory, result))
+
+
+def test_bare_self_redefinition_without_inherited_is_rejected():
+    # `:>> x` with no inherited `x` names only the feature itself -> self-redefinition.
+    factory, result = _map("part def C { part x :>> x; }")
+    x = _part_in(factory, "x", "C")
+    assert x.id in result.self_redefinitions
+    assert not list(kk.redefinitions(x))
+    assert any(d.rule == "self-redefinition" for d in _validate(factory, result))
+
+
+def test_hand_built_self_redefinition_is_reported():
+    # A persisted/API-built Redefinition whose two ends are the same feature is a
+    # self-redefinition (model-derived).
+    factory = ElementFactory()
+    x = factory.create(sysml2.PartUsage)
+    redefinition = factory.create(kerml.Redefinition)
+    redefinition.redefiningFeature = x
+    redefinition.redefinedFeature = x
+    x.ownedRelationship = redefinition
+    redefinition.owningRelatedElement = x
+    assert any(d.rule == "self-redefinition" for d in validate(factory))
+
+
+def test_redefinition_without_redefining_feature_is_reported():
+    # redefinedFeature set but no redefiningFeature: the owning end is missing, so the
+    # stored relation is half-formed (model-derived broken-redefinition).
+    factory = ElementFactory()
+    x = factory.create(sysml2.PartUsage)
+    y = factory.create(sysml2.PartUsage)
+    redefinition = factory.create(kerml.Redefinition)
+    redefinition.redefinedFeature = y
+    x.ownedRelationship = redefinition
+    redefinition.owningRelatedElement = x
+    assert any(d.rule == "broken-redefinition" for d in validate(factory))
 
 
 # --- export / round-trip -----------------------------------------------------

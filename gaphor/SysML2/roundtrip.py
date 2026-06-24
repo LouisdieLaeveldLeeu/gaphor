@@ -409,6 +409,7 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
         result.unresolved_supertypes,
         result.unresolved_subsettings,
         result.unresolved_redefinitions,
+        result.self_redefinitions,
     )
     source_model_diagnostics = validate(factory)
     root_id = result.root.id

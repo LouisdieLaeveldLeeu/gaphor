@@ -117,6 +117,10 @@ class MappingResult:
     # resolve to a Feature (no Redefinition created), for the unresolved-redefinition
     # validation rule (Phase 5c-2).
     unresolved_redefinitions: dict[str, str] = field(default_factory=dict)
+    # usage element id -> the declared `:>> y` name that denotes the redefining
+    # feature ITSELF (a feature cannot redefine itself; no Redefinition created), for
+    # the self-redefinition validation rule (Phase 5c-2 finding fix).
+    self_redefinitions: dict[str, str] = field(default_factory=dict)
 
 
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
@@ -167,7 +171,9 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
     unresolved_frame_refs = _resolve_frame_references(frame_references, ambiguous)
     unresolved_subsettings = _resolve_subsettings(subsettings, ambiguous)
-    unresolved_redefinitions = _resolve_redefinitions(redefinitions, ambiguous)
+    unresolved_redefinitions, self_redefinitions = _resolve_redefinitions(
+        redefinitions, ambiguous
+    )
     return MappingResult(
         root=root,
         elements_by_name=top_level,
@@ -180,6 +186,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
         unresolved_supertypes=unresolved_supertypes,
         unresolved_subsettings=unresolved_subsettings,
         unresolved_redefinitions=unresolved_redefinitions,
+        self_redefinitions=self_redefinitions,
     )
 
 
@@ -251,7 +258,9 @@ def map_project_members(named_packages, factory: ElementFactory):
     unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
     unresolved_frame_refs = _resolve_frame_references(frame_references, ambiguous)
     unresolved_subsettings = _resolve_subsettings(subsettings, ambiguous)
-    unresolved_redefinitions = _resolve_redefinitions(redefinitions, ambiguous)
+    unresolved_redefinitions, self_redefinitions = _resolve_redefinitions(
+        redefinitions, ambiguous
+    )
     for relationship_id, source_id in relationship_sources.items():
         if source_id in provenance:
             provenance[relationship_id] = provenance[source_id]
@@ -268,6 +277,7 @@ def map_project_members(named_packages, factory: ElementFactory):
             unresolved_supertypes=unresolved_supertypes,
             unresolved_subsettings=unresolved_subsettings,
             unresolved_redefinitions=unresolved_redefinitions,
+            self_redefinitions=self_redefinitions,
         ),
         provenance,
     )
@@ -497,20 +507,27 @@ def _resolve_subsettings(
 
 def _resolve_redefinitions(
     redefinitions: list, ambiguous: dict[str, str]
-) -> dict[str, str]:
+) -> tuple[dict[str, str], dict[str, str]]:
     """Resolve each usage `:>> y` redefined feature to a Feature and create a
-    Redefinition (mapping phase 2, Phase 5c-2).
+    Redefinition (mapping phase 2, Phase 5c-2). Returns
+    `(unresolved, self_redefinitions)`.
 
     The redefined feature resolves with the import- AND inheritance-aware
     `_resolve_type` from the usage's namespace, EXCLUDING the redefining feature
-    itself -- so a bare `:>> x` on a feature also named `x` resolves to the INHERITED
-    `x` (the thing being redefined), never to itself, and an inherited-name conflict
-    can be resolved by redefining one supertype's feature (`:>> A::x`). Visible from
-    more than one import/supertype -> `ambiguous` (no Redefinition); not a Feature /
-    not found -> recorded for the `unresolved-redefinition` rule (never silently
-    dropped).
+    itself at EVERY name segment -- so a bare `:>> x` on a feature also named `x`
+    resolves to the INHERITED `x` (the thing being redefined), never to itself, and
+    an inherited-name conflict can be resolved by redefining one supertype's feature
+    (`:>> A::x`). Visible from more than one import/supertype -> `ambiguous` (no
+    Redefinition).
+
+    A name that, with the redefining feature EXCLUDED, does not resolve to a Feature
+    but WOULD resolve to the redefining feature itself (e.g. `:>> C::x` naming this
+    very feature, or a bare `:>> x` with no inherited `x`) is a SELF-redefinition --
+    recorded distinctly (a feature cannot redefine itself); anything else that does
+    not resolve to a Feature is `unresolved-redefinition`. Neither binds.
     """
     unresolved: dict[str, str] = {}
+    self_redefinitions: dict[str, str] = {}
     for feature, namespace, redefined_name in redefinitions:
         target = _resolve_type(namespace, redefined_name, exclude=feature)
         if target is _AMBIGUOUS:
@@ -518,9 +535,11 @@ def _resolve_redefinitions(
             continue
         if isinstance(target, kerml.Feature):
             kk.add_redefinition(feature, target)
+        elif _resolve_type(namespace, redefined_name) is feature:
+            self_redefinitions[feature.id] = "::".join(redefined_name)
         else:
             unresolved[feature.id] = "::".join(redefined_name)
-    return unresolved
+    return unresolved, self_redefinitions
 
 
 def _build_requirement_body(
@@ -932,7 +951,7 @@ def _resolve_type(
         # here would make resolution declaration-order-dependent (a proxy created
         # for an earlier usage would change how a later name resolves).
         if found is not None and not _is_library_proxy(found):
-            return _descend(found, rest)
+            return _descend(found, rest, exclude)
         # Inherited members at a Type scope (own already shadowed them above). More
         # than one DISTINCT inherited member named `first` is an inherited-name
         # conflict -> ambiguous (never bind to an arbitrary first supertype); a
@@ -946,13 +965,13 @@ def _resolve_type(
             if len(inherited) > 1:
                 return _AMBIGUOUS
             if len(inherited) == 1:
-                return _descend(inherited[0], rest)
+                return _descend(inherited[0], rest, exclude)
         if use_imports:
             candidates = _imported_candidates(scope, first)
             if len(candidates) > 1:
                 return _AMBIGUOUS
             if len(candidates) == 1:
-                return _descend(candidates[0], rest)
+                return _descend(candidates[0], rest, exclude)
         scope = kk.owning_namespace(scope)
     return None
 
@@ -1008,13 +1027,22 @@ def _public_member_named(
     return None
 
 
-def _descend(element: kerml.Element, segments: list[str]) -> kerml.Element | None:
-    """Navigate qualified `segments` as members from a resolved first match."""
+def _descend(
+    element: kerml.Element,
+    segments: list[str],
+    exclude: kerml.Element | None = None,
+) -> kerml.Element | None:
+    """Navigate qualified `segments` as members from a resolved first match.
+
+    `exclude` is honored at EVERY segment (Phase 5c-2 finding fix), so a qualified
+    redefinition target like `:>> C::x` cannot descend back to the redefining feature
+    itself -- the exclusion is not silently dropped after the first name segment.
+    """
     current: kerml.Element | None = element
     for segment in segments:
         if not isinstance(current, kerml.Namespace):
             return None
-        current = kk.owned_member_named(current, segment)
+        current = kk.owned_member_named(current, segment, exclude=exclude)
         if current is None or _is_library_proxy(current):
             return None
     return current
