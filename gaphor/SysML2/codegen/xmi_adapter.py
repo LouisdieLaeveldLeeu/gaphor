@@ -511,6 +511,11 @@ KERNEL_SEED = (
     # redefines general/specific as superclassifier/subclassifier, so it adds those
     # stored classifier ends (mirroring Subsetting's subsetted/subsetting ends).
     "Subclassification",
+    # Redefinition is the KerML Subsetting that REDEFINES an inherited feature,
+    # seeded in Phase 5c-2 for `part x :>> y`. -> Subsetting (already in the kernel);
+    # it redefines subsetted/subsetting as the stored redefinedFeature/
+    # redefiningFeature ends.
+    "Redefinition",
     # Succession and Flow are the KerML connector roots the SysML action control/
     # item flow usages generalize (Phase 7): SuccessionAsUsage -> Succession and
     # FlowUsage -> Flow. Succession -> Connector and Flow -> Connector + Step, all

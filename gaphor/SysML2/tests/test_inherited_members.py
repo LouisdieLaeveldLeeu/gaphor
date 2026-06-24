@@ -211,7 +211,7 @@ def test_ambiguous_supertype_is_ambiguous_not_unresolved():
     assert not any(d.rule == "unresolved-specialization" for d in diagnostics)
 
 
-# --- 5c-2 review findings -----------------------------------------------------
+# --- 5c-1 review findings -----------------------------------------------------
 
 
 def test_inherited_name_conflict_is_ambiguous():

@@ -37,14 +37,17 @@ class PartDefinition:
 
 @dataclass(frozen=True)
 class PartUsage:
-    """`[<dir>] part <name> [ : <type> ] [ :> <subsetted> ] ;` (Phase 5c).
+    """`[<dir>] part <name> [ : <type> ] [ :> <subsetted> ] [ :>> <redefined> ] ;`
+    (Phase 5c/5c-2).
 
-    `subsets` is the subsetted feature's qualified name (a plain `Subsetting`), or
-    None."""
+    `subsets` is the subsetted feature's qualified name (a plain `Subsetting`);
+    `redefines` is the redefined feature's qualified name (a `Redefinition`); either
+    is None when absent."""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
     subsets: tuple[str, ...] | None = None  # subsetted feature qualified name
+    redefines: tuple[str, ...] | None = None  # redefined feature qualified name
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line

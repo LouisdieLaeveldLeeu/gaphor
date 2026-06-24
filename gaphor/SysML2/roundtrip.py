@@ -220,13 +220,23 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                         )
                     )
             # Subsetting (Phase 5c): each `:> y` on a usage is a SEPARATE entry
-            # (usage qn, subsetted-feature qn).
+            # (usage qn, subsetted-feature qn). Redefinition (Phase 5c-2): each
+            # `:>> y` likewise (usage qn, redefined-feature qn).
             if isinstance(member, kerml.Feature):
                 for subsetting in kk.subsettings(member):
                     target = kk._single(subsetting.subsettedFeature)
                     entries.add(
                         (
                             "Subsetting",
+                            kk.qualified_name(member),
+                            kk.qualified_name(target) if target is not None else "",
+                        )
+                    )
+                for redefinition in kk.redefinitions(member):
+                    target = kk._single(redefinition.redefinedFeature)
+                    entries.add(
+                        (
+                            "Redefinition",
                             kk.qualified_name(member),
                             kk.qualified_name(target) if target is not None else "",
                         )
@@ -398,6 +408,7 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
         result.ambiguous,
         result.unresolved_supertypes,
         result.unresolved_subsettings,
+        result.unresolved_redefinitions,
     )
     source_model_diagnostics = validate(factory)
     root_id = result.root.id

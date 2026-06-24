@@ -71,13 +71,16 @@ part_definition: "part" "def" NAME specialization_part? (";" | definition_body)
 definition_body: "{" member* "}"
 
 // `:>` (specializes/subsets) is the KerML heritage token: subclassification between
-// definitions, subsetting between usages. `:>>` (redefines) is out of 5c scope.
+// definitions, subsetting between usages. `:>>` (redefines) is the redefinition
+// token (Phase 5c-2); the 3-char `:>>` lexes before the 2-char `:>` (longest match).
 specialization_part: ":>" qualified_name ("," qualified_name)*
 
-// `[<dir>] part <name> [ ":" <type> ] [ ":>" <subsetted> ] ;` (Phase 5c). The
-// `:>` subsets an existing feature (own, inherited, or outer), a plain Subsetting.
-part_usage: DIRECTION? "part" NAME (":" type_ref)? subsetting_part? ";"
+// `[<dir>] part <name> [ ":" <type> ] [ ":>" <subsetted> ] [ ":>>" <redefined> ] ;`
+// (Phase 5c/5c-2). `:>` subsets an existing feature (a plain Subsetting); `:>>`
+// REDEFINES an inherited feature (a Redefinition).
+part_usage: DIRECTION? "part" NAME (":" type_ref)? subsetting_part? redefinition_part? ";"
 subsetting_part: ":>" qualified_name
+redefinition_part: ":>>" qualified_name
 
 // `attribute def <name> ;`
 attribute_definition: "attribute" "def" NAME ";"

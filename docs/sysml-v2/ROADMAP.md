@@ -451,33 +451,43 @@ Exit: inherited members resolve from a specializing type -- done and tested
 is deepened for already-supported constructs; PartDefinition/PartUsage stay
 `supported`).
 
-### Phase 5c-2 -- Redefinition -- PLANNED
+### Phase 5c-2 -- Redefinition -- DONE
 
-Add the canonical KerML Redefinition surface on top of inherited-member
-resolution, rather than treating inherited name conflicts as first-supertype
-wins.
+Added the canonical KerML Redefinition surface on top of inherited-member
+resolution. One new kernel class: `Redefinition` (kernel 36 -> 37).
 
-- **metamodel**: seed/generate `Redefinition` from the pinned XMI if it is not
-  already in the kernel closure, preserving the generate-from-normative-artifact
-  discipline and adding persistence/closure tests;
-- **grammar/AST/parser**: add `:>>` redefinition syntax for usages, and for
-  definition-body members if the normative grammar requires that surface in this
-  slice;
-- **mapping**: map `:>>` to a real Redefinition relationship while preserving
-  the Phase 5c-1 Subclassification/Subsetting behaviour;
-- **resolution**: resolve redefined features through owned/inherited/imported
-  scopes, and report ambiguous inherited candidates unless an explicit
-  redefinition selects a valid target;
-- **validation**: enforce valid redefinition kinds and exact stored ends, and
-  reject persisted/API-mutated broken Redefinition relationships rather than
-  letting first-value helpers silently accept them;
-- **export/round-trip/persist**: emit `:>>`, preserve it through `.gaphor`
-  save/reload, and add canonical-form coverage including multi-supertype
-  inherited conflicts.
+- **metamodel**: seeded `Redefinition` (the KerML Subsetting that redefines an
+  inherited feature) from the pinned XMI and regenerated; it redefines
+  subsetted/subsetting as the stored `redefinedFeature`/`redefiningFeature` ends;
+- **grammar/AST/parser**: `part x [: T] [:> y] [:>> z] ;` -- `:>>` (a 3-char token
+  that lexes before the 2-char `:>`) redefines an existing feature; `PartUsage`
+  gains `redefines`;
+- **mapping**: `:>>` becomes a `kerml.Redefinition`; the Phase 5c-1 subclassification
+  / subsetting behaviour is unchanged;
+- **resolution**: the redefined feature resolves through owned/inherited/imported
+  scopes EXCLUDING the redefining feature itself (`_resolve_type(..., exclude=)` /
+  `owned_member_named(..., exclude=)`), so a bare `:>> x` on a feature named `x`
+  redefines the INHERITED `x`. A redefining feature gives the type its own member,
+  which shadows an inherited-name conflict -- so a conflict that is `ambiguous-name`
+  when merely inherited (5c-1) is RESOLVED by redefining one supertype's feature
+  (`:>> A::x`); a bare `:>> x` over a genuine conflict stays ambiguous;
+- **validation**: `unresolved-redefinition` (mapping context: `:>> z` not a Feature)
+  and model-derived `broken-redefinition` (a persisted/API-mutated Redefinition with
+  no `redefinedFeature`), so no first-value helper silently accepts a broken one;
+- **export/round-trip/persist**: emits `:>>` (a redefined own/inherited target by
+  bare name via the resolver-mirrored `exclude`, else path); the canonical form
+  gained a `Redefinition` entry; `:>>` survives `.gaphor` save/reload, and the
+  multi-supertype-conflict-resolved case round-trips.
 
-Exit: a usage can faithfully redefine an inherited feature, inherited conflicts
-are diagnosed unless explicitly resolved, and Redefinition participates in
-validation/export/round-trip without silent model drift.
+OUT of scope (deferred): redefinition on non-part usages and in non-part-def
+definition bodies; multiplicity/type-conformance checks between a redefining and
+redefined feature (a redefinition currently requires only that the target is a
+Feature).
+
+Exit: a usage can faithfully redefine an inherited feature, inherited conflicts are
+diagnosed unless explicitly resolved, and Redefinition participates in
+validation/export/round-trip without silent model drift -- done and tested
+(`test_redefinition.py`).
 
 ### Phase 5d -- Implicit Specialization -- PLANNED
 

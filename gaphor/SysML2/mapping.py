@@ -113,6 +113,10 @@ class MappingResult:
     # resolve to a Feature (no Subsetting created), for the unresolved-subsetting
     # validation rule (Phase 5c).
     unresolved_subsettings: dict[str, str] = field(default_factory=dict)
+    # usage element id -> the declared `:>> y` redefined feature name that did not
+    # resolve to a Feature (no Redefinition created), for the unresolved-redefinition
+    # validation rule (Phase 5c-2).
+    unresolved_redefinitions: dict[str, str] = field(default_factory=dict)
 
 
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
@@ -130,6 +134,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     aliases: list = []
     subclassifications: list = []
     subsettings: list = []
+    redefinitions: list = []
     top_level = _build_members(
         pkg.members,
         root,
@@ -142,13 +147,15 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
         aliases,
         subclassifications,
         subsettings,
+        redefinitions,
     )
 
     # Resolve imports FIRST so the typed-usage/subject passes can see imported
     # members (Phase 5a); resolve aliases NEXT so a usage typed by an alias name
     # sees the alias's target, and so alias-to-alias chains settle (Phase 5b);
     # resolve subclassifications BEFORE the member passes so inherited-member lookup
-    # (used by typing and subsetting) sees the supertype links (Phase 5c).
+    # (used by typing, subsetting, and redefinition) sees the supertype links
+    # (Phase 5c/5c-2).
     _resolve_imports(imports)
     ambiguous: dict[str, str] = {}
     _resolve_aliases(aliases, ambiguous)
@@ -160,6 +167,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
     unresolved_frame_refs = _resolve_frame_references(frame_references, ambiguous)
     unresolved_subsettings = _resolve_subsettings(subsettings, ambiguous)
+    unresolved_redefinitions = _resolve_redefinitions(redefinitions, ambiguous)
     return MappingResult(
         root=root,
         elements_by_name=top_level,
@@ -171,6 +179,7 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
         unresolved_frame_refs=unresolved_frame_refs,
         unresolved_supertypes=unresolved_supertypes,
         unresolved_subsettings=unresolved_subsettings,
+        unresolved_redefinitions=unresolved_redefinitions,
     )
 
 
@@ -205,6 +214,7 @@ def map_project_members(named_packages, factory: ElementFactory):
     aliases: list = []
     subclassifications: list = []
     subsettings: list = []
+    redefinitions: list = []
     top_level: dict[str, kerml.Element] = {}
     provenance: dict[str, tuple] = {}
     for label, pkg in named_packages:
@@ -225,6 +235,7 @@ def map_project_members(named_packages, factory: ElementFactory):
                 aliases,
                 subclassifications,
                 subsettings,
+                redefinitions,
                 record,
             )
         )
@@ -240,6 +251,7 @@ def map_project_members(named_packages, factory: ElementFactory):
     unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
     unresolved_frame_refs = _resolve_frame_references(frame_references, ambiguous)
     unresolved_subsettings = _resolve_subsettings(subsettings, ambiguous)
+    unresolved_redefinitions = _resolve_redefinitions(redefinitions, ambiguous)
     for relationship_id, source_id in relationship_sources.items():
         if source_id in provenance:
             provenance[relationship_id] = provenance[source_id]
@@ -255,6 +267,7 @@ def map_project_members(named_packages, factory: ElementFactory):
             unresolved_frame_refs=unresolved_frame_refs,
             unresolved_supertypes=unresolved_supertypes,
             unresolved_subsettings=unresolved_subsettings,
+            unresolved_redefinitions=unresolved_redefinitions,
         ),
         provenance,
     )
@@ -482,6 +495,34 @@ def _resolve_subsettings(
     return unresolved
 
 
+def _resolve_redefinitions(
+    redefinitions: list, ambiguous: dict[str, str]
+) -> dict[str, str]:
+    """Resolve each usage `:>> y` redefined feature to a Feature and create a
+    Redefinition (mapping phase 2, Phase 5c-2).
+
+    The redefined feature resolves with the import- AND inheritance-aware
+    `_resolve_type` from the usage's namespace, EXCLUDING the redefining feature
+    itself -- so a bare `:>> x` on a feature also named `x` resolves to the INHERITED
+    `x` (the thing being redefined), never to itself, and an inherited-name conflict
+    can be resolved by redefining one supertype's feature (`:>> A::x`). Visible from
+    more than one import/supertype -> `ambiguous` (no Redefinition); not a Feature /
+    not found -> recorded for the `unresolved-redefinition` rule (never silently
+    dropped).
+    """
+    unresolved: dict[str, str] = {}
+    for feature, namespace, redefined_name in redefinitions:
+        target = _resolve_type(namespace, redefined_name, exclude=feature)
+        if target is _AMBIGUOUS:
+            ambiguous[feature.id] = "::".join(redefined_name)
+            continue
+        if isinstance(target, kerml.Feature):
+            kk.add_redefinition(feature, target)
+        else:
+            unresolved[feature.id] = "::".join(redefined_name)
+    return unresolved
+
+
 def _build_requirement_body(
     requirement,
     member,
@@ -600,6 +641,7 @@ def _build_members(
     aliases: list,
     subclassifications: list,
     subsettings: list,
+    redefinitions: list,
     on_element=None,
     owner_is_type: bool = False,
 ) -> dict[str, kerml.Element]:
@@ -667,6 +709,10 @@ def _build_members(
             # resolved in phase 2 from this usage's namespace (Phase 5c).
             if member.subsets is not None:
                 subsettings.append((element, namespace, member.subsets))
+            # `:>> y` redefines an inherited feature (Phase 5c-2); resolved in phase
+            # 2 EXCLUDING this usage itself, so bare `:>> x` finds the inherited x.
+            if member.redefines is not None:
+                redefinitions.append((element, namespace, member.redefines))
         elif isinstance(member, ast.AttributeUsage):
             element = factory.create(sysml2.AttributeUsage)
             if member.type_name is not None:
@@ -804,6 +850,7 @@ def _build_members(
                 aliases,
                 subclassifications,
                 subsettings,
+                redefinitions,
                 on_element,
             )
         elif isinstance(
@@ -826,6 +873,7 @@ def _build_members(
                 aliases,
                 subclassifications,
                 subsettings,
+                redefinitions,
                 on_element,
                 owner_is_type=True,
             )
@@ -844,6 +892,7 @@ def _resolve_type(
     namespace: kerml.Namespace,
     type_name: tuple[str, ...],
     use_imports: bool = True,
+    exclude: kerml.Element | None = None,
 ):
     """Resolve a (qualified) type name with nearest-first scoping, including
     imported memberships (Phase 5a).
@@ -867,13 +916,17 @@ def _resolve_type(
     then inherited, then imported -- so own shadows inherited shadows imported, and
     that whole local scope shadows an enclosing namespace (Phase 5c).
 
+    `exclude` (Phase 5c-2) skips that member element in the OWNED-member lookup, so a
+    redefinition `:>> x` on a feature also named `x` resolves to the INHERITED `x`
+    rather than to itself.
+
     Deferred to later phases: implicit specialization (5d), feature chains (5e), and
     transitive re-export through public imports.
     """
     first, *rest = type_name
     scope: kerml.Namespace | None = namespace
     while scope is not None:
-        found = kk.owned_member_named(scope, first)
+        found = kk.owned_member_named(scope, first, exclude=exclude)
         # Skip library value-type proxies: they are typing targets reached only
         # through `_library_value_type`, not user-authored symbols. Binding to one
         # here would make resolution declaration-order-dependent (a proxy created

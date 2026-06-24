@@ -77,6 +77,7 @@ def validate(
     ambiguous: dict[str, str] | None = None,
     unresolved_supertypes: dict[str, list[str]] | None = None,
     unresolved_subsettings: dict[str, str] | None = None,
+    unresolved_redefinitions: dict[str, str] | None = None,
 ) -> list[Diagnostic]:
     """Run the scoped M2 validation rules over all elements in `factory`.
 
@@ -105,12 +106,13 @@ def validate(
 
     `unresolved_supertypes` maps a definition id -> the LIST of its `:> Super` names
     that did not resolve to a Classifier (a `:> A, B` with both bad reports both),
-    and `unresolved_subsettings` maps a usage id -> the `:> y` name that did not
-    resolve to a Feature (Phase 5c). The mapper records these (an AMBIGUOUS
-    supertype/subsetted name goes to `ambiguous` instead, so there is no double
-    report); mapping context only. Separately, `_check_broken_specializations` is
-    MODEL-DERIVED and reports a persisted Subclassification/Subsetting whose end was
-    cleared, independent of mapping context.
+    `unresolved_subsettings` maps a usage id -> the `:> y` name that did not resolve
+    to a Feature (Phase 5c), and `unresolved_redefinitions` a usage id -> the `:>> y`
+    name that did not resolve (Phase 5c-2). The mapper records these (an AMBIGUOUS
+    supertype/subsetted/redefined name goes to `ambiguous` instead, so there is no
+    double report); mapping context only. Separately, `_check_broken_specializations`
+    is MODEL-DERIVED and reports a persisted Subclassification/Subsetting/Redefinition
+    whose end was cleared, independent of mapping context.
     """
     diagnostics: list[Diagnostic] = []
     diagnostics.extend(_check_missing_owner(factory))
@@ -136,6 +138,9 @@ def validate(
         _check_unresolved_specializations(unresolved_supertypes or {})
     )
     diagnostics.extend(_check_unresolved_subsettings(unresolved_subsettings or {}))
+    diagnostics.extend(
+        _check_unresolved_redefinitions(unresolved_redefinitions or {})
+    )
     diagnostics.extend(_check_broken_specializations(factory))
     return diagnostics
 
@@ -593,16 +598,33 @@ def _check_unresolved_subsettings(
         )
 
 
+def _check_unresolved_redefinitions(
+    unresolved_redefinitions: dict[str, str]
+) -> Iterator[Diagnostic]:
+    """A usage `:>> y` whose redefined feature did not resolve to a Feature (Phase
+    5c-2). Mapping context: recorded when no Redefinition was created (an ambiguous
+    redefined name is reported `ambiguous-name` instead). Mapping context only.
+    """
+    for element_id, name in unresolved_redefinitions.items():
+        yield Diagnostic(
+            Severity.ERROR,
+            "unresolved-redefinition",
+            f"redefined feature {name!r} does not resolve to a feature",
+            element_id,
+        )
+
+
 def _check_broken_specializations(factory: ElementFactory) -> Iterator[Diagnostic]:
-    """A persisted Subclassification must reference a supertype, and a (plain)
-    Subsetting a subsetted feature (Phase 5c).
+    """A persisted Subclassification must reference a supertype, a (plain) Subsetting
+    a subsetted feature, and a Redefinition a redefined feature (Phase 5c/5c-2).
 
     Model-derived (needs no mapping context): the mapper only CREATES these when the
     target resolves, so this catches a hand- or API-mutated / corrupt heritage
-    relationship -- e.g. a Subclassification whose `superclassifier` was cleared, or
-    a Subsetting whose `subsettedFeature` was deleted -- that export would otherwise
-    silently drop (it reads only resolvable ends). ReferenceSubsetting (the
-    framed-concern form) is checked separately, so plain Subsetting is matched by
+    relationship -- e.g. a Subclassification whose `superclassifier` was cleared, a
+    Subsetting whose `subsettedFeature`, or a Redefinition whose `redefinedFeature`
+    was deleted -- that export would otherwise silently drop (it reads only
+    resolvable ends). ReferenceSubsetting (the framed-concern form) and Redefinition
+    are Subsetting subkinds checked separately, so PLAIN Subsetting is matched by
     exact type.
     """
     for subclassification in factory.select(kerml.Subclassification):
@@ -615,13 +637,21 @@ def _check_broken_specializations(factory: ElementFactory) -> Iterator[Diagnosti
             )
     for subsetting in factory.select(kerml.Subsetting):
         if type(subsetting) is not kerml.Subsetting:
-            continue  # ReferenceSubsetting has its own integrity check
+            continue  # ReferenceSubsetting / Redefinition checked elsewhere
         if kk._single(subsetting.subsettedFeature) is None:
             yield Diagnostic(
                 Severity.ERROR,
                 "broken-subsetting",
                 "subsetting does not reference a subsetted feature",
                 subsetting.id,
+            )
+    for redefinition in factory.select(kerml.Redefinition):
+        if kk._single(redefinition.redefinedFeature) is None:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-redefinition",
+                "redefinition does not reference a redefined feature",
+                redefinition.id,
             )
 
 

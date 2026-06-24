@@ -32,6 +32,7 @@ _ActionBody = namedtuple("_ActionBody", "members")
 _Specializes = namedtuple("_Specializes", "supers")
 _DefBody = namedtuple("_DefBody", "members")
 _Subsets = namedtuple("_Subsets", "target")
+_Redefines = namedtuple("_Redefines", "target")
 
 
 def _split_direction(items):
@@ -137,6 +138,10 @@ class _ASTBuilder(Transformer):
         # `:> y` -- the subsetted feature's qualified_name tuple (Phase 5c).
         return _Subsets(items[0])
 
+    def redefinition_part(self, items):
+        # `:>> y` -- the redefined feature's qualified_name tuple (Phase 5c-2).
+        return _Redefines(items[0])
+
     def part_definition(self, items):
         name = items[0]
         specializes: tuple = ()
@@ -155,15 +160,19 @@ class _ASTBuilder(Transformer):
         name = items[0]
         type_name = None
         subsets = None
+        redefines = None
         for extra in items[1:]:
             if isinstance(extra, _Subsets):
                 subsets = extra.target
+            elif isinstance(extra, _Redefines):
+                redefines = extra.target
             else:
                 type_name = extra  # type_ref tuple
         return ast.PartUsage(
             name=str(name),
             type_name=type_name,
             subsets=subsets,
+            redefines=redefines,
             direction=direction,
             line=name.line,
         )

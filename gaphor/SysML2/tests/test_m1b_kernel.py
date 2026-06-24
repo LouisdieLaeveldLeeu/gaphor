@@ -78,11 +78,14 @@ def test_kernel_has_expected_class_count():
     # stored subsetted/subsetting feature ends) for Phase 6d-2, Succession/Flow
     # (the KerML connector roots the SysML action succession/flow usages generalize;
     # Succession -> Connector and Flow -> Connector + Step, their ends derived like
-    # Connector, so no new stored closure) for Phase 7, and Subclassification (the
+    # Connector, so no new stored closure) for Phase 7, Subclassification (the
     # KerML Specialization between Classifiers, the heritage relationship for
     # `part def Car :> Vehicle`; -> Specialization, redefining general/specific as
-    # the stored superclassifier/subclassifier classifier ends) for Phase 5c.
-    assert len(_all_kernel_classes()) == 36
+    # the stored superclassifier/subclassifier classifier ends) for Phase 5c, and
+    # Redefinition (the KerML Subsetting that redefines an inherited feature, for
+    # `part x :>> y`; -> Subsetting, redefining subsetted/subsetting as the stored
+    # redefinedFeature/redefiningFeature ends) for Phase 5c-2.
+    assert len(_all_kernel_classes()) == 37
 
 
 # --- required behaviour 1: namespace + membership round-trip -----------------

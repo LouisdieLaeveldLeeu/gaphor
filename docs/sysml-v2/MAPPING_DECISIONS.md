@@ -1422,4 +1422,49 @@ Subsetting). (The canonical Redefinition surface is now its own planned Phase 5c
   `_check_connection_end_integrity`): `broken-subclassification` /
   `broken-subsetting`. Plain Subsetting is matched by EXACT type so the framed-concern
   ReferenceSubsetting (which carries `referencedFeature`, not `subsettedFeature`) is
-  not flagged. See `test_inherited_members.py` (the 5c-2 section).
+  not flagged. See `test_inherited_members.py` (the review-findings section).
+
+### Completion Phase 5c-2: Redefinition (verified 2026-06-24)
+
+The canonical KerML Redefinition surface (`part x :>> y`) on top of inherited-member
+resolution. One new metamodel class: `Redefinition` (kernel 36 -> 37).
+
+- **Metamodel (regen).** Seeded `Redefinition` into `KERNEL_SEED` and regenerated. It
+  is a `Subsetting` subkind; its `redefinedFeature`/`redefiningFeature` REDEFINE the
+  inherited subsetted/subsetting ends and generate as their own stored ends. So
+  `subsettings()` (plain Subsetting, exact type) and the broken-subsetting check
+  already exclude it; it gets its own `redefinitions()` reader, `add_redefinition`,
+  and a separate broken-redefinition check. M1b count and the SUPPORT_MATRIX kernel
+  paragraph went to 37.
+- **Grammar -- the `:>>` token.** `redefinition_part: ":>>" qualified_name` on a part
+  usage, after the optional `:>` subsetting. Lark longest-match lexes the 3-char
+  `:>>` before the 2-char `:>` and the 1-char `:`. `PartUsage` gained `redefines`.
+- **Self-exclusion is the crux.** A redefinition `part x :>> x` must resolve the
+  redefined `x` to the INHERITED feature, not to the redefining feature itself. Added
+  an `exclude` parameter to `kerml_kernel.owned_member_named` (skip one member
+  element) and to `_resolve_type`; `_resolve_redefinitions` passes the redefining
+  feature as `exclude`. So bare `:>> x` skips self -> finds inherited `x`; a sibling
+  redefinition `b :>> a` (names differ) finds `a`; a qualified `:>> A::x` resolves
+  `A` then descends. Create-on-resolve like subsetting (ambiguous -> ambiguous-name;
+  non-Feature / not found -> `unresolved-redefinition`).
+- **Inherited-conflict resolution falls out of own-shadows-inherited.** An
+  inherited-name conflict (`C :> A, B` both with `x`) is `ambiguous-name` when the
+  bare name is used (5c-1). Declaring `part x :>> A::x` gives C its OWN `x`, which
+  `owned_member_named` returns before consulting inherited members -- so the conflict
+  is resolved and a later `part y :> x` binds C's `x` unambiguously. A bare
+  `part x :>> x` over a real conflict stays ambiguous (the redefinition target itself
+  cannot be disambiguated without qualification). No special conflict-suppression
+  code was needed.
+- **Validation.** Mapping-context `unresolved-redefinition`; model-derived
+  `broken-redefinition` (a persisted/API-mutated Redefinition with no
+  `redefinedFeature`), folded into `_check_broken_specializations` alongside the
+  subclassification/subsetting checks.
+- **Export / round-trip.** `_redefinition_suffix` emits `:>> <name>`, where the
+  redefined feature is rendered by `_feature_ref_name` with `exclude=` the redefining
+  feature -- so a bare `:>> x` round-trips as `:>> x` (not a qualified path), because
+  excluding self lets the inherited-member branch pick the bare name. The canonical
+  form gained a `Redefinition` entry, and the multi-supertype-conflict-resolved case
+  round-trips.
+- **Deferred (noted).** Redefinition on non-part usages and in non-part-def bodies;
+  multiplicity / type-conformance checks between the redefining and redefined feature
+  (only Feature-kind is enforced). See `test_redefinition.py`.

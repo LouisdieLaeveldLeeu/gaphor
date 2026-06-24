@@ -30,6 +30,7 @@ from gaphor.SysML2.kerml import (
     Membership,
     Namespace,
     OwningMembership,
+    Redefinition,
     ReferenceSubsetting,
     Relationship,
     Subclassification,
@@ -229,12 +230,38 @@ def add_subsetting(
 def subsettings(feature: Feature) -> Iterator[Subsetting]:
     """Plain Subsettings owned by `feature`, in order (Phase 5c).
 
-    EXCLUDES ReferenceSubsetting (a Subsetting subclass used for the framed-concern
-    reference form), so the two specialization forms never read each other's
-    relationships.
+    EXCLUDES ReferenceSubsetting (the framed-concern reference form) AND Redefinition
+    (the redefinition form), both Subsetting subclasses, matched by EXACT type so the
+    specialization forms never read each other's relationships.
     """
     for relationship in feature.ownedRelationship:
         if type(relationship) is Subsetting:
+            yield relationship
+
+
+def add_redefinition(
+    redefining_feature: Feature, redefined_feature: Feature
+) -> Redefinition:
+    """Make `redefining_feature` REDEFINE `redefined_feature` via an owned
+    Redefinition (`part x :>> y`, Phase 5c-2).
+
+    A Redefinition is a Subsetting subkind. Owned by the redefining feature
+    (composite, cascades); the redefined feature is a NON-owning reference, like
+    `add_subsetting`. Its own ends (redefiningFeature/redefinedFeature) carry the
+    relation, mirroring the set_feature_type / add_subsetting convention.
+    """
+    redefinition = redefining_feature.model.create(Redefinition)
+    redefinition.redefiningFeature = redefining_feature
+    redefinition.redefinedFeature = redefined_feature
+    redefining_feature.ownedRelationship = redefinition
+    redefinition.owningRelatedElement = redefining_feature
+    return redefinition
+
+
+def redefinitions(feature: Feature) -> Iterator[Redefinition]:
+    """Redefinitions owned by `feature`, in order (Phase 5c-2)."""
+    for relationship in feature.ownedRelationship:
+        if isinstance(relationship, Redefinition):
             yield relationship
 
 
@@ -340,17 +367,23 @@ def set_alias_target(alias: Membership, target: Element) -> None:
     alias.memberElement = target
 
 
-def owned_member_named(namespace: Namespace, name: str) -> Element | None:
+def owned_member_named(
+    namespace: Namespace, name: str, exclude: Element | None = None
+) -> Element | None:
     """Same-namespace name resolution: a member by its name in this namespace.
 
     An owned member matches by its element's effective name; an ALIAS matches by
     its alias name (`memberName`) and resolves to the (foreign) element it
     references (Phase 5b). So `alias E for Lib::Engine;` makes `E` resolve to
     `Lib::Engine` wherever a name resolves in this namespace.
+
+    `exclude` skips a specific member element (Phase 5c-2): a redefinition
+    `part x :>> x` must resolve the redefined `x` to the INHERITED feature, not to
+    the redefining feature itself, so the resolver excludes the redefining feature.
     """
     for membership in owned_memberships(namespace):
         member = _single(membership.memberElement)
-        if member is None:
+        if member is None or member is exclude:
             continue
         member_name = membership.memberName or effective_name(member)
         if member_name == name:

@@ -263,6 +263,10 @@ def import_user_kpar(
         make_unresolved(element_id, name, "unresolved-subsetting")
         for element_id, name in result.unresolved_subsettings.items()
     )
+    unresolved.extend(
+        make_unresolved(element_id, name, "unresolved-redefinition")
+        for element_id, name in result.unresolved_redefinitions.items()
+    )
 
     # Gate only on diagnostics this import introduced: whole-factory validation
     # minus what was already there. This catches problems within the imported
@@ -280,6 +284,7 @@ def import_user_kpar(
         result.ambiguous,
         result.unresolved_supertypes,
         result.unresolved_subsettings,
+        result.unresolved_redefinitions,
     )
     validation_diagnostics = tuple(
         d for d in all_diagnostics if d not in preexisting_set

@@ -190,6 +190,11 @@ class Subsetting(Specialization):
     subsettingFeature: relation_many[Feature]
 
 
+class Redefinition(Subsetting):
+    redefinedFeature: relation_many[Feature]
+    redefiningFeature: relation_many[Feature]
+
+
 class ReferenceSubsetting(Subsetting):
     referencedFeature: relation_many[Feature]
 
@@ -224,6 +229,8 @@ FeatureTyping.typedFeature = association("typedFeature", Feature)
 FeatureTyping.type = association("type", Type)
 Subsetting.subsettedFeature = association("subsettedFeature", Feature)
 Subsetting.subsettingFeature = association("subsettingFeature", Feature)
+Redefinition.redefiningFeature = association("redefiningFeature", Feature)
+Redefinition.redefinedFeature = association("redefinedFeature", Feature)
 ReferenceSubsetting.referencedFeature = association("referencedFeature", Feature)
 Subclassification.superclassifier = association("superclassifier", Classifier)
 Subclassification.subclassifier = association("subclassifier", Classifier)

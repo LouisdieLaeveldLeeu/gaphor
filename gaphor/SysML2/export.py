@@ -171,7 +171,8 @@ def _export_member_line(
         dir_ = _direction_prefix(element)
         return (
             f"{pad}{dir_}part {_usage_decl(element, root)}"
-            f"{_subsetting_suffix(element, root)};\n"
+            f"{_subsetting_suffix(element, root)}"
+            f"{_redefinition_suffix(element, root)};\n"
         )
     if isinstance(element, sysml2.AttributeUsage):
         dir_ = _direction_prefix(element)
@@ -255,26 +256,46 @@ def _subsetting_suffix(usage: kerml.Feature, root: kerml.Namespace) -> str:
     return out
 
 
+def _redefinition_suffix(usage: kerml.Feature, root: kerml.Namespace) -> str:
+    """` :>> y` for a usage's Redefinitions, else `""` (Phase 5c-2).
+
+    The redefined feature is emitted by the name that re-resolves from the usage's
+    namespace EXCLUDING the redefining usage itself, so a bare `:>> x` (redefining
+    the inherited `x`) round-trips as `:>> x`, not a qualified path."""
+    out = ""
+    for redefinition in kk.redefinitions(usage):
+        target = kk._single(redefinition.redefinedFeature)
+        if target is not None:
+            out += f" :>> {_feature_ref_name(usage, target, root, exclude=usage)}"
+    return out
+
+
 def _feature_ref_name(
-    element: kerml.Element, target: kerml.Element, root: kerml.Namespace
+    element: kerml.Element,
+    target: kerml.Element,
+    root: kerml.Namespace,
+    exclude: kerml.Element | None = None,
 ) -> str:
     """The name to emit for a reference from `element` to `target` so it re-resolves
-    to EXACTLY `target`, else the path from the export root (Phase 5c).
+    to EXACTLY `target`, else the path from the export root (Phase 5c/5c-2).
 
     A bare name is emitted only when it re-resolves UNAMBIGUOUSLY to `target` from
     `element`'s namespace: `target` is the OWN member of that name, or (no own member
     shadows it and) `target` is the SOLE inherited member of that name. Otherwise --
     a shadowing own member, or an inherited-name conflict -- the bare name would
-    re-resolve elsewhere or ambiguously, so the path from root is used."""
+    re-resolve elsewhere or ambiguously, so the path from root is used.
+
+    `exclude` mirrors the resolver (Phase 5c-2): a redefinition `:>> x` excludes the
+    redefining feature from the own-member check, so a feature named `x` redefining
+    the inherited `x` is emitted as the bare `:>> x` (the inherited one), not a path.
+    """
     owning = kk.owning_namespace(element)
     name = kk.effective_name(target)
     if owning is not None and name is not None:
-        if kk.owned_member_named(owning, name) is target:
+        own = kk.owned_member_named(owning, name, exclude=exclude)
+        if own is target:
             return name
-        if (
-            kk.owned_member_named(owning, name) is None
-            and isinstance(owning, kerml.Type)
-        ):
+        if own is None and isinstance(owning, kerml.Type):
             inherited = kk.inherited_members_named(owning, name)
             if len(inherited) == 1 and inherited[0] is target:
                 return name
