@@ -474,17 +474,22 @@ def _check_missing_owner(factory: ElementFactory) -> Iterator[Diagnostic]:
 def _check_duplicate_names(factory: ElementFactory) -> Iterator[Diagnostic]:
     """No two members of the same namespace may share a name.
 
-    A name in a namespace is an owned member's effective name OR an alias's alias
-    name (`memberName`), so an alias that collides with an owned member or another
-    alias is a duplicate too (Phase 5b).
+    A name in a namespace is an alias's alias name (`memberName`) OR an owned
+    member's effective name, so an alias that collides with an owned member or
+    another alias is a duplicate too (Phase 5b). The alias name is counted even
+    when the alias target is UNRESOLVED -- the name still occupies the namespace --
+    so an unresolved alias colliding by name is still reported (independently of its
+    own unresolved-alias diagnostic).
     """
     for namespace in factory.select(kerml.Namespace):
         names: Counter[str] = Counter()
         for membership in kk.owned_memberships(namespace):
             member = kk._single(membership.memberElement)
-            if member is None:
-                continue
-            name = membership.memberName or kk.effective_name(member)
+            # An alias carries its name (`memberName`) before its target resolves;
+            # an owned member takes its name from its element.
+            name = membership.memberName or (
+                kk.effective_name(member) if member is not None else None
+            )
             if name is not None:
                 names[name] += 1
         for name, count in names.items():

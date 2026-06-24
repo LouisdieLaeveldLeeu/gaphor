@@ -160,6 +160,22 @@ def test_alias_name_colliding_with_member_is_duplicate():
     assert any(d.rule == "duplicate-name" for d in _validate(factory, result))
 
 
+def test_unresolved_alias_name_still_collides_with_member():
+    # An alias name occupies the namespace even when its target is unresolved, so a
+    # name collision is reported alongside (not instead of) unresolved-alias.
+    factory, result = _map("part def X;\nalias X for Missing;")
+    diagnostics = _validate(factory, result)
+    assert any(d.rule == "duplicate-name" for d in diagnostics)
+    assert any(d.rule == "unresolved-alias" for d in diagnostics)
+
+
+def test_two_unresolved_aliases_same_name_collide():
+    factory, result = _map("alias A for Missing;\nalias A for AlsoMissing;")
+    diagnostics = _validate(factory, result)
+    assert any(d.rule == "duplicate-name" for d in diagnostics)
+    assert sum(d.rule == "unresolved-alias" for d in diagnostics) == 2
+
+
 # --- export / round-trip -----------------------------------------------------
 
 
