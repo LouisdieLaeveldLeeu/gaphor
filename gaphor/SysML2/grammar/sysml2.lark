@@ -62,11 +62,22 @@ alias_statement: "alias" NAME "for" qualified_name ";"
 // is lexed as a direction only where a usage expects it (contextual LALR).
 DIRECTION: "inout" | "in" | "out"
 
-// `part def <name> ;`
-part_definition: "part" "def" NAME ";"
+// `part def <name> [ ":>" <super> (, <super>)* ] ( ";" | "{" <members> "}" )`
+// (Phase 5c). A definition may specialize supertypes (`:>`, a Subclassification)
+// and/or carry a body of nested members; the body reuses the shared `member` list
+// (a PartDefinition IS a Type, so its feature members are owned via
+// FeatureMembership in the mapper, like an action body).
+part_definition: "part" "def" NAME specialization_part? (";" | definition_body)
+definition_body: "{" member* "}"
 
-// `[<dir>] part <name> [ ":" <type> ] ;`
-part_usage: DIRECTION? "part" NAME (":" type_ref)? ";"
+// `:>` (specializes/subsets) is the KerML heritage token: subclassification between
+// definitions, subsetting between usages. `:>>` (redefines) is out of 5c scope.
+specialization_part: ":>" qualified_name ("," qualified_name)*
+
+// `[<dir>] part <name> [ ":" <type> ] [ ":>" <subsetted> ] ;` (Phase 5c). The
+// `:>` subsets an existing feature (own, inherited, or outer), a plain Subsetting.
+part_usage: DIRECTION? "part" NAME (":" type_ref)? subsetting_part? ";"
+subsetting_part: ":>" qualified_name
 
 // `attribute def <name> ;`
 attribute_definition: "attribute" "def" NAME ";"

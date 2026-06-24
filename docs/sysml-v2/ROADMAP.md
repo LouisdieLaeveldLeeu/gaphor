@@ -408,12 +408,47 @@ Exit: an alias resolves to its target wherever the target would resolve -- done
 and tested (`test_aliases.py`). No support-matrix cell moves (resolution is
 deepened for already-supported constructs).
 
-### Phase 5c -- Inherited Members -- PLANNED
+### Phase 5c -- Inherited Members -- DONE
 
-Resolve members inherited through specialization (a feature/member reachable via
-a supertype). Prerequisite: definition bodies (members nested in definitions) in
-the grammar so inheritance is authorable, plus the inheritance-resolution
-contract. Exit: inherited members resolve from a specializing type.
+Resolve members inherited through specialization (a member reachable via a
+supertype). Added the prerequisite authoring surface (definition bodies +
+subclassification) and the inheritance-resolution contract. One new kernel class:
+`Subclassification` (kernel 35 -> 36).
+
+- **metamodel**: seeded `Subclassification` (the KerML Specialization between
+  Classifiers) from the pinned XMI and regenerated; it redefines general/specific
+  as the stored `superclassifier`/`subclassifier` ends (like Subsetting's ends);
+- **grammar/AST/parser**: `part def Name [:> Super, ...] ( ; | { <members> } )` --
+  a definition may specialize supertypes (`:>`, the KerML specializes/subsets
+  token) and carry a body of nested members; and `part x [: T] [:> y] ;` -- a usage
+  may SUBSET an existing feature. The body reuses the shared `member` list;
+- **mapping**: a `:> Super` becomes a Subclassification (`owner_is_type=True` owns
+  body features via FeatureMembership, nested definitions via OwningMembership, like
+  an action body); a `:> y` becomes a plain Subsetting. Both targets resolve in
+  phase 2 with the import-aware resolver; subclassifications resolve BEFORE the
+  member passes so inheritance is visible;
+- **resolution**: `_resolve_type` now consults INHERITED members at a Type scope --
+  KerML local order is owned, then inherited (through supertypes, transitively,
+  cycle-guarded), then imported, and that whole local scope shadows an enclosing
+  namespace. Private members are NOT inherited. So a usage typed by an inherited
+  nested definition AND a usage subsetting an inherited feature both resolve;
+- **validation**: `unresolved-specialization` (a `:> Super` that is not a Classifier)
+  and `unresolved-subsetting` (a `:> y` that is not a Feature); an ambiguous
+  supertype/subsetted name is reported `ambiguous-name` instead (no double report);
+- **export/round-trip/persist**: a `part def` re-emits its `:> Super, ...` and body;
+  a usage re-emits `:> y` (an own/inherited target by bare name, else path); the
+  canonical form gained `Subclassification` and `Subsetting` entries and recurses
+  into part-def bodies; the heritage links and body survive save/reload.
+
+OUT of scope (deferred): subclassification/bodies on non-part definitions
+(attribute/port/connection/interface), redefinition (`:>>`), and feature-chain
+references (5e). Round-trip still does not recurse into ACTION bodies (unchanged
+from Phase 7); only part-def bodies are fingerprinted.
+
+Exit: inherited members resolve from a specializing type -- done and tested
+(`test_inherited_members.py`). No support-matrix construct cell moves (resolution
+is deepened for already-supported constructs; PartDefinition/PartUsage stay
+`supported`).
 
 ### Phase 5d -- Implicit Specialization -- PLANNED
 

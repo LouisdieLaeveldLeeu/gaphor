@@ -75,11 +75,14 @@ def test_kernel_has_expected_class_count():
     # roots the SysML requirement-parameter memberships generalize) for Phase 6b,
     # Subsetting/ReferenceSubsetting (the feature-specialization roots the
     # framed-concern REFERENCE form generalizes; both -> Specialization, adding the
-    # stored subsetted/subsetting feature ends) for Phase 6d-2, and Succession/Flow
+    # stored subsetted/subsetting feature ends) for Phase 6d-2, Succession/Flow
     # (the KerML connector roots the SysML action succession/flow usages generalize;
     # Succession -> Connector and Flow -> Connector + Step, their ends derived like
-    # Connector, so no new stored closure) for Phase 7.
-    assert len(_all_kernel_classes()) == 35
+    # Connector, so no new stored closure) for Phase 7, and Subclassification (the
+    # KerML Specialization between Classifiers, the heritage relationship for
+    # `part def Car :> Vehicle`; -> Specialization, redefining general/specific as
+    # the stored superclassifier/subclassifier classifier ends) for Phase 5c.
+    assert len(_all_kernel_classes()) == 36
 
 
 # --- required behaviour 1: namespace + membership round-trip -----------------

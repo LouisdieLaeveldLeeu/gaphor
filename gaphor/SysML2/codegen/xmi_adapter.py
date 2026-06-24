@@ -505,6 +505,12 @@ KERNEL_SEED = (
     # feature ends.
     "Subsetting",
     "ReferenceSubsetting",
+    # Subclassification is the KerML Specialization between Classifiers, seeded in
+    # Phase 5c as the heritage relationship for `part def Car :> Vehicle` (a
+    # Definition is a Classifier). -> Specialization (already in the kernel); it
+    # redefines general/specific as superclassifier/subclassifier, so it adds those
+    # stored classifier ends (mirroring Subsetting's subsetted/subsetting ends).
+    "Subclassification",
     # Succession and Flow are the KerML connector roots the SysML action control/
     # item flow usages generalize (Phase 7): SuccessionAsUsage -> Succession and
     # FlowUsage -> Flow. Succession -> Connector and Flow -> Connector + Step, all

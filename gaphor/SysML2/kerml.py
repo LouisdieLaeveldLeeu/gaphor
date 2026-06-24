@@ -194,6 +194,11 @@ class ReferenceSubsetting(Subsetting):
     referencedFeature: relation_many[Feature]
 
 
+class Subclassification(Specialization):
+    subclassifier: relation_many[Classifier]
+    superclassifier: relation_many[Classifier]
+
+
 class Succession(Connector):
     pass
 
@@ -220,3 +225,5 @@ FeatureTyping.type = association("type", Type)
 Subsetting.subsettedFeature = association("subsettedFeature", Feature)
 Subsetting.subsettingFeature = association("subsettingFeature", Feature)
 ReferenceSubsetting.referencedFeature = association("referencedFeature", Feature)
+Subclassification.superclassifier = association("superclassifier", Classifier)
+Subclassification.subclassifier = association("subclassifier", Classifier)

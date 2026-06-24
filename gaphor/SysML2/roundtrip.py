@@ -207,6 +207,35 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                     ("FeatureDirection", kk.qualified_name(member), str(member.direction))
                 )
 
+            # Subclassification heritage (Phase 5c): each `:> Super` is a SEPARATE
+            # entry (definition qn, supertype qn), so a specializing definition's
+            # fingerprint differs from a plain one and the supertype links round-trip.
+            if isinstance(member, kerml.Type):
+                for supertype in kk.supertypes(member):
+                    entries.add(
+                        (
+                            "Subclassification",
+                            kk.qualified_name(member),
+                            kk.qualified_name(supertype),
+                        )
+                    )
+            # Subsetting (Phase 5c): each `:> y` on a usage is a SEPARATE entry
+            # (usage qn, subsetted-feature qn).
+            if isinstance(member, kerml.Feature):
+                for subsetting in kk.subsettings(member):
+                    target = kk._single(subsetting.subsettedFeature)
+                    entries.add(
+                        (
+                            "Subsetting",
+                            kk.qualified_name(member),
+                            kk.qualified_name(target) if target is not None else "",
+                        )
+                    )
+            # Recurse into a definition BODY (a part def is a Namespace with nested
+            # members), like a package, so its body members round-trip (Phase 5c).
+            if isinstance(member, sysml2.PartDefinition):
+                visit(member)
+
             # A constraint body is likewise a SEPARATE entry (only when present),
             # so a constraint with a preserved body differs from one without.
             body = constraints.body_text(member)
@@ -367,6 +396,8 @@ def round_trip(text: str, root_name: str = "Root") -> RoundTripResult:
         result.unresolved_ends,
         result.unresolved_frame_refs,
         result.ambiguous,
+        result.unresolved_supertypes,
+        result.unresolved_subsettings,
     )
     source_model_diagnostics = validate(factory)
     root_id = result.root.id

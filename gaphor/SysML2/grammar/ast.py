@@ -22,19 +22,29 @@ _line = field(default=None, compare=False)
 
 @dataclass(frozen=True)
 class PartDefinition:
-    """`part def <name> ;`"""
+    """`part def <name> [ :> <super>, ... ] ( ; | { <members> } )` (Phase 5c).
+
+    `specializes` is the tuple of supertype qualified names (each a `Subclassification`
+    to the named Classifier); `members` is the body's nested members (owned as the
+    definition's features/members, like an action body)."""
 
     name: str
+    specializes: tuple[tuple[str, ...], ...] = ()  # supertype qualified names
+    members: tuple = ()  # nested body members
     visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
 
 
 @dataclass(frozen=True)
 class PartUsage:
-    """`[<dir>] part <name> [ : <type> ] ;`"""
+    """`[<dir>] part <name> [ : <type> ] [ :> <subsetted> ] ;` (Phase 5c).
+
+    `subsets` is the subsetted feature's qualified name (a plain `Subsetting`), or
+    None."""
 
     name: str
     type_name: tuple[str, ...] | None = None  # qualified name segments, or None
+    subsets: tuple[str, ...] | None = None  # subsetted feature qualified name
     direction: str | None = None  # "in" / "out" / "inout", or None (undirected)
     visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line

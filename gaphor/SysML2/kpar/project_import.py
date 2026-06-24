@@ -252,6 +252,16 @@ def import_user_kpar(
         make_unresolved(element_id, name, "ambiguous")
         for element_id, name in result.ambiguous.items()
     )
+    # A `:> Super` supertype / `:> y` subsetted feature that did not resolve is an
+    # unresolved reference too (Phase 5c).
+    unresolved.extend(
+        make_unresolved(element_id, name, "unresolved-specialization")
+        for element_id, name in result.unresolved_supertypes.items()
+    )
+    unresolved.extend(
+        make_unresolved(element_id, name, "unresolved-subsetting")
+        for element_id, name in result.unresolved_subsettings.items()
+    )
 
     # Gate only on diagnostics this import introduced: whole-factory validation
     # minus what was already there. This catches problems within the imported
@@ -267,6 +277,8 @@ def import_user_kpar(
         result.unresolved_ends,
         result.unresolved_frame_refs,
         result.ambiguous,
+        result.unresolved_supertypes,
+        result.unresolved_subsettings,
     )
     validation_diagnostics = tuple(
         d for d in all_diagnostics if d not in preexisting_set

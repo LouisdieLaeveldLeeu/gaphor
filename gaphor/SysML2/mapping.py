@@ -104,6 +104,15 @@ class MappingResult:
     # element id -> the (qualified) name that was visible from MORE THAN ONE import
     # and so did not bind, for the ambiguous-name validation rule (Phase 5a).
     ambiguous: dict[str, str] = field(default_factory=dict)
+    # definition element id -> a declared `:> Super` supertype name that did not
+    # resolve to a Type (no Subclassification created), for the unresolved-
+    # specialization validation rule (Phase 5c). One entry per definition (first
+    # unresolved supertype).
+    unresolved_supertypes: dict[str, str] = field(default_factory=dict)
+    # usage element id -> the declared `:> y` subsetted feature name that did not
+    # resolve to a Feature (no Subsetting created), for the unresolved-subsetting
+    # validation rule (Phase 5c).
+    unresolved_subsettings: dict[str, str] = field(default_factory=dict)
 
 
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
@@ -119,6 +128,8 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     frame_references: list = []
     imports: list = []
     aliases: list = []
+    subclassifications: list = []
+    subsettings: list = []
     top_level = _build_members(
         pkg.members,
         root,
@@ -129,20 +140,26 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
         frame_references,
         imports,
         aliases,
+        subclassifications,
+        subsettings,
     )
 
     # Resolve imports FIRST so the typed-usage/subject passes can see imported
     # members (Phase 5a); resolve aliases NEXT so a usage typed by an alias name
-    # sees the alias's target, and so alias-to-alias chains settle (Phase 5b).
+    # sees the alias's target, and so alias-to-alias chains settle (Phase 5b);
+    # resolve subclassifications BEFORE the member passes so inherited-member lookup
+    # (used by typing and subsetting) sees the supertype links (Phase 5c).
     _resolve_imports(imports)
     ambiguous: dict[str, str] = {}
     _resolve_aliases(aliases, ambiguous)
+    unresolved_supertypes = _resolve_subclassifications(subclassifications, ambiguous)
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
         root, typed_usages, ambiguous
     )
     unresolved_ends = _resolve_connection_ends(connection_ends, ambiguous)
     unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
     unresolved_frame_refs = _resolve_frame_references(frame_references, ambiguous)
+    unresolved_subsettings = _resolve_subsettings(subsettings, ambiguous)
     return MappingResult(
         root=root,
         elements_by_name=top_level,
@@ -152,6 +169,8 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
         ambiguous=ambiguous,
         unresolved_ends=unresolved_ends,
         unresolved_frame_refs=unresolved_frame_refs,
+        unresolved_supertypes=unresolved_supertypes,
+        unresolved_subsettings=unresolved_subsettings,
     )
 
 
@@ -184,6 +203,8 @@ def map_project_members(named_packages, factory: ElementFactory):
     frame_references: list = []
     imports: list = []
     aliases: list = []
+    subclassifications: list = []
+    subsettings: list = []
     top_level: dict[str, kerml.Element] = {}
     provenance: dict[str, tuple] = {}
     for label, pkg in named_packages:
@@ -202,6 +223,8 @@ def map_project_members(named_packages, factory: ElementFactory):
                 frame_references,
                 imports,
                 aliases,
+                subclassifications,
+                subsettings,
                 record,
             )
         )
@@ -209,12 +232,14 @@ def map_project_members(named_packages, factory: ElementFactory):
     _resolve_imports(imports)
     ambiguous: dict[str, str] = {}
     _resolve_aliases(aliases, ambiguous)
+    unresolved_supertypes = _resolve_subclassifications(subclassifications, ambiguous)
     unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
         root, typed_usages, ambiguous
     )
     unresolved_ends = _resolve_connection_ends(connection_ends, ambiguous)
     unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
     unresolved_frame_refs = _resolve_frame_references(frame_references, ambiguous)
+    unresolved_subsettings = _resolve_subsettings(subsettings, ambiguous)
     for relationship_id, source_id in relationship_sources.items():
         if source_id in provenance:
             provenance[relationship_id] = provenance[source_id]
@@ -228,6 +253,8 @@ def map_project_members(named_packages, factory: ElementFactory):
             ambiguous=ambiguous,
             unresolved_ends=unresolved_ends,
             unresolved_frame_refs=unresolved_frame_refs,
+            unresolved_supertypes=unresolved_supertypes,
+            unresolved_subsettings=unresolved_subsettings,
         ),
         provenance,
     )
@@ -403,6 +430,58 @@ def _resolve_aliases(aliases: list, ambiguous: dict[str, str]) -> None:
         pending = still
 
 
+def _resolve_subclassifications(
+    subclassifications: list, ambiguous: dict[str, str]
+) -> dict[str, str]:
+    """Resolve each definition `:> Super` to a Classifier and create a
+    Subclassification (mapping phase 2, Phase 5c).
+
+    The supertype name resolves with the import-aware nearest-first rule
+    (`_resolve_type`) in the namespace containing the definition. A supertype visible
+    from more than one import is recorded `ambiguous` (no Subclassification); a name
+    that does not resolve to a Classifier (a definition) is recorded for the
+    `unresolved-specialization` rule -- so `:> Bad` is reported, never silently
+    dropped. Resolved BEFORE the member passes so inherited-member lookup sees the
+    supertype links.
+    """
+    unresolved: dict[str, str] = {}
+    for subtype, namespace, super_name in subclassifications:
+        target = _resolve_type(namespace, super_name)
+        if target is _AMBIGUOUS:
+            ambiguous[subtype.id] = "::".join(super_name)
+            continue
+        if isinstance(target, kerml.Classifier):
+            kk.add_subclassification(subtype, target)
+        else:
+            unresolved.setdefault(subtype.id, "::".join(super_name))
+    return unresolved
+
+
+def _resolve_subsettings(
+    subsettings: list, ambiguous: dict[str, str]
+) -> dict[str, str]:
+    """Resolve each usage `:> y` subsetted feature to a Feature and create a plain
+    Subsetting (mapping phase 2, Phase 5c).
+
+    The subsetted feature resolves with the import- AND inheritance-aware
+    `_resolve_type` from the usage's namespace, so it may be an own, INHERITED, or
+    enclosing feature. Visible from more than one import -> `ambiguous` (no
+    Subsetting); not a Feature / not found -> recorded for the
+    `unresolved-subsetting` rule (never silently dropped).
+    """
+    unresolved: dict[str, str] = {}
+    for feature, namespace, subset_name in subsettings:
+        target = _resolve_type(namespace, subset_name)
+        if target is _AMBIGUOUS:
+            ambiguous[feature.id] = "::".join(subset_name)
+            continue
+        if isinstance(target, kerml.Feature):
+            kk.add_subsetting(feature, target)
+        else:
+            unresolved[feature.id] = "::".join(subset_name)
+    return unresolved
+
+
 def _build_requirement_body(
     requirement,
     member,
@@ -519,16 +598,20 @@ def _build_members(
     frame_references: list,
     imports: list,
     aliases: list,
+    subclassifications: list,
+    subsettings: list,
     on_element=None,
     owner_is_type: bool = False,
 ) -> dict[str, kerml.Element]:
     """Create each AST member as an owned member of `namespace`, recursing into
-    sub-packages. Returns this level's elements by name.
+    sub-packages and definition bodies. Returns this level's elements by name.
 
     Typed usages (including requirement actor/stakeholder PartUsages) are recorded
     in `typed_usages`, connection endpoints in `connection_ends`, requirement
     SUBJECT types in `subject_typings`, framed-concern references in
-    `frame_references`, and import targets in `imports` for phase-2 resolution. If
+    `frame_references`, import targets in `imports`, definition supertypes in
+    `subclassifications`, and usage subsetted features in `subsettings` for phase-2
+    resolution (Phase 5c). If
     `on_element` is given, it is called as `on_element(element, ast_node)` for every
     created element (including nested ones), so callers can record per-element
     provenance from the AST node (e.g. its source line)."""
@@ -569,12 +652,21 @@ def _build_members(
             continue
         if isinstance(member, ast.PartDefinition):
             element: kerml.Element = factory.create(sysml2.PartDefinition)
+            # Each `:> Super` becomes a Subclassification resolved in phase 2; the
+            # supertype name resolves in the namespace CONTAINING the definition
+            # (nearest-first), so `namespace` is the resolution scope (Phase 5c).
+            for super_name in member.specializes:
+                subclassifications.append((element, namespace, super_name))
         elif isinstance(member, ast.AttributeDefinition):
             element = factory.create(sysml2.AttributeDefinition)
         elif isinstance(member, ast.PartUsage):
             element = factory.create(sysml2.PartUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name, False))
+            # `:> y` subsets an existing feature (own, inherited, or outer),
+            # resolved in phase 2 from this usage's namespace (Phase 5c).
+            if member.subsets is not None:
+                subsettings.append((element, namespace, member.subsets))
         elif isinstance(member, ast.AttributeUsage):
             element = factory.create(sysml2.AttributeUsage)
             if member.type_name is not None:
@@ -710,13 +802,18 @@ def _build_members(
                 frame_references,
                 imports,
                 aliases,
+                subclassifications,
+                subsettings,
                 on_element,
             )
-        elif isinstance(member, (ast.ActionDefinition, ast.ActionUsage)):
-            # An action IS a Type, so its body members are owned per-kind: usages
-            # (Features -- steps, directed parameters, successions, flows) via
-            # FeatureMembership, nested definitions/packages via OwningMembership
-            # (Phase 7). `owner_is_type=True` selects that split per member.
+        elif isinstance(
+            member, (ast.ActionDefinition, ast.ActionUsage, ast.PartDefinition)
+        ):
+            # An action/definition IS a Type, so its body members are owned per-kind:
+            # usages (Features -- parts, steps, directed parameters, successions,
+            # flows) via FeatureMembership, nested definitions/packages via
+            # OwningMembership (Phase 7/5c). `owner_is_type=True` selects that split.
+            # A `part def`/action with no body has empty members, so this is a no-op.
             _build_members(
                 member.members,
                 element,
@@ -727,6 +824,8 @@ def _build_members(
                 frame_references,
                 imports,
                 aliases,
+                subclassifications,
+                subsettings,
                 on_element,
                 owner_is_type=True,
             )
@@ -763,8 +862,13 @@ def _resolve_type(
     its alias name and returns the (foreign) element it references (Phase 5b), so a
     name bound by an alias resolves wherever the alias is in scope.
 
-    Deferred to later phases: inherited members (5c), implicit specialization (5d),
-    feature chains (5e), and transitive re-export through public imports.
+    At a TYPE scope, INHERITED members (reachable through supertypes via
+    Subclassification) are in scope too: per KerML, the local search order is owned,
+    then inherited, then imported -- so own shadows inherited shadows imported, and
+    that whole local scope shadows an enclosing namespace (Phase 5c).
+
+    Deferred to later phases: implicit specialization (5d), feature chains (5e), and
+    transitive re-export through public imports.
     """
     first, *rest = type_name
     scope: kerml.Namespace | None = namespace
@@ -776,6 +880,11 @@ def _resolve_type(
         # for an earlier usage would change how a later name resolves).
         if found is not None and not _is_library_proxy(found):
             return _descend(found, rest)
+        # Inherited members at a Type scope (own already shadowed them above).
+        if isinstance(scope, kerml.Type):
+            inherited = kk.inherited_member_named(scope, first)
+            if inherited is not None and not _is_library_proxy(inherited):
+                return _descend(inherited, rest)
         if use_imports:
             candidates = _imported_candidates(scope, first)
             if len(candidates) > 1:

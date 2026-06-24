@@ -26,6 +26,13 @@ _Connect = namedtuple("_Connect", "source target")
 # optional type_ref (a tuple) on an action usage (Phase 7).
 _ActionBody = namedtuple("_ActionBody", "members")
 
+# Carriers for the Phase 5c heritage parts, each distinguishable by type from an
+# optional type_ref (a tuple): a definition's `:> A, B` supertype list, a
+# definition body's member list, and a usage's `:> y` subsetted feature.
+_Specializes = namedtuple("_Specializes", "supers")
+_DefBody = namedtuple("_DefBody", "members")
+_Subsets = namedtuple("_Subsets", "target")
+
 
 def _split_direction(items):
     """Pop a leading DIRECTION token (a usage's `in`/`out`/`inout` prefix).
@@ -118,16 +125,47 @@ class _ASTBuilder(Transformer):
     def type_ref(self, items):
         return items[0]
 
+    def specialization_part(self, items):
+        # `:> A, B` -- each item is a qualified_name tuple (a supertype).
+        return _Specializes(tuple(items))
+
+    def definition_body(self, items):
+        # `{ <members> }` -- the nested member list (Phase 5c).
+        return _DefBody(tuple(items))
+
+    def subsetting_part(self, items):
+        # `:> y` -- the subsetted feature's qualified_name tuple (Phase 5c).
+        return _Subsets(items[0])
+
     def part_definition(self, items):
-        (name,) = items
-        return ast.PartDefinition(name=str(name), line=name.line)
+        name = items[0]
+        specializes: tuple = ()
+        members: tuple = ()
+        for extra in items[1:]:
+            if isinstance(extra, _Specializes):
+                specializes = extra.supers
+            elif isinstance(extra, _DefBody):
+                members = extra.members
+        return ast.PartDefinition(
+            name=str(name), specializes=specializes, members=members, line=name.line
+        )
 
     def part_usage(self, items):
         direction, items = _split_direction(items)
         name = items[0]
-        type_name = items[1] if len(items) > 1 else None
+        type_name = None
+        subsets = None
+        for extra in items[1:]:
+            if isinstance(extra, _Subsets):
+                subsets = extra.target
+            else:
+                type_name = extra  # type_ref tuple
         return ast.PartUsage(
-            name=str(name), type_name=type_name, direction=direction, line=name.line
+            name=str(name),
+            type_name=type_name,
+            subsets=subsets,
+            direction=direction,
+            line=name.line,
         )
 
     def attribute_definition(self, items):

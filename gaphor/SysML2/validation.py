@@ -75,6 +75,8 @@ def validate(
     unresolved_ends: dict[str, list[str]] | None = None,
     unresolved_frame_refs: dict[str, str] | None = None,
     ambiguous: dict[str, str] | None = None,
+    unresolved_supertypes: dict[str, str] | None = None,
+    unresolved_subsettings: dict[str, str] | None = None,
 ) -> list[Diagnostic]:
     """Run the scoped M2 validation rules over all elements in `factory`.
 
@@ -100,6 +102,12 @@ def validate(
     `ambiguous` maps an element id -> a (qualified) name that was visible from MORE
     THAN ONE import and so did not bind (Phase 5a). The ambiguous-name rule reports
     them; mapping context only.
+
+    `unresolved_supertypes` maps a definition id -> a `:> Super` name that did not
+    resolve to a Classifier, and `unresolved_subsettings` maps a usage id -> a
+    `:> y` name that did not resolve to a Feature (Phase 5c). The mapper records
+    these (an AMBIGUOUS supertype/subsetted name goes to `ambiguous` instead, so
+    there is no double report); mapping context only.
     """
     diagnostics: list[Diagnostic] = []
     diagnostics.extend(_check_missing_owner(factory))
@@ -121,6 +129,10 @@ def validate(
         _check_frame_references(factory, unresolved_frame_refs or {})
     )
     diagnostics.extend(_check_feature_membership_members(factory))
+    diagnostics.extend(
+        _check_unresolved_specializations(unresolved_supertypes or {})
+    )
+    diagnostics.extend(_check_unresolved_subsettings(unresolved_subsettings or {}))
     return diagnostics
 
 
@@ -540,6 +552,39 @@ def _check_unresolved_aliases(
                 "resolvable element",
                 membership.id,
             )
+
+
+def _check_unresolved_specializations(
+    unresolved_supertypes: dict[str, str]
+) -> Iterator[Diagnostic]:
+    """A definition `:> Super` whose supertype did not resolve to a Classifier
+    (Phase 5c). Mapping context: the mapper records the name when no Subclassification
+    was created (an ambiguous supertype is reported `ambiguous-name` instead). A
+    reloaded model has no mapping context, so nothing to report here.
+    """
+    for element_id, name in unresolved_supertypes.items():
+        yield Diagnostic(
+            Severity.ERROR,
+            "unresolved-specialization",
+            f"supertype {name!r} does not resolve to a definition",
+            element_id,
+        )
+
+
+def _check_unresolved_subsettings(
+    unresolved_subsettings: dict[str, str]
+) -> Iterator[Diagnostic]:
+    """A usage `:> y` whose subsetted feature did not resolve to a Feature (Phase
+    5c). Mapping context: recorded when no Subsetting was created (an ambiguous
+    subsetted name is reported `ambiguous-name` instead). Mapping context only.
+    """
+    for element_id, name in unresolved_subsettings.items():
+        yield Diagnostic(
+            Severity.ERROR,
+            "unresolved-subsetting",
+            f"subsetted feature {name!r} does not resolve to a feature",
+            element_id,
+        )
 
 
 def _check_ambiguous_names(

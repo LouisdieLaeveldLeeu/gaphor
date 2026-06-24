@@ -1321,3 +1321,69 @@ Membership already carries `memberName`/`memberElement`/`visibility` (kernel sta
   round-trip (the visit recurses only into packages, as for all members); a NAMED
   import of an alias (`import <ns>::E`) imports the underlying element under its real
   name, not the alias name. See `test_aliases.py`.
+
+### Completion Phase 5c: Inherited Members (verified 2026-06-24)
+
+Resolution deepening (the third of the 5a-5e series). One new metamodel class:
+`Subclassification` (kernel 35 -> 36), the only kernel change in the 5a-5e series so
+far -- inheritance has no honest representation without the heritage relationship.
+
+- **Metamodel (regen).** Seeded `Subclassification` into `KERNEL_SEED` and
+  regenerated `kerml.py` in Docker. It is a `Specialization` between Classifiers; its
+  `superclassifier`/`subclassifier` REDEFINE the base general/specific and generate
+  as their own stored ends (exactly like Subsetting's subsetted/subsetting ends), so
+  the convention from `set_feature_type`/`add_reference_subsetting` carries over: the
+  subkind-specific ends carry the relation, the base general/specific stay unset. The
+  M1b count assertion and the SUPPORT_MATRIX kernel paragraph were updated to 36.
+- **Grammar -- the `:>` token.** `:>` is the KerML specializes/subsets token,
+  overloaded: subclassification between definitions, subsetting between usages
+  (`:>>`/redefines is out of 5c scope). `part def Name specialization_part? (";" |
+  definition_body)` with `specialization_part: ":>" qualified_name ("," ...)*` and
+  `definition_body: "{" member* "}"` (the shared `member` list, so any nested usage
+  kind works); `part_usage` gains `subsetting_part: ":>" qualified_name`. Lark's
+  longest-match lexing keeps `:>` distinct from `:` (typing) and `::` (separator).
+- **Definition bodies reuse the action-body machinery.** A PartDefinition IS a Type,
+  so `owner_is_type=True` (added for Phase 7 action bodies) already owns body
+  FEATURES via FeatureMembership and nested definitions/packages via OwningMembership.
+  The `_build_members` recursion just added `ast.PartDefinition` to the action branch;
+  a body-less `part def` has empty members, so it is a no-op.
+- **Non-owning heritage ends.** `add_subclassification(subtype, supertype)` owns the
+  Subclassification on the subtype; the supertype is a non-owning reference (mirrors
+  `set_feature_type`). `add_subsetting` does the same for a plain Subsetting (NOT a
+  ReferenceSubsetting -- `subsettings()` filters by exact type so the 5c subsetting
+  form and the 6d framed-concern reference form never read each other's links).
+- **Create-on-resolve (mirrors typing).** `_resolve_subclassifications` and
+  `_resolve_subsettings` run in phase 2 and create the relationship ONLY when the
+  target resolves; an ambiguous target is recorded in `ambiguous` (-> ambiguous-name),
+  a non-resolving / wrong-kind target in `unresolved_supertypes` /
+  `unresolved_subsettings` (-> unresolved-specialization / unresolved-subsetting).
+  Because the relationship is mapping-created, these are mapping-context diagnostics
+  (a reloaded model has none) -- and an ambiguous target is NOT double-reported (it is
+  absent from the unresolved dicts). Subclassifications resolve BEFORE the typed-usage
+  and subsetting passes so inherited-member lookup sees the supertype links.
+- **Inherited resolution is a new axis in `_resolve_type`.** The resolver walks
+  enclosing NAMESPACES; inheritance is orthogonal (supertypes are not in the owning
+  chain). At each scope that is a Type, after owned members and before imports, it
+  consults `inherited_member_named` -- a cycle-guarded breadth-first walk of
+  supertypes returning the first PUBLIC member by name (own shadows inherited;
+  private is not inherited; KerML local order owned -> inherited -> imported). This
+  makes inheritance work for BOTH the typing path (a usage typed by an inherited
+  nested definition) and the subsetting path (a usage subsetting an inherited
+  feature), with no per-caller special-casing.
+- **`members()` already scoped to owned (Phase 5b) pays off.** Export, round-trip,
+  and duplicate detection iterate `members()` (owned members), so inherited members
+  are never mistaken for a type's own -- inheritance shows up only through the
+  resolver and the explicit `supertypes()`/`inherited_member_named` helpers.
+- **Export / round-trip.** A `part def` re-emits `:> Super, ...` (each supertype by a
+  name that re-resolves from the namespace containing the definition) and its body
+  (the action-body renderer, generalized to `_type_body`); a usage re-emits `:> y`
+  where the subsetted feature is emitted by a BARE name when it is an own OR INHERITED
+  member (so `:> wheel` round-trips as `:> wheel`, not `:> Vehicle::wheel`), else the
+  path from root. The canonical form gained `Subclassification` (definition qn,
+  supertype qn) and `Subsetting` (usage qn, subsetted qn) entries, and `visit`
+  recurses into part-def bodies so nested members round-trip.
+- **Deferred (noted).** Subclassification/bodies on non-part definitions
+  (attribute/port/connection/interface), redefinition (`:>>`), and feature-chain
+  references (5e). Round-trip still does not recurse into ACTION bodies (unchanged
+  from Phase 7); only part-def bodies are fingerprinted. See
+  `test_inherited_members.py`.

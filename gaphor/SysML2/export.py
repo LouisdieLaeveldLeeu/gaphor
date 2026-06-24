@@ -137,11 +137,15 @@ def _export_member_line(
     if isinstance(element, sysml2.ConnectionDefinition):
         return f"{pad}connection def {element.declaredName};\n"
     if isinstance(element, sysml2.PartDefinition):
-        return f"{pad}part def {element.declaredName};\n"
+        return (
+            f"{pad}part def {element.declaredName}"
+            f"{_specialization_suffix(element, root)}"
+            f"{_type_body(element, depth, root)}\n"
+        )
     if isinstance(element, sysml2.AttributeDefinition):
         return f"{pad}attribute def {element.declaredName};\n"
     if isinstance(element, sysml2.ActionDefinition):
-        return f"{pad}action def {element.declaredName}{_action_body(element, depth, root)}\n"
+        return f"{pad}action def {element.declaredName}{_type_body(element, depth, root)}\n"
     if isinstance(element, sysml2.ConcernDefinition):
         return (
             f"{pad}concern def {_short_name_prefix(element)}{element.declaredName}"
@@ -165,7 +169,10 @@ def _export_member_line(
         return f"{pad}{dir_}connection {_connection_decl(element, root)};\n"
     if isinstance(element, sysml2.PartUsage):
         dir_ = _direction_prefix(element)
-        return f"{pad}{dir_}part {_usage_decl(element, root)};\n"
+        return (
+            f"{pad}{dir_}part {_usage_decl(element, root)}"
+            f"{_subsetting_suffix(element, root)};\n"
+        )
     if isinstance(element, sysml2.AttributeUsage):
         dir_ = _direction_prefix(element)
         return f"{pad}{dir_}attribute {_usage_decl(element, root)};\n"
@@ -181,7 +188,7 @@ def _export_member_line(
         dir_ = _direction_prefix(element)
         return (
             f"{pad}{dir_}action {_usage_decl(element, root)}"
-            f"{_action_body(element, depth, root)}\n"
+            f"{_type_body(element, depth, root)}\n"
         )
     if isinstance(element, sysml2.ConcernUsage):
         dir_ = _direction_prefix(element)
@@ -209,16 +216,62 @@ def _export_member_line(
     return ""
 
 
-def _action_body(action: kerml.Element, depth: int, root: kerml.Namespace) -> str:
-    """` { <members> }` for an action with body members, else `;` (Phase 7).
+def _type_body(type_: kerml.Element, depth: int, root: kerml.Namespace) -> str:
+    """` { <members> }` for a Type (action or part def) with body members, else `;`
+    (Phase 7/5c).
 
-    The body members are the action's FEATURES (steps, directed parameters,
-    successions, flows); each is re-exported recursively at one deeper indent. An
-    action with no members renders `;` (an empty `{ }` body carries no semantics and
-    is not distinguished from none)."""
+    The body members are the type's FEATURES (parts, steps, directed parameters,
+    successions, flows) and nested definitions; each is re-exported recursively at
+    one deeper indent. A type with no members renders `;` (an empty `{ }` body
+    carries no semantics and is not distinguished from none)."""
     pad = _INDENT * depth
-    inner = _export_members(action, depth + 1, root)
+    inner = _export_members(type_, depth + 1, root)
     return f" {{\n{inner}{pad}}}" if inner else ";"
+
+
+def _specialization_suffix(type_: kerml.Type, root: kerml.Namespace) -> str:
+    """` :> Super1, Super2` for a definition's Subclassifications, else `""` (5c).
+
+    Each supertype is emitted by the name that re-resolves from the namespace
+    CONTAINING the definition: a bare name when it is a member there, else the path
+    from the export root."""
+    supers = list(kk.supertypes(type_))
+    if not supers:
+        return ""
+    names = [_feature_ref_name(type_, supertype, root) for supertype in supers]
+    return " :> " + ", ".join(names)
+
+
+def _subsetting_suffix(usage: kerml.Feature, root: kerml.Namespace) -> str:
+    """` :> y` for a usage's (plain) Subsettings, else `""` (Phase 5c).
+
+    The subsetted feature is emitted by the name that re-resolves from the usage's
+    namespace (own/inherited bare name, else path from root)."""
+    out = ""
+    for subsetting in kk.subsettings(usage):
+        target = kk._single(subsetting.subsettedFeature)
+        if target is not None:
+            out += f" :> {_feature_ref_name(usage, target, root)}"
+    return out
+
+
+def _feature_ref_name(
+    element: kerml.Element, target: kerml.Element, root: kerml.Namespace
+) -> str:
+    """The name to emit for a reference from `element` to `target` so it re-resolves:
+    a bare name when `target` is a member (own or INHERITED) of `element`'s
+    namespace, else the path from the export root (Phase 5c)."""
+    owning = kk.owning_namespace(element)
+    name = kk.effective_name(target)
+    if owning is not None and name is not None:
+        if target in set(kk.members(owning)):
+            return name
+        if (
+            isinstance(owning, kerml.Type)
+            and kk.inherited_member_named(owning, name) is target
+        ):
+            return name
+    return _path_from_root(target, root)
 
 
 def _connector_line(

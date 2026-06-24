@@ -22,6 +22,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 from gaphor.SysML2.kerml import (
+    Classifier,
     Element,
     Feature,
     FeatureTyping,
@@ -31,6 +32,8 @@ from gaphor.SysML2.kerml import (
     OwningMembership,
     ReferenceSubsetting,
     Relationship,
+    Subclassification,
+    Subsetting,
     Type,
     VisibilityKind,
 )
@@ -132,6 +135,101 @@ def add_reference_subsetting(
     referencing.ownedRelationship = subsetting
     subsetting.owningRelatedElement = referencing
     return subsetting
+
+
+def add_subclassification(
+    subtype: Classifier, supertype: Classifier
+) -> Subclassification:
+    """Make `subtype` specialize `supertype` via an owned Subclassification (the
+    KerML heritage relationship between Classifiers, Phase 5c).
+
+    The Subclassification is owned by `subtype` (composite, cascades); `supertype`
+    (the superclassifier/general) is a NON-owning reference. Mirrors
+    `set_feature_type`: the subkind-specific ends (subclassifier/superclassifier)
+    carry the relation; the base general/specific stay unset.
+    """
+    sc = subtype.model.create(Subclassification)
+    sc.subclassifier = subtype
+    sc.superclassifier = supertype
+    subtype.ownedRelationship = sc
+    sc.owningRelatedElement = subtype
+    return sc
+
+
+def subclassifications(type_: Type) -> Iterator[Subclassification]:
+    """Subclassifications owned by `type_` (where it is the subclassifier)."""
+    for relationship in type_.ownedRelationship:
+        if isinstance(relationship, Subclassification):
+            yield relationship
+
+
+def supertypes(type_: Type) -> Iterator[Type]:
+    """Direct supertypes of `type_`: the superclassifiers of its Subclassifications
+    (Phase 5c)."""
+    for sc in subclassifications(type_):
+        general = _single(sc.superclassifier)
+        if general is not None:
+            yield general
+
+
+def inherited_member_named(type_: Type, name: str) -> Element | None:
+    """A PUBLIC member named `name` inherited through `type_`'s supertypes
+    (transitively, nearest-first, cycle-guarded) (Phase 5c).
+
+    A private member is NOT inherited (visibility governs inheritance); the member
+    default is public, so ordinary members ARE inherited. The type's OWN members are
+    searched by the caller (own shadows inherited), not here. Resolution matches an
+    owned member by its element name and an alias by its alias name, like
+    `owned_member_named`.
+    """
+    seen: set[str] = set()
+    queue: list[Type] = list(supertypes(type_))
+    while queue:
+        supertype = queue.pop(0)
+        if supertype.id in seen:  # guard against inheritance cycles / diamonds
+            continue
+        seen.add(supertype.id)
+        for membership in owned_memberships(supertype):
+            if membership.visibility != VisibilityKind.public:
+                continue  # private members are not inherited
+            member = _single(membership.memberElement)
+            if member is None:
+                continue
+            member_name = membership.memberName or effective_name(member)
+            if member_name == name:
+                return member
+        queue.extend(supertypes(supertype))
+    return None
+
+
+def add_subsetting(
+    subsetting_feature: Feature, subsetted_feature: Feature
+) -> Subsetting:
+    """Make `subsetting_feature` SUBSET `subsetted_feature` via an owned (plain)
+    Subsetting (`part x :> y;`, Phase 5c).
+
+    A plain Subsetting, NOT a ReferenceSubsetting (the framed-concern form). Owned by
+    the subsetting feature (composite, cascades); the subsetted feature is a
+    NON-owning reference, like `set_feature_type` / `add_reference_subsetting`.
+    """
+    subsetting = subsetting_feature.model.create(Subsetting)
+    subsetting.subsettingFeature = subsetting_feature
+    subsetting.subsettedFeature = subsetted_feature
+    subsetting_feature.ownedRelationship = subsetting
+    subsetting.owningRelatedElement = subsetting_feature
+    return subsetting
+
+
+def subsettings(feature: Feature) -> Iterator[Subsetting]:
+    """Plain Subsettings owned by `feature`, in order (Phase 5c).
+
+    EXCLUDES ReferenceSubsetting (a Subsetting subclass used for the framed-concern
+    reference form), so the two specialization forms never read each other's
+    relationships.
+    """
+    for relationship in feature.ownedRelationship:
+        if type(relationship) is Subsetting:
+            yield relationship
 
 
 def reference_subsettings(feature: Feature) -> Iterator[ReferenceSubsetting]:

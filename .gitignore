@@ -1,5 +1,6 @@
 build
 dist
+tmp/
 docs/jupyter_execute
 gaphor/locale/*/LC_MESSAGES
 docs/locale/*/LC_MESSAGES/*.mo
