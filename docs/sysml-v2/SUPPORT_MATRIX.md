@@ -390,6 +390,10 @@ and reloads through `.gaphor`, and deleting the element removes its projection.
 Package projection is a package frame/box view of the namespace; semantic
 namespace ownership remains in the KerML ownership spine.
 
+`Diagram=yes` does not mean text/KPAR import auto-creates finished diagrams. That
+product workflow is separately planned as ROADMAP Phase 13 (Diagram Synthesis And
+User-Facing UI Grooming), after semantic/resolution work is stable.
+
 UI-edit scope for Package, PartDefinition, PartUsage, AttributeDefinition,
 AttributeUsage, ActionDefinition, ActionUsage, ConstraintDefinition,
 ConstraintUsage, RequirementDefinition, RequirementUsage, PortDefinition,

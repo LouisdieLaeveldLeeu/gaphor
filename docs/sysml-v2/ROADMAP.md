@@ -72,6 +72,11 @@ tests.
   import contract, normative-library import, user-project import, GUI import, and
   the AttributeUsage value-type promotion built on that path are complete for the
   implemented SysML2 surface. KPAR export/round-trip remains Phase 10.
+- Diagram support currently means manual subject-bound projection and UI editing
+  for implemented constructs, not automatic diagram generation from imported
+  text/KPAR content. Initial diagram synthesis and model-browser/UI grooming are
+  now planned as Phase 13, after semantic/resolution work is stable and before
+  final CI/release hardening.
 
 ## Definition Of Supported
 
@@ -768,7 +773,43 @@ Decide and implement the SysML v2 API/client surface needed by Gaphor, if any:
 Exit: API-related scope is either implemented and tested or explicitly closed
 with a documented rationale.
 
-### Phase 13 -- CI And Release Hardening
+### Phase 13 -- Diagram Synthesis And User-Facing UI Grooming
+
+Turn the proven semantic import/projection machinery into an evaluator-friendly
+workflow: imported text/KPAR content should produce useful initial diagrams and
+the UI should present SysML2 concepts rather than generated metamodel plumbing.
+
+This phase does NOT change the `Diagram=yes` meaning used earlier in the support
+matrix: those cells prove that a construct can be projected as a subject-bound
+diagram item. This phase is the product workflow on top of that foundation.
+
+Work:
+
+- model-browser grooming: hide, group, or de-emphasize internal implementation
+  elements such as `FeatureTyping`, generated membership relationships,
+  conjugation helper elements, library value-type proxies, and other relationship
+  plumbing unless the user explicitly asks for an internal/debug view;
+- diagram synthesis from imported or existing semantic content: create initial
+  package/structure, requirement/concern, action/flow, port/connection, and
+  interface-oriented diagrams for the implemented surface where the semantic
+  model contains enough information;
+- deterministic layout and routing heuristics good enough for human evaluation:
+  stable placement, readable labels, relation lines anchored to their semantic
+  endpoints, and no avoidable overlaps on normal-sized models;
+- idempotency rules: importing or regenerating diagrams must not duplicate
+  already-synthesized diagrams/items unless the user requests a new view;
+- scope controls: let users choose whether to generate diagrams during text/KPAR
+  import, generate them later from an existing model, or keep semantic import
+  model-only;
+- tests: headless synthesis tests proving subject binding, idempotency,
+  persistence/reload, delete cascade, and representative layout invariants, plus
+  focused GUI smoke tests for the generation entry point.
+
+Exit: a human evaluator can import supported SysML2 text/KPAR content and get
+useful initial diagrams without manually dragging every element, while every
+generated diagram item remains a view of existing semantic model state.
+
+### Phase 14 -- CI And Release Hardening
 
 Make verification authoritative:
 
@@ -812,14 +853,15 @@ counted here.
 17. Phase 6d -- Framed Concern And the Concern Construct -- DONE (6d-1 + 6d-2)
 18. Phase 7 -- Action Semantics -- DONE (bounded: bodies/steps, parameters, succession, flow; advanced nodes deferred; rows stay `alpha`)
 19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- DONE
-20. Phase 5b -- Aliases -- PLANNED
+20. Phase 5b -- Aliases -- DONE
 21. Phase 5c -- Inherited Members -- PLANNED
 22. Phase 5d -- Implicit Specialization -- PLANNED
 23. Phase 5e -- Feature Chains -- PLANNED
 24. Phase 10 -- General KPAR Export And Round-Trip -- PLANNED
 25. Phase 11 -- Versioned Spec-Ingestion Pipeline -- PLANNED
 26. Phase 12 -- SysML v2 API Alignment -- PLANNED
-27. Phase 13 -- CI And Release Hardening -- PLANNED
+27. Phase 13 -- Diagram Synthesis And User-Facing UI Grooming -- PLANNED
+28. Phase 14 -- CI And Release Hardening -- PLANNED
 
 Rationale: the project now intentionally resolves KPAR import architecture
 before standard-library/value-type promotion. Phase 3a prevents import identity,
@@ -831,7 +873,10 @@ Connector ends and ports are closely related, so they should be addressed before
 the larger expression/action behavior phases. Requirement surfaces now continue
 through 6b/6c/6d before action semantics, so Requirement rows do not promote
 while named requirement work remains. KPAR export/round-trip follows after import
-semantics exist. Spec-ingestion and CI hardening close the loop.
+semantics exist. Spec-ingestion and API alignment come before diagram synthesis
+so the synthesized views are built on stable semantics. Diagram synthesis then
+turns the semantic/projectable model into an evaluator-friendly workflow before
+CI hardening closes the loop.
 
 ## Definition Of Done
 

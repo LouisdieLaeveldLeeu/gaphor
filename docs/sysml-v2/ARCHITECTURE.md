@@ -28,6 +28,11 @@ The implementation layers will be:
    next through a design contract, minimal normative-library import, then
    general user KPAR import.
 10. Projection: optional diagrams as views onto semantic elements after textual and semantic paths are proven.
+11. Diagram synthesis: a later product workflow that creates useful initial
+    subject-bound diagrams from imported/existing semantic content. This is
+    distinct from projection support: projection proves that a semantic element
+    can be shown and edited on a diagram; synthesis decides which diagrams/items
+    to create automatically.
 
 ## M0 Scaffold Boundary
 
@@ -42,4 +47,4 @@ part def Engine;
 part vehicleEngine : Engine;
 ```
 
-Diagram projection is a view concern. A diagram item must always project an existing semantic element or create a semantic element and then project it; symbol-only storage is out of scope.
+Diagram projection is a view concern. A diagram item must always project an existing semantic element or create a semantic element and then project it; symbol-only storage is out of scope. Automatic diagram synthesis from imported SysML2 text/KPAR content is a separate roadmap phase, not implied by per-construct projection support.
