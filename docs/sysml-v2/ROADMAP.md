@@ -408,7 +408,7 @@ Exit: an alias resolves to its target wherever the target would resolve -- done
 and tested (`test_aliases.py`). No support-matrix cell moves (resolution is
 deepened for already-supported constructs).
 
-### Phase 5c -- Inherited Members -- DONE
+### Phase 5c-1 -- Subclassification, Definition Bodies, Subsetting, And Inherited Members -- DONE
 
 Resolve members inherited through specialization (a member reachable via a
 supertype). Added the prerequisite authoring surface (definition bodies +
@@ -441,14 +441,43 @@ subclassification) and the inheritance-resolution contract. One new kernel class
   into part-def bodies; the heritage links and body survive save/reload.
 
 OUT of scope (deferred): subclassification/bodies on non-part definitions
-(attribute/port/connection/interface), redefinition (`:>>`), and feature-chain
-references (5e). Round-trip still does not recurse into ACTION bodies (unchanged
-from Phase 7); only part-def bodies are fingerprinted.
+(attribute/port/connection/interface), feature-chain references (5e), and
+Redefinition (`:>>`), which is now explicit Phase 5c-2. Round-trip still does
+not recurse into ACTION bodies (unchanged from Phase 7); only part-def bodies
+are fingerprinted.
 
 Exit: inherited members resolve from a specializing type -- done and tested
 (`test_inherited_members.py`). No support-matrix construct cell moves (resolution
 is deepened for already-supported constructs; PartDefinition/PartUsage stay
 `supported`).
+
+### Phase 5c-2 -- Redefinition -- PLANNED
+
+Add the canonical KerML Redefinition surface on top of inherited-member
+resolution, rather than treating inherited name conflicts as first-supertype
+wins.
+
+- **metamodel**: seed/generate `Redefinition` from the pinned XMI if it is not
+  already in the kernel closure, preserving the generate-from-normative-artifact
+  discipline and adding persistence/closure tests;
+- **grammar/AST/parser**: add `:>>` redefinition syntax for usages, and for
+  definition-body members if the normative grammar requires that surface in this
+  slice;
+- **mapping**: map `:>>` to a real Redefinition relationship while preserving
+  the Phase 5c-1 Subclassification/Subsetting behaviour;
+- **resolution**: resolve redefined features through owned/inherited/imported
+  scopes, and report ambiguous inherited candidates unless an explicit
+  redefinition selects a valid target;
+- **validation**: enforce valid redefinition kinds and exact stored ends, and
+  reject persisted/API-mutated broken Redefinition relationships rather than
+  letting first-value helpers silently accept them;
+- **export/round-trip/persist**: emit `:>>`, preserve it through `.gaphor`
+  save/reload, and add canonical-form coverage including multi-supertype
+  inherited conflicts.
+
+Exit: a usage can faithfully redefine an inherited feature, inherited conflicts
+are diagnosed unless explicitly resolved, and Redefinition participates in
+validation/export/round-trip without silent model drift.
 
 ### Phase 5d -- Implicit Specialization -- PLANNED
 
@@ -889,14 +918,15 @@ counted here.
 18. Phase 7 -- Action Semantics -- DONE (bounded: bodies/steps, parameters, succession, flow; advanced nodes deferred; rows stay `alpha`)
 19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- DONE
 20. Phase 5b -- Aliases -- DONE
-21. Phase 5c -- Inherited Members -- PLANNED
-22. Phase 5d -- Implicit Specialization -- PLANNED
-23. Phase 5e -- Feature Chains -- PLANNED
-24. Phase 10 -- General KPAR Export And Round-Trip -- PLANNED
-25. Phase 11 -- Versioned Spec-Ingestion Pipeline -- PLANNED
-26. Phase 12 -- SysML v2 API Alignment -- PLANNED
-27. Phase 13 -- Diagram Synthesis And User-Facing UI Grooming -- PLANNED
-28. Phase 14 -- CI And Release Hardening -- PLANNED
+21. Phase 5c-1 -- Subclassification, Definition Bodies, Subsetting, And Inherited Members -- DONE
+22. Phase 5c-2 -- Redefinition -- PLANNED
+23. Phase 5d -- Implicit Specialization -- PLANNED
+24. Phase 5e -- Feature Chains -- PLANNED
+25. Phase 10 -- General KPAR Export And Round-Trip -- PLANNED
+26. Phase 11 -- Versioned Spec-Ingestion Pipeline -- PLANNED
+27. Phase 12 -- SysML v2 API Alignment -- PLANNED
+28. Phase 13 -- Diagram Synthesis And User-Facing UI Grooming -- PLANNED
+29. Phase 14 -- CI And Release Hardening -- PLANNED
 
 Rationale: the project now intentionally resolves KPAR import architecture
 before standard-library/value-type promotion. Phase 3a prevents import identity,

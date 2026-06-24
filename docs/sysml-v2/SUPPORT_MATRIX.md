@@ -285,20 +285,21 @@ names in duplicate-name); an alias target visible from more than one import is
 `ambiguous-name`. Aliases export (`alias N for path;`, `private` when private),
 round-trip, and persist. See `test_aliases.py`.
 
-Phase 5c deepens NAME RESOLUTION with INHERITED members (no construct row moves --
-it deepens resolution for already-supported constructs). A `part def` may carry a
-body of nested members and specialize supertypes (`part def Car :> Vehicle { ... }`,
-a `Subclassification` -- one new kernel class, 35 -> 36), and a usage may subset an
-existing feature (`part spare :> wheel;`, a plain `Subsetting`). A member reachable
-through a supertype is inherited: at a Type scope resolution consults owned, then
-inherited (transitively, cycle-guarded), then imported members, so a usage typed by
-an inherited nested definition and a usage subsetting an inherited feature both
-resolve; own members shadow inherited; private members are not inherited. Validation
-adds `unresolved-specialization` and `unresolved-subsetting` (an ambiguous
+Phase 5c-1 deepens NAME RESOLUTION with INHERITED members (no construct row moves
+-- it deepens resolution for already-supported constructs). A `part def` may
+carry a body of nested members and specialize supertypes
+(`part def Car :> Vehicle { ... }`, a `Subclassification` -- one new kernel class,
+35 -> 36), and a usage may subset an existing feature (`part spare :> wheel;`, a
+plain `Subsetting`). A member reachable through a supertype is inherited: at a
+Type scope resolution consults owned, then inherited (transitively,
+cycle-guarded), then imported members, so a usage typed by an inherited nested
+definition and a usage subsetting an inherited feature both resolve; own members
+shadow inherited; private members are not inherited. Validation adds
+`unresolved-specialization` and `unresolved-subsetting` (an ambiguous
 supertype/subsetted name is `ambiguous-name`). Definition bodies, supertypes, and
 subsettings export, round-trip, and persist. Subclassification/bodies on non-part
-definitions and redefinition (`:>>`) are out of scope. See
-`test_inherited_members.py`.
+definitions remain out of scope, and Redefinition (`:>>`) is explicitly planned
+as ROADMAP Phase 5c-2. See `test_inherited_members.py`.
 
 PortDefinition and PortUsage are `supported` for the declaration-and-typing
 surface INCLUDING conjugation (`port def Fuel; port p : Fuel; port q : ~Fuel;`).
