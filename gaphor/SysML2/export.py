@@ -236,7 +236,7 @@ def _specialization_suffix(type_: kerml.Type, root: kerml.Namespace) -> str:
     Each supertype is emitted by the name that re-resolves from the namespace
     CONTAINING the definition: a bare name when it is a member there, else the path
     from the export root."""
-    supers = list(kk.supertypes(type_))
+    supers = list(kk.explicit_supertypes(type_))
     if not supers:
         return ""
     names = [_feature_ref_name(type_, supertype, root) for supertype in supers]
@@ -249,7 +249,7 @@ def _subsetting_suffix(usage: kerml.Feature, root: kerml.Namespace) -> str:
     The subsetted feature is emitted by the name that re-resolves from the usage's
     namespace (own/inherited bare name, else path from root)."""
     out = ""
-    for subsetting in kk.subsettings(usage):
+    for subsetting in kk.explicit_subsettings(usage):
         target = kk._single(subsetting.subsettedFeature)
         if target is not None:
             out += f" :> {_feature_ref_name(usage, target, root)}"

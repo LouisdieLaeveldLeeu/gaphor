@@ -23,6 +23,7 @@ from collections.abc import Iterator
 
 from gaphor.SysML2.kerml import (
     Classifier,
+    DataType,
     Element,
     Feature,
     FeatureTyping,
@@ -171,6 +172,52 @@ def supertypes(type_: Type) -> Iterator[Type]:
         general = _single(sc.superclassifier)
         if general is not None:
             yield general
+
+
+def is_implicit_base(element: Element) -> bool:
+    """True for an implicit-specialization base proxy (Phase 5d).
+
+    The read-only `Anything` root Classifier and `things` root Feature that every
+    definition/usage WITHOUT an explicit specialization implicitly specializes (the
+    KerML universal root). Recognized structurally: a BARE kernel Classifier/Feature
+    (user constructs are SysML2 subclasses) with the reserved root name -- the
+    `things` proxy additionally owned by a plain OwningMembership, to tell it from a
+    requirement subject (also a bare Feature, but owned by a SubjectMembership). They
+    are filtered from export/round-trip and skipped in name resolution, so the
+    implicit base is never written or user-referenceable.
+    """
+    if type(element) is Classifier and element.declaredName == "Anything":
+        return True
+    if type(element) is Feature and element.declaredName == "things":
+        return type(_single(element.owningRelationship)) is OwningMembership
+    return False
+
+
+def is_library_proxy(element: Element) -> bool:
+    """True for a read-only library proxy: a standard-library value-type DataType
+    proxy, or an implicit-specialization base (`Anything`/`things`, Phase 5d). These
+    are excluded from name resolution, export, and duplicate-name counting -- they
+    are reference data the mapper materializes, never user symbols."""
+    return type(element) is DataType or is_implicit_base(element)
+
+
+def explicit_supertypes(type_: Type) -> Iterator[Type]:
+    """Supertypes of `type_` EXCLUDING the implicit base (Phase 5d): the user-written
+    `:> Super` heritage, for export and round-trip (the implicit `Anything` is never
+    emitted)."""
+    for supertype in supertypes(type_):
+        if not is_implicit_base(supertype):
+            yield supertype
+
+
+def explicit_subsettings(feature: Feature) -> Iterator[Subsetting]:
+    """Plain Subsettings of `feature` EXCLUDING the implicit base (Phase 5d): the
+    user-written `:> y`, for export and round-trip (the implicit `things` subsetting
+    is never emitted)."""
+    for subsetting in subsettings(feature):
+        target = _single(subsetting.subsettedFeature)
+        if target is None or not is_implicit_base(target):
+            yield subsetting
 
 
 def inherited_members_named(type_: Type, name: str) -> list[Element]:

@@ -1497,3 +1497,46 @@ Two review findings on Phase 5c-2.
   `broken-subsetting` / `broken-redefinition`) rather than silently mis-emitted.
 
 See `test_redefinition.py` and `test_inherited_members.py` (the owning-end cases).
+
+### Completion Phase 5d: Implicit Specialization (universal root) (verified 2026-06-24)
+
+The KerML universal-root implicit specialization. User-chosen scope: the universal
+root only (`Anything`/`things`); per-kind Systems-Library bases (`Parts::Part`, ...)
+are deferred to the library-import phase, since we load only ScalarValues today. No
+new kernel class -- reuses Subclassification/Subsetting (5c) and the read-only-proxy
+pattern (value-type proxies, Phase 4).
+
+- **Read-only base proxies.** `_implicit_base_proxy` materializes one `Anything` (a
+  bare `kerml.Classifier`) and one `things` (a bare `kerml.Feature`) per model root,
+  find-or-create, owned via OwningMembership -- exactly like `_value_type_proxy`. A
+  new `kk.is_implicit_base` recognizes them STRUCTURALLY: a bare kernel
+  Classifier/Feature with the reserved name; for `things` it additionally requires a
+  plain OwningMembership owner, to distinguish it from a requirement subject (also a
+  bare Feature, but owned by a SubjectMembership). `kk.is_library_proxy` unifies the
+  value-type and implicit-base proxies; `mapping._is_library_proxy` now delegates to
+  it.
+- **The pass runs LAST.** `_apply_implicit_bases` runs after every explicit
+  resolution pass: each Classifier with no owned Subclassification gets `:> Anything`;
+  each Feature with no owned Subsetting (plain / ReferenceSubsetting / Redefinition)
+  gets `:> things`. It snapshots `list(factory.select(...))` BEFORE creating any proxy
+  (creating one mutates the factory, which would break a live `select` generator).
+- **Declared intent suppresses the implicit base.** A declared `:>`/`:>>` that did
+  NOT resolve leaves no relationship, so a model scan alone could not tell it from
+  "no specialization." `_explicitly_specialized` collects the ids of every element
+  that appeared in the phase-2 subclassification/subsetting/redefinition lists
+  (declared, resolved or not); those are skipped, so a broken `:> Missing` keeps its
+  `unresolved-specialization` error rather than being masked by a root.
+- **Invisible everywhere it must be.** New `kk.explicit_supertypes` /
+  `explicit_subsettings` drop the implicit base; export (`_specialization_suffix` /
+  `_subsetting_suffix`) and the round-trip canonical form use them, and `visit` skips
+  ALL library proxies entirely (so a proxy's default-private OwningMembership no
+  longer leaks a `Visibility` entry into the fingerprint). Resolution skips proxies
+  via `_is_library_proxy`, and `_check_duplicate_names` skips them too -- so
+  `Anything`/`things` are never written, never user-resolvable, and never collide.
+- **Real + persisted.** The implicit specialization is a genuine stored
+  Subclassification/Subsetting (shows up in `supertypes()`/`subsettings()`, traversed
+  by inherited-member resolution, survives save/reload), matching the value-type-proxy
+  precedent of storing the relationship to a read-only proxy.
+- **Deferred (noted).** Per-kind Systems/Kernel-Library bases and their inherited
+  members; the universal root has no members, so the resolution payoff is structural.
+  See `test_implicit_specialization.py`.

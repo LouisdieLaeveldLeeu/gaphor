@@ -489,11 +489,42 @@ diagnosed unless explicitly resolved, and Redefinition participates in
 validation/export/round-trip without silent model drift -- done and tested
 (`test_redefinition.py`).
 
-### Phase 5d -- Implicit Specialization -- PLANNED
+### Phase 5d -- Implicit Specialization -- DONE
 
-Apply KerML implicit specialization where the normative model requires it.
-Prerequisite: the implicit-specialization semantic contract (and any grammar it
-implies). Exit: implicit specializations participate in resolution per the spec.
+Applied the KerML UNIVERSAL-ROOT implicit specialization (the chosen scope; per-kind
+Systems-Library bases such as `Parts::Part` are deferred to the library-import
+phase, since we currently load only ScalarValues). No new kernel class -- reuses
+Subclassification/Subsetting (5c) and the read-only-proxy pattern (the value-type
+proxies, Phase 4):
+
+- **mechanism**: a mapping pass (last, after all explicit resolution) gives every
+  definition (Classifier) with no explicit subclassification an implicit
+  `:> Anything`, and every usage (Feature) with no explicit feature-specialization
+  (Subsetting / ReferenceSubsetting / Redefinition) an implicit `:> things`. The two
+  bases are read-only proxies materialized at the model root (`Anything`, a bare
+  Classifier; `things`, a bare Feature), one each per root, recognized by
+  `kk.is_implicit_base`;
+- **suppression**: a DECLARED `:>`/`:>>` -- even one that did not resolve -- suppresses
+  the implicit base (tracked by element id from the phase-2 lists), so a broken
+  `:> Missing` keeps its `unresolved-specialization` error instead of being masked by
+  a root;
+- **invisible + non-referenceable**: the bases are filtered from export and the
+  round-trip canonical form (`kk.explicit_supertypes` / `explicit_subsettings`, and
+  `visit` skips all library proxies) and skipped in name resolution and
+  duplicate-name counting (`kk.is_library_proxy`), so `Anything`/`things` are never
+  written, never user-resolvable, and never collide;
+- **participation + persistence**: the implicit specialization is a real stored
+  Subclassification/Subsetting, so it shows up in `supertypes()`/`subsettings()`, is
+  traversed by inherited-member resolution, and survives `.gaphor` save/reload.
+
+OUT of scope (deferred): per-kind Systems/Kernel-Library bases (PartDefinition ->
+Parts::Part, etc.) and their inherited members -- the universal root has no members,
+so the payoff here is structural, not member-inheritance, pending broad library
+import.
+
+Exit: implicit specializations participate in resolution per the (universal-root)
+spec, and are invisible to text -- done and tested
+(`test_implicit_specialization.py`). No support-matrix construct cell moves.
 
 ### Phase 5e -- Feature Chains -- PLANNED
 
@@ -929,7 +960,7 @@ counted here.
 19. Phase 5a -- Imports, Imported Memberships, Visibility & Ambiguity -- DONE
 20. Phase 5b -- Aliases -- DONE
 21. Phase 5c-1 -- Subclassification, Definition Bodies, Subsetting, And Inherited Members -- DONE
-22. Phase 5c-2 -- Redefinition -- PLANNED
+22. Phase 5c-2 -- Redefinition -- DONE
 23. Phase 5d -- Implicit Specialization -- PLANNED
 24. Phase 5e -- Feature Chains -- PLANNED
 25. Phase 10 -- General KPAR Export And Round-Trip -- PLANNED

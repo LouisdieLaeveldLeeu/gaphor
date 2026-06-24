@@ -310,6 +310,19 @@ one supertype's feature (`:>> A::x`). Validation adds `unresolved-redefinition`
 (mapping context) and model-derived `broken-redefinition`. `:>>` exports,
 round-trips, and persists. See `test_redefinition.py`.
 
+Phase 5d adds IMPLICIT SPECIALIZATION -- the KerML universal root (no construct row
+moves, no new kernel class). Every definition with no explicit `:>` implicitly
+specializes the root `Anything`; every usage with no explicit `:>`/`:>>` implicitly
+subsets the root `things`. The two bases are read-only proxies (like the value-type
+proxies): real, persisted Subclassification/Subsetting that show up in
+`supertypes()`/`subsettings()` but are filtered from export and the round-trip
+fingerprint and skipped in name resolution, so `Anything`/`things` are never written
+or user-referenceable. A declared-but-unresolved specialization still suppresses the
+implicit base. Per-kind Systems-Library bases (`Parts::Part`, ...) and their
+inherited members are deferred to the library-import phase (we load only
+ScalarValues today), so the payoff here is structural. See
+`test_implicit_specialization.py`.
+
 PortDefinition and PortUsage are `supported` for the declaration-and-typing
 surface INCLUDING conjugation (`port def Fuel; port p : Fuel; port q : ~Fuel;`).
 Phase F first built the unconjugated surface (every cell implemented and

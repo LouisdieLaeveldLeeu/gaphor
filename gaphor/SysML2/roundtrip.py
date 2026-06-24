@@ -75,6 +75,11 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
                 )
             )
         for member in kk.members(namespace):
+            # Read-only library proxies (value types, implicit bases) are reference
+            # data the mapper materializes; they are invisible to the canonical form
+            # (and to export), so skip them entirely -- no base or sub-entries.
+            if kk.is_library_proxy(member):
+                continue
             # Package check first (Part* are also Namespaces). ConnectionDefinition
             # / ConnectionUsage subclass PartDefinition / PartUsage, so the more
             # specific connection classes are matched before the part classes.
@@ -210,8 +215,12 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
             # Subclassification heritage (Phase 5c): each `:> Super` is a SEPARATE
             # entry (definition qn, supertype qn), so a specializing definition's
             # fingerprint differs from a plain one and the supertype links round-trip.
+            # Implicit universal bases (Phase 5d) are EXCLUDED: `explicit_supertypes`
+            # / `explicit_subsettings` drop the `Anything`/`things` roots, so the
+            # implicit specialization never changes the fingerprint (it is not
+            # written on export either).
             if isinstance(member, kerml.Type):
-                for supertype in kk.supertypes(member):
+                for supertype in kk.explicit_supertypes(member):
                     entries.add(
                         (
                             "Subclassification",
@@ -223,7 +232,7 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
             # (usage qn, subsetted-feature qn). Redefinition (Phase 5c-2): each
             # `:>> y` likewise (usage qn, redefined-feature qn).
             if isinstance(member, kerml.Feature):
-                for subsetting in kk.subsettings(member):
+                for subsetting in kk.explicit_subsettings(member):
                     target = kk._single(subsetting.subsettedFeature)
                     entries.add(
                         (

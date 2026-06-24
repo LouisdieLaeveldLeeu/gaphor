@@ -174,6 +174,12 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     unresolved_redefinitions, self_redefinitions = _resolve_redefinitions(
         redefinitions, ambiguous
     )
+    # LAST: every definition/usage with no EXPLICIT specialization gets the implicit
+    # universal base (`Anything`/`things`). A declared-but-unresolved `:>`/`:>>`
+    # still counts as explicit and suppresses the implicit base (Phase 5d).
+    _apply_implicit_bases(
+        root, factory, _explicitly_specialized(subclassifications, subsettings, redefinitions)
+    )
     return MappingResult(
         root=root,
         elements_by_name=top_level,
@@ -260,6 +266,9 @@ def map_project_members(named_packages, factory: ElementFactory):
     unresolved_subsettings = _resolve_subsettings(subsettings, ambiguous)
     unresolved_redefinitions, self_redefinitions = _resolve_redefinitions(
         redefinitions, ambiguous
+    )
+    _apply_implicit_bases(
+        root, factory, _explicitly_specialized(subclassifications, subsettings, redefinitions)
     )
     for relationship_id, source_id in relationship_sources.items():
         if source_id in provenance:
@@ -1049,14 +1058,16 @@ def _descend(
 
 
 def _is_library_proxy(element: kerml.Element) -> bool:
-    """A read-only standard-library value-type proxy (a bare ``kerml.DataType``).
+    """A read-only library proxy, excluded from name resolution and user lookup.
 
-    User constructs are SysML2 subclasses (AttributeDefinition, ...) or KerML
-    Packages; only the value-type proxies materialized by `_value_type_proxy` are
-    bare DataTypes. They are excluded from name resolution so user-symbol lookup
-    is independent of whether/when a proxy was created.
+    Either a standard-library value-type proxy (a bare ``kerml.DataType``,
+    materialized by `_value_type_proxy`) or an implicit-specialization base proxy
+    (`Base::Anything` / `Base::things`, Phase 5d) -- see `kk.is_library_proxy`. User
+    constructs are SysML2 subclasses or KerML Packages, so neither proxy is ever a
+    user symbol; excluding them keeps name resolution independent of whether/when a
+    proxy was created.
     """
-    return type(element) is kerml.DataType
+    return kk.is_library_proxy(element)
 
 
 @lru_cache(maxsize=1)
@@ -1164,6 +1175,74 @@ def _value_type_proxy(root: kerml.Namespace, simple_name: str) -> kerml.DataType
     proxy.declaredName = simple_name
     kk.add_owned_member(root, proxy, factory.create(kerml.OwningMembership))
     return proxy
+
+
+def _implicit_base_proxy(root: kerml.Namespace, cls, name: str) -> kerml.Element:
+    """Find or create the read-only implicit-specialization base proxy named `name`
+    (a bare `cls`) owned by `root` -- one `Anything` Classifier and one `things`
+    Feature per model root (Phase 5d). Like `_value_type_proxy`: a real element that
+    persists, recognized by `kk.is_implicit_base`, and invisible to export and the
+    round-trip canonical form."""
+    factory = root.model
+    for existing in factory.select(cls):
+        if (
+            type(existing) is cls
+            and existing.declaredName == name
+            and kk.owning_namespace(existing) is root
+        ):
+            return existing
+    proxy = factory.create(cls)
+    proxy.declaredName = name
+    kk.add_owned_member(root, proxy, factory.create(kerml.OwningMembership))
+    return proxy
+
+
+def _explicitly_specialized(
+    subclassifications: list, subsettings: list, redefinitions: list
+) -> set[str]:
+    """Ids of elements that DECLARED an explicit `:>`/`:>>` clause (Phase 5d), from
+    the phase-2 lists -- whether or not it resolved. The implicit base is suppressed
+    for these, so a declared-but-broken specialization is not masked by a root."""
+    return (
+        {element.id for element, _, _ in subclassifications}
+        | {element.id for element, _, _ in subsettings}
+        | {element.id for element, _, _ in redefinitions}
+    )
+
+
+def _apply_implicit_bases(
+    root: kerml.Namespace, factory: ElementFactory, explicit_specialized: set[str]
+) -> None:
+    """Add the KerML universal implicit specialization (Phase 5d).
+
+    Every Classifier (definition) with NO explicit subclassification implicitly
+    subclassifies the root `Anything`; every Feature (usage) with NO explicit
+    feature-specialization (Subsetting / ReferenceSubsetting / Redefinition)
+    implicitly subsets the root `things`. `explicit_specialized` holds the ids of
+    elements that DECLARED a `:>`/`:>>` clause (even one that did not resolve), so a
+    declared-but-broken specialization still SUPPRESSES the implicit base -- the user
+    expressed intent, and an implicit root would mask the error. Library proxies and
+    the bases themselves are skipped. The bases are read-only proxies, so the implicit
+    specializations never export or change the round-trip fingerprint.
+    """
+    # Snapshot the selections BEFORE creating any proxy: creating a base proxy
+    # mutates the factory, so iterating the live `select` generator would raise.
+    anything: kerml.Element | None = None
+    things: kerml.Element | None = None
+    for classifier in list(factory.select(kerml.Classifier)):
+        if _is_library_proxy(classifier) or classifier.id in explicit_specialized:
+            continue
+        if any(isinstance(r, kerml.Subclassification) for r in classifier.ownedRelationship):
+            continue
+        anything = anything or _implicit_base_proxy(root, kerml.Classifier, "Anything")
+        kk.add_subclassification(classifier, anything)
+    for feature in list(factory.select(kerml.Feature)):
+        if _is_library_proxy(feature) or feature.id in explicit_specialized:
+            continue
+        if any(isinstance(r, kerml.Subsetting) for r in feature.ownedRelationship):
+            continue  # has an explicit subsetting / reference-subsetting / redefinition
+        things = things or _implicit_base_proxy(root, kerml.Feature, "things")
+        kk.add_subsetting(feature, things)
 
 
 def _set_type(

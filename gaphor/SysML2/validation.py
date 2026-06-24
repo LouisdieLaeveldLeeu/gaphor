@@ -511,6 +511,8 @@ def _check_duplicate_names(factory: ElementFactory) -> Iterator[Diagnostic]:
         names: Counter[str] = Counter()
         for membership in kk.owned_memberships(namespace):
             member = kk._single(membership.memberElement)
+            if member is not None and kk.is_library_proxy(member):
+                continue  # read-only library proxies (value types, implicit bases)
             # An alias carries its name (`memberName`) before its target resolves;
             # an owned member takes its name from its element.
             name = membership.memberName or (
