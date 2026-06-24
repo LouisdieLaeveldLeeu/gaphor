@@ -75,7 +75,7 @@ def validate(
     unresolved_ends: dict[str, list[str]] | None = None,
     unresolved_frame_refs: dict[str, str] | None = None,
     ambiguous: dict[str, str] | None = None,
-    unresolved_supertypes: dict[str, str] | None = None,
+    unresolved_supertypes: dict[str, list[str]] | None = None,
     unresolved_subsettings: dict[str, str] | None = None,
 ) -> list[Diagnostic]:
     """Run the scoped M2 validation rules over all elements in `factory`.
@@ -103,11 +103,14 @@ def validate(
     THAN ONE import and so did not bind (Phase 5a). The ambiguous-name rule reports
     them; mapping context only.
 
-    `unresolved_supertypes` maps a definition id -> a `:> Super` name that did not
-    resolve to a Classifier, and `unresolved_subsettings` maps a usage id -> a
-    `:> y` name that did not resolve to a Feature (Phase 5c). The mapper records
-    these (an AMBIGUOUS supertype/subsetted name goes to `ambiguous` instead, so
-    there is no double report); mapping context only.
+    `unresolved_supertypes` maps a definition id -> the LIST of its `:> Super` names
+    that did not resolve to a Classifier (a `:> A, B` with both bad reports both),
+    and `unresolved_subsettings` maps a usage id -> the `:> y` name that did not
+    resolve to a Feature (Phase 5c). The mapper records these (an AMBIGUOUS
+    supertype/subsetted name goes to `ambiguous` instead, so there is no double
+    report); mapping context only. Separately, `_check_broken_specializations` is
+    MODEL-DERIVED and reports a persisted Subclassification/Subsetting whose end was
+    cleared, independent of mapping context.
     """
     diagnostics: list[Diagnostic] = []
     diagnostics.extend(_check_missing_owner(factory))
@@ -133,6 +136,7 @@ def validate(
         _check_unresolved_specializations(unresolved_supertypes or {})
     )
     diagnostics.extend(_check_unresolved_subsettings(unresolved_subsettings or {}))
+    diagnostics.extend(_check_broken_specializations(factory))
     return diagnostics
 
 
@@ -555,20 +559,22 @@ def _check_unresolved_aliases(
 
 
 def _check_unresolved_specializations(
-    unresolved_supertypes: dict[str, str]
+    unresolved_supertypes: dict[str, list[str]]
 ) -> Iterator[Diagnostic]:
-    """A definition `:> Super` whose supertype did not resolve to a Classifier
-    (Phase 5c). Mapping context: the mapper records the name when no Subclassification
-    was created (an ambiguous supertype is reported `ambiguous-name` instead). A
-    reloaded model has no mapping context, so nothing to report here.
+    """Each definition `:> Super` whose supertype did not resolve to a Classifier
+    (Phase 5c). Mapping context: the mapper records EVERY unresolved supertype name
+    of a definition (a `:> A, B` with both bad reports both), so no unresolved
+    supertype is dropped; an ambiguous supertype is reported `ambiguous-name`
+    instead. A reloaded model has no mapping context, so nothing to report here.
     """
-    for element_id, name in unresolved_supertypes.items():
-        yield Diagnostic(
-            Severity.ERROR,
-            "unresolved-specialization",
-            f"supertype {name!r} does not resolve to a definition",
-            element_id,
-        )
+    for element_id, names in unresolved_supertypes.items():
+        for name in names:
+            yield Diagnostic(
+                Severity.ERROR,
+                "unresolved-specialization",
+                f"supertype {name!r} does not resolve to a definition",
+                element_id,
+            )
 
 
 def _check_unresolved_subsettings(
@@ -587,21 +593,55 @@ def _check_unresolved_subsettings(
         )
 
 
+def _check_broken_specializations(factory: ElementFactory) -> Iterator[Diagnostic]:
+    """A persisted Subclassification must reference a supertype, and a (plain)
+    Subsetting a subsetted feature (Phase 5c).
+
+    Model-derived (needs no mapping context): the mapper only CREATES these when the
+    target resolves, so this catches a hand- or API-mutated / corrupt heritage
+    relationship -- e.g. a Subclassification whose `superclassifier` was cleared, or
+    a Subsetting whose `subsettedFeature` was deleted -- that export would otherwise
+    silently drop (it reads only resolvable ends). ReferenceSubsetting (the
+    framed-concern form) is checked separately, so plain Subsetting is matched by
+    exact type.
+    """
+    for subclassification in factory.select(kerml.Subclassification):
+        if kk._single(subclassification.superclassifier) is None:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-subclassification",
+                "subclassification does not reference a supertype",
+                subclassification.id,
+            )
+    for subsetting in factory.select(kerml.Subsetting):
+        if type(subsetting) is not kerml.Subsetting:
+            continue  # ReferenceSubsetting has its own integrity check
+        if kk._single(subsetting.subsettedFeature) is None:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-subsetting",
+                "subsetting does not reference a subsetted feature",
+                subsetting.id,
+            )
+
+
 def _check_ambiguous_names(
     factory: ElementFactory, ambiguous: dict[str, str]
 ) -> Iterator[Diagnostic]:
-    """A name visible from MORE THAN ONE import is ambiguous (Phase 5a).
+    """A name that resolves to MORE THAN ONE distinct element is ambiguous.
 
-    Mapping context: the resolver records a (qualified) name that resolved to more
-    than one distinct element through different imports at the same scope, and did
-    NOT bind. Reported here; like the other reference rules this needs mapping
-    context, so a reloaded model has none to report.
+    Mapping context: the resolver records a (qualified) name that, at one scope,
+    resolved to more than one distinct element -- visible from several IMPORTS
+    (Phase 5a) or INHERITED from several unrelated supertypes (Phase 5c, an
+    inherited-name conflict) -- and so did NOT bind. Reported here; like the other
+    reference rules this needs mapping context, so a reloaded model has none.
     """
     for element_id, name in ambiguous.items():
         yield Diagnostic(
             Severity.ERROR,
             "ambiguous-name",
-            f"{name!r} is visible from more than one import (ambiguous)",
+            f"{name!r} resolves to more than one element "
+            "(ambiguous: imported or inherited)",
             element_id,
         )
 

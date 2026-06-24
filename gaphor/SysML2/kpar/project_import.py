@@ -256,7 +256,8 @@ def import_user_kpar(
     # unresolved reference too (Phase 5c).
     unresolved.extend(
         make_unresolved(element_id, name, "unresolved-specialization")
-        for element_id, name in result.unresolved_supertypes.items()
+        for element_id, names in result.unresolved_supertypes.items()
+        for name in names
     )
     unresolved.extend(
         make_unresolved(element_id, name, "unresolved-subsetting")

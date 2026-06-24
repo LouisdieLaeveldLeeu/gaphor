@@ -104,11 +104,11 @@ class MappingResult:
     # element id -> the (qualified) name that was visible from MORE THAN ONE import
     # and so did not bind, for the ambiguous-name validation rule (Phase 5a).
     ambiguous: dict[str, str] = field(default_factory=dict)
-    # definition element id -> a declared `:> Super` supertype name that did not
-    # resolve to a Type (no Subclassification created), for the unresolved-
-    # specialization validation rule (Phase 5c). One entry per definition (first
-    # unresolved supertype).
-    unresolved_supertypes: dict[str, str] = field(default_factory=dict)
+    # definition element id -> the LIST of declared `:> Super` supertype names that
+    # did not resolve to a Classifier (no Subclassification created), for the
+    # unresolved-specialization validation rule (Phase 5c). All unresolved supertypes
+    # of a `:> A, B` are recorded, so none is dropped.
+    unresolved_supertypes: dict[str, list[str]] = field(default_factory=dict)
     # usage element id -> the declared `:> y` subsetted feature name that did not
     # resolve to a Feature (no Subsetting created), for the unresolved-subsetting
     # validation rule (Phase 5c).
@@ -432,19 +432,19 @@ def _resolve_aliases(aliases: list, ambiguous: dict[str, str]) -> None:
 
 def _resolve_subclassifications(
     subclassifications: list, ambiguous: dict[str, str]
-) -> dict[str, str]:
+) -> dict[str, list[str]]:
     """Resolve each definition `:> Super` to a Classifier and create a
     Subclassification (mapping phase 2, Phase 5c).
 
     The supertype name resolves with the import-aware nearest-first rule
     (`_resolve_type`) in the namespace containing the definition. A supertype visible
     from more than one import is recorded `ambiguous` (no Subclassification); a name
-    that does not resolve to a Classifier (a definition) is recorded for the
-    `unresolved-specialization` rule -- so `:> Bad` is reported, never silently
-    dropped. Resolved BEFORE the member passes so inherited-member lookup sees the
-    supertype links.
+    that does not resolve to a Classifier (a definition) is APPENDED to the
+    definition's unresolved-supertype list -- so EVERY bad supertype of a `:> A, B`
+    is reported, none dropped. Resolved BEFORE the member passes so inherited-member
+    lookup sees the supertype links.
     """
-    unresolved: dict[str, str] = {}
+    unresolved: dict[str, list[str]] = {}
     for subtype, namespace, super_name in subclassifications:
         target = _resolve_type(namespace, super_name)
         if target is _AMBIGUOUS:
@@ -453,7 +453,7 @@ def _resolve_subclassifications(
         if isinstance(target, kerml.Classifier):
             kk.add_subclassification(subtype, target)
         else:
-            unresolved.setdefault(subtype.id, "::".join(super_name))
+            unresolved.setdefault(subtype.id, []).append("::".join(super_name))
     return unresolved
 
 
@@ -880,11 +880,20 @@ def _resolve_type(
         # for an earlier usage would change how a later name resolves).
         if found is not None and not _is_library_proxy(found):
             return _descend(found, rest)
-        # Inherited members at a Type scope (own already shadowed them above).
+        # Inherited members at a Type scope (own already shadowed them above). More
+        # than one DISTINCT inherited member named `first` is an inherited-name
+        # conflict -> ambiguous (never bind to an arbitrary first supertype); a
+        # qualified name (`Super::first`) sidesteps it by resolving `Super` here.
         if isinstance(scope, kerml.Type):
-            inherited = kk.inherited_member_named(scope, first)
-            if inherited is not None and not _is_library_proxy(inherited):
-                return _descend(inherited, rest)
+            inherited = [
+                m
+                for m in kk.inherited_members_named(scope, first)
+                if not _is_library_proxy(m)
+            ]
+            if len(inherited) > 1:
+                return _AMBIGUOUS
+            if len(inherited) == 1:
+                return _descend(inherited[0], rest)
         if use_imports:
             candidates = _imported_candidates(scope, first)
             if len(candidates) > 1:

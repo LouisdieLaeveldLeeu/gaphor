@@ -172,16 +172,22 @@ def supertypes(type_: Type) -> Iterator[Type]:
             yield general
 
 
-def inherited_member_named(type_: Type, name: str) -> Element | None:
-    """A PUBLIC member named `name` inherited through `type_`'s supertypes
-    (transitively, nearest-first, cycle-guarded) (Phase 5c).
+def inherited_members_named(type_: Type, name: str) -> list[Element]:
+    """The DISTINCT public members named `name` inherited through `type_`'s
+    supertypes (transitive closure, cycle-guarded) (Phase 5c).
+
+    Returns every distinct candidate, deduplicated by id -- so a member reachable by
+    several paths (a diamond) is ONE result, but the same name declared by two
+    UNRELATED supertypes is two results, an inherited-name CONFLICT. The caller
+    decides what more-than-one means (the resolver reports it ambiguous); this never
+    picks a winner, so no inherited conflict binds silently to a first match.
 
     A private member is NOT inherited (visibility governs inheritance); the member
     default is public, so ordinary members ARE inherited. The type's OWN members are
-    searched by the caller (own shadows inherited), not here. Resolution matches an
-    owned member by its element name and an alias by its alias name, like
-    `owned_member_named`.
+    searched by the caller (own shadows inherited), not here. Matches an owned member
+    by its element name and an alias by its alias name, like `owned_member_named`.
     """
+    found: dict[str, Element] = {}
     seen: set[str] = set()
     queue: list[Type] = list(supertypes(type_))
     while queue:
@@ -197,9 +203,9 @@ def inherited_member_named(type_: Type, name: str) -> Element | None:
                 continue
             member_name = membership.memberName or effective_name(member)
             if member_name == name:
-                return member
+                found[member.id] = member
         queue.extend(supertypes(supertype))
-    return None
+    return list(found.values())
 
 
 def add_subsetting(

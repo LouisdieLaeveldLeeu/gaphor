@@ -1387,3 +1387,39 @@ far -- inheritance has no honest representation without the heritage relationshi
   references (5e). Round-trip still does not recurse into ACTION bodies (unchanged
   from Phase 7); only part-def bodies are fingerprinted. See
   `test_inherited_members.py`.
+
+### Completion Phase 5c-1: Inherited Members review findings fix (verified 2026-06-24)
+
+Three review findings on the Phase 5c-1 inherited-members work (Subclassification /
+Subsetting). (The canonical Redefinition surface is now its own planned Phase 5c-2.)
+
+- **High -- inherited-name conflicts must be ambiguous, not first-wins.** The
+  initial `inherited_member_named` did a BFS and returned the FIRST public inherited
+  member, so `A {part x;} B {part x;} C :> A, B { part y :> x; }` silently bound `y`
+  to `A::x`. Replaced it with `inherited_members_named(type_, name) -> list`, which
+  returns ALL distinct candidates (deduped by id, so a diamond -- the same member via
+  two paths -- is one result, but two unrelated supertypes declaring the name are
+  two). `_resolve_type` now treats more-than-one inherited candidate exactly like
+  more-than-one import candidate: it returns `_AMBIGUOUS`, so the conflict is
+  reported `ambiguous-name` and does NOT bind. A qualified `:> A::x` sidesteps the
+  conflict (it resolves `A`, then descends). The `ambiguous-name` message was
+  generalized from "visible from more than one import" to "resolves to more than one
+  element (ambiguous: imported or inherited)". Export's `_feature_ref_name` likewise
+  emits a bare name only when it re-resolves UNAMBIGUOUSLY to the target (the sole
+  inherited member of that name, with no shadowing own member), else the path.
+- **Medium -- multiple unresolved supertypes collapsed to one diagnostic.**
+  `_resolve_subclassifications` keyed unresolved supertypes by subtype id with
+  `setdefault`, so `:> Missing1, Missing2` reported only `Missing1`.
+  `MappingResult.unresolved_supertypes` is now `id -> list[str]` (every unresolved
+  supertype appended), and `_check_unresolved_specializations` / the KPAR importer
+  iterate the list, so each bad supertype is reported.
+- **Medium -- broken persisted heritage was unvalidated.** The 5c specialization /
+  subsetting rules are mapping-context only (the relationship is created only when
+  the target resolves), so a hand- or API-mutated Subclassification with no
+  `superclassifier`, or plain Subsetting with no `subsettedFeature`, produced no
+  diagnostic and export silently dropped it. Added MODEL-DERIVED
+  `_check_broken_specializations` (mirrors `_check_unresolved_imports` /
+  `_check_connection_end_integrity`): `broken-subclassification` /
+  `broken-subsetting`. Plain Subsetting is matched by EXACT type so the framed-concern
+  ReferenceSubsetting (which carries `referencedFeature`, not `subsettedFeature`) is
+  not flagged. See `test_inherited_members.py` (the 5c-2 section).

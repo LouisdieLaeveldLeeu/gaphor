@@ -211,6 +211,102 @@ def test_ambiguous_supertype_is_ambiguous_not_unresolved():
     assert not any(d.rule == "unresolved-specialization" for d in diagnostics)
 
 
+# --- 5c-2 review findings -----------------------------------------------------
+
+
+def test_inherited_name_conflict_is_ambiguous():
+    # `x` is inherited from BOTH A and B (distinct members) -> ambiguous, NOT a
+    # silent first-wins bind to A::x. The subsetting does not resolve.
+    factory, result = _map(
+        "part def A { part x; }\npart def B { part x; }\n"
+        "part def C :> A, B { part y :> x; }"
+    )
+    y = _part(factory, "y")
+    assert y.id in result.ambiguous
+    diagnostics = _validate(factory, result)
+    assert any(d.rule == "ambiguous-name" for d in diagnostics)
+    assert not list(kk.subsettings(y))  # did NOT bind to an arbitrary supertype
+
+
+def test_diamond_inherited_member_is_not_ambiguous():
+    # `x` reaches C via A and via B but is the SAME D::x (a diamond), so it is one
+    # candidate, not a conflict -- it resolves cleanly.
+    factory, result = _map(
+        "part def D { part x; }\n"
+        "part def A :> D;\npart def B :> D;\n"
+        "part def C :> A, B { part y :> x; }"
+    )
+    assert not has_errors(_validate(factory, result))
+    y = _part(factory, "y")
+    target = kk._single(next(iter(kk.subsettings(y))).subsettedFeature)
+    assert kk.owning_namespace(target).declaredName == "D"
+
+
+def test_inherited_conflict_resolvable_by_qualified_name():
+    # A qualified `:> A::x` sidesteps the inherited-name conflict (it resolves `A`,
+    # then descends to `x`), so it binds and is not ambiguous.
+    factory, result = _map(
+        "part def A { part x; }\npart def B { part x; }\n"
+        "part def C :> A, B { part y :> A::x; }"
+    )
+    assert not has_errors(_validate(factory, result))
+    target = kk._single(next(iter(kk.subsettings(_part(factory, "y")))).subsettedFeature)
+    assert kk.owning_namespace(target).declaredName == "A"
+
+
+def test_all_unresolved_supertypes_are_reported():
+    # `:> Missing1, Missing2` reports BOTH, not just the first.
+    factory, result = _map("part def Car :> Missing1, Missing2;")
+    assert set(result.unresolved_supertypes[_def(factory, "Car").id]) == {
+        "Missing1",
+        "Missing2",
+    }
+    msgs = [
+        d.message
+        for d in _validate(factory, result)
+        if d.rule == "unresolved-specialization"
+    ]
+    assert any("Missing1" in m for m in msgs)
+    assert any("Missing2" in m for m in msgs)
+
+
+def test_broken_persisted_subclassification_is_reported():
+    # A hand/API-built Subclassification with no superclassifier is caught by the
+    # MODEL-DERIVED check (no mapping context), and would otherwise be silently
+    # dropped on export.
+    factory = ElementFactory()
+    car = factory.create(sysml2.PartDefinition)
+    sc = factory.create(kerml.Subclassification)
+    sc.subclassifier = car
+    car.ownedRelationship = sc
+    sc.owningRelatedElement = car
+    diagnostics = validate(factory)
+    assert any(d.rule == "broken-subclassification" for d in diagnostics)
+
+
+def test_broken_persisted_subsetting_is_reported():
+    factory = ElementFactory()
+    spare = factory.create(sysml2.PartUsage)
+    sub = factory.create(kerml.Subsetting)
+    sub.subsettingFeature = spare
+    spare.ownedRelationship = sub
+    sub.owningRelatedElement = spare
+    diagnostics = validate(factory)
+    assert any(d.rule == "broken-subsetting" for d in diagnostics)
+
+
+def test_healthy_heritage_has_no_broken_diagnostics():
+    factory, result = _map(
+        "part def Vehicle { part wheel; }\n"
+        "part def Car :> Vehicle { part spare :> wheel; }"
+    )
+    diagnostics = _validate(factory, result)
+    assert not any(
+        d.rule in {"broken-subclassification", "broken-subsetting"}
+        for d in diagnostics
+    )
+
+
 # --- export / round-trip -----------------------------------------------------
 
 
@@ -272,7 +368,9 @@ def test_inheritance_survives_save_reload(element_factory, saver, loader):
     )
     assert [kk.effective_name(s) for s in kk.supertypes(car)] == ["Vehicle"]
     # Inherited-member resolution still works through the reloaded supertype link.
-    assert kk.inherited_member_named(car, "wheel").declaredName == "wheel"
+    assert [
+        m.declaredName for m in kk.inherited_members_named(car, "wheel")
+    ] == ["wheel"]
     spare = next(
         u
         for u in element_factory.select(sysml2.PartUsage)

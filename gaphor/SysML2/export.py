@@ -258,19 +258,26 @@ def _subsetting_suffix(usage: kerml.Feature, root: kerml.Namespace) -> str:
 def _feature_ref_name(
     element: kerml.Element, target: kerml.Element, root: kerml.Namespace
 ) -> str:
-    """The name to emit for a reference from `element` to `target` so it re-resolves:
-    a bare name when `target` is a member (own or INHERITED) of `element`'s
-    namespace, else the path from the export root (Phase 5c)."""
+    """The name to emit for a reference from `element` to `target` so it re-resolves
+    to EXACTLY `target`, else the path from the export root (Phase 5c).
+
+    A bare name is emitted only when it re-resolves UNAMBIGUOUSLY to `target` from
+    `element`'s namespace: `target` is the OWN member of that name, or (no own member
+    shadows it and) `target` is the SOLE inherited member of that name. Otherwise --
+    a shadowing own member, or an inherited-name conflict -- the bare name would
+    re-resolve elsewhere or ambiguously, so the path from root is used."""
     owning = kk.owning_namespace(element)
     name = kk.effective_name(target)
     if owning is not None and name is not None:
-        if target in set(kk.members(owning)):
+        if kk.owned_member_named(owning, name) is target:
             return name
         if (
-            isinstance(owning, kerml.Type)
-            and kk.inherited_member_named(owning, name) is target
+            kk.owned_member_named(owning, name) is None
+            and isinstance(owning, kerml.Type)
         ):
-            return name
+            inherited = kk.inherited_members_named(owning, name)
+            if len(inherited) == 1 and inherited[0] is target:
+                return name
     return _path_from_root(target, root)
 
 
