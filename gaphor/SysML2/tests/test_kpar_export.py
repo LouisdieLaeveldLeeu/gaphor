@@ -194,6 +194,32 @@ def test_relative_path_project_name_cannot_escape_project_dir(tmp_path):
         assert "/" not in read_kpar(path).root
 
 
+def test_project_dir_is_windows_portable(tmp_path):
+    # The archive must extract on Windows too: invalid characters, reserved device
+    # names, and trailing dots must not leak into a project DIRECTORY component, while
+    # the original name is still kept as the .project.json display `name`.
+    import zipfile
+
+    cases = {
+        "CON": "_CON",  # reserved device name -> prefixed
+        "con.txt": "_con.txt",  # reserved (case-insensitive, ignoring extension)
+        "COM1": "_COM1",
+        "a:b": "a_b",  # `:` invalid on Windows
+        "has*star": "has_star",  # `*` invalid
+        'q?"<>|': "q_____",  # the full invalid set
+        "name.": "name",  # trailing dot trimmed
+    }
+    for declared, expected_dir in cases.items():
+        path = tmp_path / "out.kpar"
+        write_kpar(path, _map("part def Engine;")[1], project_name=declared)
+        with zipfile.ZipFile(path) as zf:
+            dirs = {name.split("/", 1)[0] for name in zf.namelist()}
+        assert dirs == {expected_dir}
+        archive = read_kpar(path)
+        assert archive.root == expected_dir
+        assert archive.project.name == declared  # original display name preserved
+
+
 def test_kpar_export_cli_rejects_traversal_name(tmp_path):
     # The CLI path (`--name ..`) is sanitized too -- no escape from the project dir.
     import zipfile

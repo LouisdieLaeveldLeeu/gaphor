@@ -44,6 +44,19 @@ MODEL_MEMBER = "model.sysml"
 #: Identifies the metamodel in `.meta.json`.
 METAMODEL = "SysML2"
 
+#: Characters that are invalid in a Windows path component (plus the path
+#: separators `/` and `\`); each is replaced in the project DIRECTORY name so the
+#: archive extracts portably on Windows as well as macOS/Linux.
+_INVALID_DIR_CHARS = set('<>:"|?*/\\')
+
+#: Reserved Windows device names (case-insensitive, ignoring any extension) that
+#: cannot be a directory component; a project directory matching one is prefixed.
+_RESERVED_DIR_NAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"COM{digit}" for digit in range(1, 10)}
+    | {f"LPT{digit}" for digit in range(1, 10)}
+)
+
 
 def write_kpar(
     path: str | Path,
@@ -89,14 +102,29 @@ def write_kpar(
 
 
 def _project_dir_name(project_name: str) -> str:
-    """A safe, non-empty single-segment project directory name from `project_name`.
+    """A PORTABLE single-segment project directory name from `project_name`.
 
-    `read_kpar` requires the descriptors to live under one project directory (no
-    archive-root descriptor, no nested separators), so path separators are replaced.
-    An empty result, or one that is a relative-path special (`.`/`..`, which would
-    place entries OUTSIDE the project directory, e.g. `../.project.json`), falls back
-    to a constant -- so a name like `--name ..` cannot escape the project dir."""
-    name = project_name.replace("/", "_").replace("\\", "_").strip()
+    The exported archive must extract on Windows, macOS, and Linux, so the project
+    DIRECTORY component is reduced to a portable slug (the original name is still kept
+    verbatim as the `.project.json` display `name`):
+
+    - path separators and Windows-invalid characters (`< > : " | ? *`) and control
+      characters are replaced with `_`;
+    - leading/trailing whitespace and TRAILING dots/spaces are trimmed (Windows
+      silently drops trailing dots/spaces, which would change or empty the name);
+    - an empty result, or a relative-path special (`.`/`..` -- which would place
+      entries OUTSIDE the project directory, e.g. `../.project.json`), falls back to a
+      constant, so `--name ..` cannot escape the project dir;
+    - a reserved Windows device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1`-`COM9`,
+      `LPT1`-`LPT9`, case-insensitive, ignoring any extension) is prefixed with `_`.
+    """
+    name = "".join(
+        "_" if char in _INVALID_DIR_CHARS or not char.isprintable() else char
+        for char in project_name
+    )
+    name = name.strip().rstrip(". ")
     if name in ("", ".", ".."):
         return "Project"
+    if name.split(".", 1)[0].upper() in _RESERVED_DIR_NAMES:
+        return f"_{name}"
     return name
