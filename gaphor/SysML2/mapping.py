@@ -176,7 +176,9 @@ class _MappingContext:
         unresolved_types, mistyped = _resolve_typed_usages(
             self.root, self.typed_usages, ambiguous, relationship_sources
         )
-        unresolved_ends = _resolve_connection_ends(self.connection_ends, ambiguous)
+        unresolved_ends = _resolve_connection_ends(
+            self.connection_ends, ambiguous, relationship_sources
+        )
         unresolved_types.update(
             _resolve_subject_types(
                 self.subject_typings, ambiguous, relationship_sources
@@ -322,7 +324,9 @@ def _resolve_typed_usages(
 
 
 def _resolve_connection_ends(
-    connection_ends: list, ambiguous: dict[str, str]
+    connection_ends: list,
+    ambiguous: dict[str, str],
+    relationship_sources: dict[str, str],
 ) -> dict[str, list[str]]:
     """Resolve binary connector endpoints to features (mapping phase 2).
 
@@ -332,7 +336,10 @@ def _resolve_connection_ends(
     visible from more than one import is recorded `ambiguous` (Phase 5a); an end
     that does not resolve, or resolves to a non-feature, is recorded broken
     (`broken-connection-end`). Either way NEITHER end is set -- the connection has
-    no valid textual form and is reported rather than materialised half-formed.
+    no valid textual form and is reported rather than materialised half-formed. A
+    feature-chain end (Phase 5e) synthesizes a chain Feature + FeatureChainings, all
+    recorded in `relationship_sources` against the declaring connector so they trace
+    to its source line on KPAR import (Phase 5e-review).
     """
     unresolved_ends: dict[str, list[str]] = {}
     for connection, namespace, source_name, target_name in connection_ends:
@@ -364,9 +371,11 @@ def _resolve_connection_ends(
                 broken.append("::".join(name))
         if len(resolved) == 2:
             for setter, end in resolved.items():
-                feature = _make_chain_feature(connection, end) if isinstance(
-                    end, list
-                ) else end
+                feature = (
+                    _make_chain_feature(connection, end, relationship_sources)
+                    if isinstance(end, list)
+                    else end
+                )
                 setattr(connection, setter, feature)
         elif broken:
             unresolved_ends[connection.id] = broken
@@ -414,16 +423,25 @@ def _resolve_chain_features(
 
 
 def _make_chain_feature(
-    connection: kerml.Feature, steps: list[kerml.Feature]
+    connection: kerml.Feature,
+    steps: list[kerml.Feature],
+    relationship_sources: dict[str, str],
 ) -> kerml.Feature:
     """Synthesize the anonymous chain Feature for a connector end (Phase 5e): a
     Feature owning an ordered FeatureChaining per step, owned by the connection (an
     end feature). It is recognized by `kk.is_feature_chain` and skipped where user
-    members are iterated."""
+    members are iterated.
+
+    The synthesized chain Feature and each FeatureChaining are recorded in
+    `relationship_sources` against the CONNECTION (which carries element-level
+    provenance), so KPAR import can trace these synthesized artifacts to the
+    connector's source line (Phase 5e-review)."""
     factory = connection.model
     chain = factory.create(kerml.Feature)
+    relationship_sources[chain.id] = connection.id
     for step in steps:
-        kk.add_feature_chaining(chain, step)
+        chaining = kk.add_feature_chaining(chain, step)
+        relationship_sources[chaining.id] = connection.id
     kk.add_owned_member(connection, chain, factory.create(kerml.FeatureMembership))
     return chain
 

@@ -248,6 +248,34 @@ def test_framed_concern_reference_relationship_carries_provenance(tmp_path):
     assert prov.line == 3
 
 
+def test_feature_chain_relationships_carry_provenance(tmp_path):
+    # A feature-chain connector endpoint synthesizes a chain Feature + FeatureChaining
+    # relationships; they trace to the connector's source line (Phase 5e-review §4).
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(
+        archive,
+        {
+            "V.sysml": (
+                "part def B { part c; }\n"  # line 1
+                "part def A { part b : B; }\n"  # line 2
+                "part a : A;\n"  # line 3
+                "part x;\n"  # line 4
+                "connection conn connect a.b.c to x;"  # line 5
+            )
+        },
+    )
+
+    result = import_user_kpar(archive)
+
+    chainings = list(result.factory.select(kerml.FeatureChaining))
+    assert len(chainings) == 3
+    for chaining in chainings:
+        prov = result.provenance_of(chaining)
+        assert prov is not None
+        assert prov.member == f"{ROOT_DIR}/V.sysml"
+        assert prov.line == 5  # the `connection conn connect ...` line
+
+
 def test_nested_elements_carry_provenance(tmp_path):
     archive = tmp_path / "proj.kpar"
     _write_user_kpar(
