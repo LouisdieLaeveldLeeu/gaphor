@@ -1540,3 +1540,29 @@ pattern (value-type proxies, Phase 4).
 - **Deferred (noted).** Per-kind Systems/Kernel-Library bases and their inherited
   members; the universal root has no members, so the resolution payoff is structural.
   See `test_implicit_specialization.py`.
+
+### Mapping review follow-ups (verified 2026-06-24)
+
+Two post-Phase-5d hardening changes to the mapper itself, from the mapping.py
+review. No SysML construct behavior changes.
+
+- **`_MappingContext` refactor (review §2/§3).** The phase-2 collection state was nine
+  parallel positional lists threaded through an 11-arg `_build_members` (four call
+  sites), and the phase-2 resolution sequence was duplicated VERBATIM in both
+  orchestrators. Bundled `factory`/`root`/`on_element` + the nine lists into one
+  `_MappingContext`; `_build_members`/`_build_requirement_body` take `ctx` (unpacked to
+  the same locals, so the build bodies are unchanged); and `ctx.resolve(top_level)` is
+  the single copy of the resolution sequence + MappingResult construction. The
+  implicit-base pass keeps using `_root_members(root)` (the provably complete ownership
+  set) rather than a `created` list, which could silently diverge for elements built
+  outside the main loop. Pure threading refactor; full suite unchanged.
+- **Relationship provenance (review §4).** `relationship_sources` (relationship id ->
+  declaring element id) previously covered ONLY the typed-usage FeatureTyping, so KPAR
+  import could not trace a Subclassification/Subsetting/Redefinition/ReferenceSubsetting
+  or a subject FeatureTyping back to its source line. Made `relationship_sources` a
+  SHARED dict (like `ambiguous`), owned by `ctx.resolve` and threaded into every
+  relationship-creating resolver; each records its created relationship against its
+  declaring element (which already carries element-level provenance via `on_element`).
+  So `result.provenance_of(<any mapper relationship>)` now resolves. The implicit-base
+  relationships are intentionally NOT recorded (they have no source declaration). See
+  `test_kpar_project_import.py` (heritage + framed-concern provenance).

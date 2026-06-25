@@ -185,6 +185,69 @@ def test_resolved_typing_relationship_carries_provenance(tmp_path):
     assert prov.declaration == "part e : Engine;"
 
 
+def test_heritage_relationships_carry_provenance(tmp_path):
+    # Every mapper-made relationship -- not just FeatureTyping -- traces to its
+    # declaring element's source line (Phase 5d-review §4): a Subclassification to its
+    # `:>` definition, a Subsetting to its `:>` usage, a Redefinition to its `:>>`
+    # usage.
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(
+        archive,
+        {
+            "V.sysml": (
+                "part def Vehicle { part wheel; }\n"  # line 1
+                "part def Car :> Vehicle {\n"  # line 2 (subclassification)
+                "  part spare :> wheel;\n"  # line 3 (subsetting)
+                "  part m :>> wheel;\n"  # line 4 (redefinition)
+                "}"
+            )
+        },
+    )
+
+    result = import_user_kpar(archive)
+
+    subclassification = next(iter(result.factory.select(kerml.Subclassification)))
+    subsetting = next(
+        s for s in result.factory.select(kerml.Subsetting)
+        if type(s) is kerml.Subsetting
+    )
+    redefinition = next(iter(result.factory.select(kerml.Redefinition)))
+
+    for relationship, line in (
+        (subclassification, 2),
+        (subsetting, 3),
+        (redefinition, 4),
+    ):
+        prov = result.provenance_of(relationship)
+        assert prov is not None
+        assert prov.member == f"{ROOT_DIR}/V.sysml"
+        assert prov.line == line
+
+
+def test_framed_concern_reference_relationship_carries_provenance(tmp_path):
+    archive = tmp_path / "proj.kpar"
+    _write_user_kpar(
+        archive,
+        {
+            "V.sysml": (
+                "concern def Safety;\n"
+                "concern theSafety : Safety;\n"
+                "requirement def R { frame theSafety; }"
+            )
+        },
+    )
+
+    result = import_user_kpar(archive)
+
+    reference_subsetting = next(
+        iter(result.factory.select(kerml.ReferenceSubsetting))
+    )
+    prov = result.provenance_of(reference_subsetting)
+    assert prov is not None
+    assert prov.member == f"{ROOT_DIR}/V.sysml"
+    assert prov.line == 3
+
+
 def test_nested_elements_carry_provenance(tmp_path):
     archive = tmp_path / "proj.kpar"
     _write_user_kpar(

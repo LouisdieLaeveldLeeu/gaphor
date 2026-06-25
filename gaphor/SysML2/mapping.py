@@ -163,21 +163,33 @@ class _MappingContext:
         """
         _resolve_imports(self.imports)
         ambiguous: dict[str, str] = {}
+        # `relationship_sources` (relationship id -> declaring element id) is shared
+        # across every relationship-creating resolver, so an importer can trace ANY
+        # mapper-made relationship -- typing, subclassification, subsetting,
+        # redefinition, framed-concern reference -- back to its source declaration's
+        # line, not just the typed-usage FeatureTyping (Phase 5d-review §4).
+        relationship_sources: dict[str, str] = {}
         _resolve_aliases(self.aliases, ambiguous)
         unresolved_supertypes = _resolve_subclassifications(
-            self.subclassifications, ambiguous
+            self.subclassifications, ambiguous, relationship_sources
         )
-        unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
-            self.root, self.typed_usages, ambiguous
+        unresolved_types, mistyped = _resolve_typed_usages(
+            self.root, self.typed_usages, ambiguous, relationship_sources
         )
         unresolved_ends = _resolve_connection_ends(self.connection_ends, ambiguous)
-        unresolved_types.update(_resolve_subject_types(self.subject_typings, ambiguous))
-        unresolved_frame_refs = _resolve_frame_references(
-            self.frame_references, ambiguous
+        unresolved_types.update(
+            _resolve_subject_types(
+                self.subject_typings, ambiguous, relationship_sources
+            )
         )
-        unresolved_subsettings = _resolve_subsettings(self.subsettings, ambiguous)
+        unresolved_frame_refs = _resolve_frame_references(
+            self.frame_references, ambiguous, relationship_sources
+        )
+        unresolved_subsettings = _resolve_subsettings(
+            self.subsettings, ambiguous, relationship_sources
+        )
         unresolved_redefinitions, self_redefinitions = _resolve_redefinitions(
-            self.redefinitions, ambiguous
+            self.redefinitions, ambiguous, relationship_sources
         )
         _apply_implicit_bases(
             self.root,
@@ -254,8 +266,11 @@ def map_project_members(named_packages, factory: ElementFactory):
 
 
 def _resolve_typed_usages(
-    root: kerml.Namespace, typed_usages: list, ambiguous: dict[str, str]
-) -> tuple[dict[str, str], dict[str, tuple[str, str]], dict[str, str]]:
+    root: kerml.Namespace,
+    typed_usages: list,
+    ambiguous: dict[str, str],
+    relationship_sources: dict[str, str],
+) -> tuple[dict[str, str], dict[str, tuple[str, str]]]:
     """Resolve usage typing for the collected usages (mapping phase 2).
 
     Name resolution is nearest-first across enclosing namespaces (see
@@ -263,7 +278,8 @@ def _resolve_typed_usages(
     AttributeUsage, tried against the standard library (e.g. `attribute x : Real`);
     otherwise it is recorded as unresolved. A name that resolves to the WRONG kind
     is recorded as mistyped. Only a kind match creates the FeatureTyping, so
-    nothing is silently dropped and no cross-kind typing is ever stored.
+    nothing is silently dropped and no cross-kind typing is ever stored. A created
+    FeatureTyping records its usage in `relationship_sources` for provenance tracing.
 
     A conjugated port typing (`port p : ~Fuel`) resolves its name like a normal
     typing but must land on a PortDefinition; on a match it is typed by the
@@ -271,7 +287,6 @@ def _resolve_typed_usages(
     """
     unresolved_types: dict[str, str] = {}
     mistyped: dict[str, tuple[str, str]] = {}
-    relationship_sources: dict[str, str] = {}
     for usage, namespace, type_name, conjugated in typed_usages:
         target = _resolve_type(namespace, type_name)
         display_name = ("~" if conjugated else "") + "::".join(type_name)
@@ -303,7 +318,7 @@ def _resolve_typed_usages(
                 relationship_sources[typing.id] = usage.id
         else:
             mistyped[usage.id] = ("::".join(type_name), type(target).__name__)
-    return unresolved_types, mistyped, relationship_sources
+    return unresolved_types, mistyped
 
 
 def _resolve_connection_ends(
@@ -345,7 +360,9 @@ def _resolve_connection_ends(
 
 
 def _resolve_frame_references(
-    frame_references: list, ambiguous: dict[str, str]
+    frame_references: list,
+    ambiguous: dict[str, str],
+    relationship_sources: dict[str, str],
 ) -> dict[str, str]:
     """Resolve each framed-concern REFERENCE to an existing ConcernUsage (phase 2).
 
@@ -355,7 +372,9 @@ def _resolve_frame_references(
     ReferenceSubsetting linking the anonymous usage to it. A name visible from more
     than one import is recorded `ambiguous` (Phase 5a); a name that does not resolve,
     or resolves to a non-ConcernUsage (a ConcernDefinition or a part), is recorded
-    unresolved -- never silently dropped.
+    unresolved -- never silently dropped. A created ReferenceSubsetting records its
+    framing ConcernUsage in `relationship_sources` for provenance tracing
+    (Phase 5d-review §4).
     """
     unresolved: dict[str, str] = {}
     for concern, namespace, target in frame_references:
@@ -363,7 +382,8 @@ def _resolve_frame_references(
         if referenced is _AMBIGUOUS:
             ambiguous[concern.id] = "::".join(target)
         elif isinstance(referenced, sysml2.ConcernUsage):
-            kk.add_reference_subsetting(concern, referenced)
+            reference_subsetting = kk.add_reference_subsetting(concern, referenced)
+            relationship_sources[reference_subsetting.id] = concern.id
         else:
             unresolved[concern.id] = "::".join(target)
     return unresolved
@@ -424,7 +444,9 @@ def _resolve_aliases(aliases: list, ambiguous: dict[str, str]) -> None:
 
 
 def _resolve_subclassifications(
-    subclassifications: list, ambiguous: dict[str, str]
+    subclassifications: list,
+    ambiguous: dict[str, str],
+    relationship_sources: dict[str, str],
 ) -> dict[str, list[str]]:
     """Resolve each definition `:> Super` to a Classifier and create a
     Subclassification (mapping phase 2, Phase 5c).
@@ -435,7 +457,9 @@ def _resolve_subclassifications(
     that does not resolve to a Classifier (a definition) is APPENDED to the
     definition's unresolved-supertype list -- so EVERY bad supertype of a `:> A, B`
     is reported, none dropped. Resolved BEFORE the member passes so inherited-member
-    lookup sees the supertype links.
+    lookup sees the supertype links. A created Subclassification records its
+    declaring definition in `relationship_sources` so importers can trace it to that
+    definition's source line (Phase 5d-review §4).
     """
     unresolved: dict[str, list[str]] = {}
     for subtype, namespace, super_name in subclassifications:
@@ -444,14 +468,17 @@ def _resolve_subclassifications(
             ambiguous[subtype.id] = "::".join(super_name)
             continue
         if isinstance(target, kerml.Classifier):
-            kk.add_subclassification(subtype, target)
+            sc = kk.add_subclassification(subtype, target)
+            relationship_sources[sc.id] = subtype.id
         else:
             unresolved.setdefault(subtype.id, []).append("::".join(super_name))
     return unresolved
 
 
 def _resolve_subsettings(
-    subsettings: list, ambiguous: dict[str, str]
+    subsettings: list,
+    ambiguous: dict[str, str],
+    relationship_sources: dict[str, str],
 ) -> dict[str, str]:
     """Resolve each usage `:> y` subsetted feature to a Feature and create a plain
     Subsetting (mapping phase 2, Phase 5c).
@@ -460,7 +487,9 @@ def _resolve_subsettings(
     `_resolve_type` from the usage's namespace, so it may be an own, INHERITED, or
     enclosing feature. Visible from more than one import -> `ambiguous` (no
     Subsetting); not a Feature / not found -> recorded for the
-    `unresolved-subsetting` rule (never silently dropped).
+    `unresolved-subsetting` rule (never silently dropped). A created Subsetting
+    records its declaring usage in `relationship_sources` for provenance tracing
+    (Phase 5d-review §4).
     """
     unresolved: dict[str, str] = {}
     for feature, namespace, subset_name in subsettings:
@@ -469,14 +498,17 @@ def _resolve_subsettings(
             ambiguous[feature.id] = "::".join(subset_name)
             continue
         if isinstance(target, kerml.Feature):
-            kk.add_subsetting(feature, target)
+            subsetting = kk.add_subsetting(feature, target)
+            relationship_sources[subsetting.id] = feature.id
         else:
             unresolved[feature.id] = "::".join(subset_name)
     return unresolved
 
 
 def _resolve_redefinitions(
-    redefinitions: list, ambiguous: dict[str, str]
+    redefinitions: list,
+    ambiguous: dict[str, str],
+    relationship_sources: dict[str, str],
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Resolve each usage `:>> y` redefined feature to a Feature and create a
     Redefinition (mapping phase 2, Phase 5c-2). Returns
@@ -494,7 +526,9 @@ def _resolve_redefinitions(
     but WOULD resolve to the redefining feature itself (e.g. `:>> C::x` naming this
     very feature, or a bare `:>> x` with no inherited `x`) is a SELF-redefinition --
     recorded distinctly (a feature cannot redefine itself); anything else that does
-    not resolve to a Feature is `unresolved-redefinition`. Neither binds.
+    not resolve to a Feature is `unresolved-redefinition`. Neither binds. A created
+    Redefinition records its declaring usage in `relationship_sources` for provenance
+    tracing (Phase 5d-review §4).
     """
     unresolved: dict[str, str] = {}
     self_redefinitions: dict[str, str] = {}
@@ -504,7 +538,8 @@ def _resolve_redefinitions(
             ambiguous[feature.id] = "::".join(redefined_name)
             continue
         if isinstance(target, kerml.Feature):
-            kk.add_redefinition(feature, target)
+            redefinition = kk.add_redefinition(feature, target)
+            relationship_sources[redefinition.id] = feature.id
         elif _resolve_type(namespace, redefined_name) is feature:
             self_redefinitions[feature.id] = "::".join(redefined_name)
         else:
@@ -592,7 +627,9 @@ def _build_requirement_body(requirement, member, namespace, ctx: _MappingContext
 
 
 def _resolve_subject_types(
-    subject_typings: list, ambiguous: dict[str, str]
+    subject_typings: list,
+    ambiguous: dict[str, str],
+    relationship_sources: dict[str, str],
 ) -> dict[str, str]:
     """Resolve each requirement SUBJECT's declared type (mapping phase 2).
 
@@ -600,7 +637,9 @@ def _resolve_subject_types(
     usage), so there is no kind check; a name that resolves to a Type sets the
     FeatureTyping, otherwise it is recorded unresolved. A name visible from more
     than one import is recorded ambiguous (Phase 5a). (Actor/stakeholder are
-    PartUsage and resolve through the kind-checked `_resolve_typed_usages` path.)
+    PartUsage and resolve through the kind-checked `_resolve_typed_usages` path.) A
+    created FeatureTyping records its subject in `relationship_sources` for provenance
+    tracing (Phase 5d-review §4).
     """
     unresolved: dict[str, str] = {}
     for feature, namespace, type_name in subject_typings:
@@ -608,7 +647,9 @@ def _resolve_subject_types(
         if target is _AMBIGUOUS:
             ambiguous[feature.id] = "::".join(type_name)
         elif isinstance(target, kerml.Type):
-            kk.set_feature_type(feature, target)
+            typing = kk.set_feature_type(feature, target)
+            if typing is not None:
+                relationship_sources[typing.id] = feature.id
         else:
             unresolved[feature.id] = "::".join(type_name)
     return unresolved
