@@ -36,6 +36,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
+from gaphor.SysML2.element_id import element_id
 from gaphor.SysML2.export import export_namespace
 
 #: The single model member every export writes (the whole model's text).
@@ -83,13 +84,19 @@ def write_kpar(
 
     # The index maps each REAL top-level member name to the single model file;
     # library proxies and anonymous members (e.g. a nameless connector) are omitted.
-    index = {
-        name: MODEL_MEMBER
-        for member in kk.members(root)
-        if not kk.is_library_proxy(member)
-        and (name := kk.effective_name(member)) is not None
-    }
-    meta = {"index": index, "metamodel": METAMODEL}
+    # `elementIds` carries each member's API-facing elementId (Phase 12) so the
+    # archive records the OMG element identity; the reader tolerates the extra key.
+    index = {}
+    element_ids = {}
+    for member in kk.members(root):
+        if kk.is_library_proxy(member):
+            continue
+        name = kk.effective_name(member)
+        if name is None:
+            continue
+        index[name] = MODEL_MEMBER
+        element_ids[name] = element_id(member)
+    meta = {"index": index, "metamodel": METAMODEL, "elementIds": element_ids}
 
     path = Path(path)
     with ZipFile(path, "w", ZIP_DEFLATED) as archive:

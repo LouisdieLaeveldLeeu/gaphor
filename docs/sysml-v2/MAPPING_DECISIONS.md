@@ -181,9 +181,14 @@ Do not introduce a parallel repository id. Add a SysML/API-facing `elementId` on
 Keep these identities distinct:
 
 - Gaphor internal `Base.id`.
-- SysML/API-facing `elementId`, if introduced later.
+- SysML/API-facing `elementId` (introduced in Phase 12 -- see the Phase 12 entry).
 - Text import ids minted during import.
 - Canonical round-trip identity, based on structure and resolved references.
+
+Phase 12 amendment: the API-facing `elementId` is now POPULATED (a stable UUID minted
+at creation, persisted, distinct from `Base.id`, ignored by round-trip). The "only
+when required" rule was satisfied by the Phase 12 decision to implement the
+identity + API JSON export surface and close the REST client/service scope.
 
 ## Round-Trip Equivalence
 
@@ -1677,3 +1682,38 @@ pinned XMI abstract syntax and changes neither the model nor the generator.
   library `.kpar`s (only the artifact set + hashes are tracked, via
   `compute_manifest_rows`); auto-rewriting the manifest Markdown table.
   See `test_spec_index.py`.
+
+### Completion Phase 12: SysML v2 API alignment (verified 2026-06-25)
+
+A decision phase (exit: implement-and-test OR close-with-rationale). Decided to
+implement an API-facing IDENTITY + EXPORT surface and explicitly CLOSE the full
+Systems Modeling API & Services (REST repository client/server) as out of scope for
+a desktop modeling tool -- nothing implemented requires it, and KPAR is the realistic
+interchange.
+
+- **`elementId` is populated, not parallel.** KerML `Element::elementId` already
+  existed (generated from the XMI) but was a dead, empty slot. `element_id.py` mints a
+  stable UUID at element CREATION via `assign_element_ids`, called from the single
+  mapper resolve chokepoint so it covers BOTH text import and KPAR import. It is
+  persisted in `.gaphor` (stable across save/reload; `assign_element_ids` is idempotent
+  so a reloaded model keeps its ids), distinct in value and concept from `Base.id`
+  (the standing "keep identities distinct" rule), and IGNORED by `roundtrip.canonical_form`
+  (round-trip stays structural -- two structurally-equal models with different
+  elementIds still round-trip). There is no textual `<id>` syntax: a fresh text import
+  mints new ids, which is the correct API semantic (ids are assigned on creation).
+- **API element JSON export (`api_export.py`, `sysml2-api-export`).** A model -> the
+  OMG Systems Modeling API element shape: each element `{"@id", "@type", <stored
+  attributes>, <references as {"@id": ...} or lists>}`, built with Gaphor's generic
+  `Base.save` property enumeration (no per-class code). The WHOLE repository is dumped
+  (every `kerml.Element`, including library proxies and membership/relationship
+  elements) precisely so no `@id` dangles -- the opposite choice from the TEXTUAL
+  export, which omits elements lacking a human-readable form. `elementId` is surfaced
+  as `@id`; the diagram `presentation` back-reference is excluded as non-abstract-syntax.
+- **KPAR carries `elementId`.** The writer's `.meta.json` gains an `elementIds` map
+  (top-level member name -> elementId); the reader already reads only known keys, so
+  the extra field is tolerated and the KPAR contract is unchanged.
+- **Explicitly closed (documented).** No REST API client/server, project-repository
+  service, query/PATCH surface, or live API I/O; diagnostics stay Gaphor-internal. A
+  future concrete API consumer would build on this identity + JSON foundation. No
+  support-matrix construct rows change (this is an identity/export surface, not a new
+  construct). See `test_api_export.py`.

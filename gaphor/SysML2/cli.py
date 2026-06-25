@@ -262,6 +262,30 @@ def _run_kpar_export(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_api_export(args: argparse.Namespace) -> int:
+    """Export a `.gaphor` SysML2 model to the SysML v2 API element JSON (Phase 12).
+
+    Loads the model and serializes every element as an API payload (`@id`/`@type` +
+    stored attributes/references), the OMG Systems Modeling API element shape.
+    """
+    import gaphor.storage as storage
+    from gaphor.core.modeling import ElementFactory
+    from gaphor.SysML2.api_export import export_api_json
+
+    factory = ElementFactory()
+    with open(args.model, encoding="utf-8") as f:
+        storage.load(
+            f, element_factory=factory, modeling_language=_modeling_language()
+        )
+
+    text = export_api_json(factory)
+    if args.output:
+        Path(args.output).write_text(text, encoding="utf-8")
+    else:
+        sys.stdout.write(text)
+    return 0
+
+
 def validate_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Validate SysML v2 text without importing it."
@@ -341,6 +365,16 @@ def kpar_export_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def api_export_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Export a Gaphor SysML2 model as SysML v2 API element JSON."
+    )
+    parser.add_argument("model", help="source .gaphor model")
+    parser.add_argument("-o", "--output", help="output JSON file")
+    parser.set_defaults(command=_run_api_export)
+    return parser
+
+
 def parser_names() -> Sequence[str]:
     return (
         "sysml2-validate",
@@ -350,4 +384,5 @@ def parser_names() -> Sequence[str]:
         "sysml2-kpar-info",
         "sysml2-kpar-import",
         "sysml2-kpar-export",
+        "sysml2-api-export",
     )

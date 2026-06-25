@@ -957,17 +957,41 @@ auto-rewriting the manifest Markdown table (the tool prints rows to paste).
 Exit: future OMG SysML/KerML releases can be assessed mechanically before human
 mapping decisions -- done and tested.
 
-### Phase 12 -- SysML v2 API Alignment
+### Phase 12 -- SysML v2 API Alignment -- DONE
 
-Decide and implement the SysML v2 API/client surface needed by Gaphor, if any:
+Decided and implemented an API-facing IDENTITY + EXPORT surface, while the full
+Systems Modeling API & Services (a REST project-repository client/server) is
+explicitly CLOSED as out of proportion for a desktop modeling tool -- nothing
+implemented requires it, and KPAR (Phase 10) is the realistic interchange.
 
-- keep Gaphor's internal ids distinct from SysML/API-facing ids;
-- add API-facing identity/export compatibility only where required;
-- align diagnostics and interchange metadata with the formal API where it affects
-  model compatibility.
+- **API-facing identity (`elementId`)** -- `gaphor/SysML2/element_id.py`. KerML
+  `Element` already declared `elementId` (generated from the XMI) but it was never
+  populated. It is now minted as a stable UUID at element CREATION (`assign_element_ids`,
+  called from the mapper's resolve chokepoint, so it covers text import AND KPAR
+  import), PERSISTED into `.gaphor` (stable across save/reload, idempotent on reload),
+  kept DISTINCT in value and concept from Gaphor's internal `Base.id`, and IGNORED by
+  round-trip/canonical equivalence (which stays purely structural). It is never part
+  of the textual syntax -- a fresh text import mints new ids, the correct API semantic.
+- **API element JSON export** -- `gaphor/SysML2/api_export.py` +
+  `sysml2-api-export <model.gaphor> [-o out.json]`. Serializes the model to the OMG
+  Systems Modeling API element shape: every element as `{"@id": elementId, "@type":
+  metaclass, <stored attributes>, <references as {"@id": ...} / lists>}`, via Gaphor's
+  generic property enumeration (`Base.save`). The WHOLE repository is dumped (every
+  `kerml.Element`, including library proxies and membership/relationship elements) so
+  no `@id` reference dangles -- unlike the textual export, which omits elements with no
+  human-readable form. `elementId` becomes `@id`; the diagram `presentation` back-ref
+  is excluded (not abstract syntax).
+- **KPAR carries elementId** -- the writer's `.meta.json` gains an `elementIds` map
+  (top-level member name -> elementId); the reader tolerates the extra key, so an
+  exported archive records the OMG element identity without changing the KPAR contract.
 
-Exit: API-related scope is either implemented and tested or explicitly closed
-with a documented rationale.
+Boundary / explicitly CLOSED (documented rationale): no REST API client/server, no
+project-repository service, no API query/PATCH surface, no live API I/O. The diagnostics
+surface stays Gaphor-internal. If a concrete API consumer appears later, it builds on
+this identity + JSON foundation. Tested in `test_api_export.py`.
+
+Exit: API-related scope is implemented and tested (identity + JSON export) with the
+client/service scope explicitly closed and rationalized -- met.
 
 ### Phase 13 -- Diagram Synthesis And User-Facing UI Grooming
 
@@ -1056,7 +1080,7 @@ counted here.
 24. Phase 5e -- Feature Chains -- PLANNED
 25. Phase 10 -- General KPAR Export And Round-Trip -- PLANNED
 26. Phase 11 -- Versioned Spec-Ingestion Pipeline -- DONE
-27. Phase 12 -- SysML v2 API Alignment -- PLANNED
+27. Phase 12 -- SysML v2 API Alignment -- DONE
 28. Phase 13 -- Diagram Synthesis And User-Facing UI Grooming -- PLANNED
 29. Phase 14 -- CI And Release Hardening -- PLANNED
 

@@ -28,6 +28,7 @@ from gaphor.SysML2 import constraints
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import requirements
+from gaphor.SysML2.element_id import assign_element_ids
 from gaphor.SysML2.grammar import ast
 
 
@@ -199,6 +200,9 @@ class _MappingContext:
                 self.subclassifications, self.subsettings, self.redefinitions
             ),
         )
+        # Mint a stable API-facing elementId for every element at creation time
+        # (Phase 12). Persisted, distinct from Base.id, ignored by round-trip.
+        assign_element_ids(self.factory)
         return MappingResult(
             root=self.root,
             elements_by_name=top_level,
