@@ -92,7 +92,11 @@ def _project_dir_name(project_name: str) -> str:
     """A safe, non-empty single-segment project directory name from `project_name`.
 
     `read_kpar` requires the descriptors to live under one project directory (no
-    archive-root descriptor, no nested separators), so path separators are replaced
-    and an empty result falls back to a constant."""
+    archive-root descriptor, no nested separators), so path separators are replaced.
+    An empty result, or one that is a relative-path special (`.`/`..`, which would
+    place entries OUTSIDE the project directory, e.g. `../.project.json`), falls back
+    to a constant -- so a name like `--name ..` cannot escape the project dir."""
     name = project_name.replace("/", "_").replace("\\", "_").strip()
-    return name or "Project"
+    if name in ("", ".", ".."):
+        return "Project"
+    return name

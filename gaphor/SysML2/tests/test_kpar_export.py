@@ -176,3 +176,36 @@ def test_project_name_with_separators_is_sanitized(tmp_path):
     archive = read_kpar(path)
     assert "/" not in archive.root
     assert archive.project.name == "a/b\\c"  # the declared name is preserved as-is
+
+
+def test_relative_path_project_name_cannot_escape_project_dir(tmp_path):
+    # A `.`/`..`/empty project name must NOT place entries outside the project dir
+    # (no `../.project.json` zip-slip); it falls back to a safe constant.
+    import zipfile
+
+    for bad in ("..", ".", "  ", "../..", ".. "):
+        path = tmp_path / "out.kpar"
+        write_kpar(path, _map("part def Engine;")[1], project_name=bad)
+        with zipfile.ZipFile(path) as zf:
+            names = zf.namelist()
+        assert all(not name.startswith((".." + "/", "../", "./")) for name in names)
+        assert all(".." not in name.split("/") for name in names)
+        # Still a readable, single-project archive.
+        assert "/" not in read_kpar(path).root
+
+
+def test_kpar_export_cli_rejects_traversal_name(tmp_path):
+    # The CLI path (`--name ..`) is sanitized too -- no escape from the project dir.
+    import zipfile
+
+    model = tmp_path / "m.gaphor"
+    factory = ElementFactory()
+    map_package(parse("part def Engine;"), factory)
+    with open(model, "w", encoding="utf-8") as f:
+        storage.save(f, factory)
+
+    archive = tmp_path / "out.kpar"
+    args = cli.kpar_export_parser().parse_args([str(model), str(archive), "--name", ".."])
+    assert args.command(args) == 0
+    with zipfile.ZipFile(archive) as zf:
+        assert all(".." not in name.split("/") for name in zf.namelist())
