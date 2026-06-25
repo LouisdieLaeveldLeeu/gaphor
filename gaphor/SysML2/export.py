@@ -445,6 +445,14 @@ def _connection_decl(connection: kerml.Feature, root: kerml.Namespace) -> str:
 def _end_name(
     connection: kerml.Feature, end: kerml.Element, root: kerml.Namespace
 ) -> str:
+    # A feature-chain endpoint (`a.b.c`, Phase 5e) is rendered from its ordered
+    # chaining features: the head by the usual endpoint rule, then each `.step` by
+    # its simple name (a step is a member of the previous step's type, so relative
+    # to the head it re-resolves by name).
+    if kk.is_feature_chain(end):
+        steps = list(kk.chaining_features(end))
+        head = _end_name(connection, steps[0], root)
+        return ".".join((head, *(kk.effective_name(s) for s in steps[1:])))
     owning = kk.owning_namespace(connection)
     if owning is not None and end in set(kk.members(owning)):
         return kk.effective_name(end)

@@ -84,8 +84,11 @@ def test_kernel_has_expected_class_count():
     # the stored superclassifier/subclassifier classifier ends) for Phase 5c, and
     # Redefinition (the KerML Subsetting that redefines an inherited feature, for
     # `part x :>> y`; -> Subsetting, redefining subsetted/subsetting as the stored
-    # redefinedFeature/redefiningFeature ends) for Phase 5c-2.
-    assert len(_all_kernel_classes()) == 37
+    # redefinedFeature/redefiningFeature ends) for Phase 5c-2, and FeatureChaining
+    # (the KerML Relationship making its target one of its owner's chainingFeatures,
+    # for `connect a.b to c.d`; -> Relationship, adding the stored chainingFeature
+    # end, featureChained derived) for Phase 5e.
+    assert len(_all_kernel_classes()) == 38
 
 
 # --- required behaviour 1: namespace + membership round-trip -----------------

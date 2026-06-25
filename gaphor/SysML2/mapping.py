@@ -337,11 +337,24 @@ def _resolve_connection_ends(
     unresolved_ends: dict[str, list[str]] = {}
     for connection, namespace, source_name, target_name in connection_ends:
         broken: list[str] = []
-        resolved: dict[str, kerml.Feature] = {}
+        # Maps "source"/"target" -> the resolved end: a Feature for a plain endpoint,
+        # or a list of chaining Features for a chain endpoint (Phase 5e). The chain
+        # FEATURE is synthesized only after BOTH ends resolve, so a half-broken
+        # connection leaves no orphan chain feature (the ends stay atomic).
+        resolved: dict[str, kerml.Feature | list[kerml.Feature]] = {}
         for name, setter in (
             (source_name, "source"),
             (target_name, "target"),
         ):
+            if isinstance(name, ast.FeatureChain):
+                steps = _resolve_chain_features(namespace, name)
+                if steps is _AMBIGUOUS:
+                    ambiguous[connection.id] = _chain_display(name)
+                elif steps is not None:
+                    resolved[setter] = steps
+                else:
+                    broken.append(_chain_display(name))
+                continue
             target = _resolve_type(namespace, name)
             if target is _AMBIGUOUS:
                 ambiguous[connection.id] = "::".join(name)
@@ -350,13 +363,69 @@ def _resolve_connection_ends(
             else:
                 broken.append("::".join(name))
         if len(resolved) == 2:
-            for setter, feature in resolved.items():
+            for setter, end in resolved.items():
+                feature = _make_chain_feature(connection, end) if isinstance(
+                    end, list
+                ) else end
                 setattr(connection, setter, feature)
         elif broken:
             unresolved_ends[connection.id] = broken
         # else: an ambiguous end (no plain-broken end) -- reported via `ambiguous`,
         # not double-reported as a broken end; ends left unset.
     return unresolved_ends
+
+
+def _chain_display(chain: ast.FeatureChain) -> str:
+    """The dotted text of a feature chain (`a.b.c`) for diagnostics (Phase 5e)."""
+    return ".".join(("::".join(chain.head), *chain.rest))
+
+
+def _resolve_chain_features(
+    namespace: kerml.Namespace, chain: ast.FeatureChain
+):
+    """Resolve a feature chain `a.b.c` to its ordered chaining features (Phase 5e).
+
+    The HEAD resolves nearest-first (imports included) and must be a Feature; each
+    subsequent `.step` resolves as a member of the PREVIOUS feature's TYPE (own
+    member, else its sole inherited member). Returns the ordered feature list, or
+    `_AMBIGUOUS` if the head is visible from more than one import, or None if any
+    step does not resolve to a feature (a broken chain).
+    """
+    head = _resolve_type(namespace, chain.head)
+    if head is _AMBIGUOUS:
+        return _AMBIGUOUS
+    if not isinstance(head, kerml.Feature):
+        return None
+    features: list[kerml.Feature] = [head]
+    current = head
+    for step in chain.rest:
+        type_ = kk.feature_type(current)
+        if type_ is None:
+            return None  # the previous feature is untyped: nothing to navigate into
+        member = kk.owned_member_named(type_, step)
+        if member is None and isinstance(type_, kerml.Type):
+            inherited = kk.inherited_members_named(type_, step)
+            member = inherited[0] if len(inherited) == 1 else None
+        if not isinstance(member, kerml.Feature) or _is_library_proxy(member):
+            return None
+        features.append(member)
+        current = member
+    return features
+
+
+def _make_chain_feature(
+    connection: kerml.Feature, steps: list[kerml.Feature]
+) -> kerml.Feature:
+    """Synthesize the anonymous chain Feature for a connector end (Phase 5e): a
+    Feature owning an ordered FeatureChaining per step, owned by the connection (an
+    end feature). It is recognized by `kk.is_feature_chain` and skipped where user
+    members are iterated."""
+    factory = connection.model
+    chain = factory.create(kerml.Feature)
+    for step in steps:
+        kk.add_feature_chaining(chain, step)
+    kk.add_owned_member(connection, chain, factory.create(kerml.FeatureMembership))
+    return chain
 
 
 def _resolve_frame_references(
@@ -1223,7 +1292,11 @@ def _apply_implicit_bases(
     for feature in root_members:
         if not isinstance(feature, kerml.Feature):
             continue
-        if _is_library_proxy(feature) or feature.id in explicit_specialized:
+        if (
+            _is_library_proxy(feature)
+            or kk.is_feature_chain(feature)  # synthesized connector-end chain (5e)
+            or feature.id in explicit_specialized
+        ):
             continue
         if any(isinstance(r, kerml.Subsetting) for r in feature.ownedRelationship):
             continue  # has an explicit subsetting / reference-subsetting / redefinition

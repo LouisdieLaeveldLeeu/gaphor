@@ -89,29 +89,25 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
             elif isinstance(member, sysml2.InterfaceDefinition):
                 entries.add(("InterfaceDefinition", kk.qualified_name(member)))
             elif isinstance(member, sysml2.InterfaceUsage):
-                source = kk._single(member.source)
-                target = kk._single(member.target)
                 entries.add(
                     (
                         "InterfaceUsage",
                         kk.qualified_name(member),
                         _usage_type_qualified_name(member) or "",
-                        kk.qualified_name(source) if source is not None else "",
-                        kk.qualified_name(target) if target is not None else "",
+                        _endpoint_qn(kk._single(member.source)),
+                        _endpoint_qn(kk._single(member.target)),
                     )
                 )
             elif isinstance(member, sysml2.ConnectionDefinition):
                 entries.add(("ConnectionDefinition", kk.qualified_name(member)))
             elif isinstance(member, sysml2.ConnectionUsage):
-                source = kk._single(member.source)
-                target = kk._single(member.target)
                 entries.add(
                     (
                         "ConnectionUsage",
                         kk.qualified_name(member),
                         _usage_type_qualified_name(member) or "",
-                        kk.qualified_name(source) if source is not None else "",
-                        kk.qualified_name(target) if target is not None else "",
+                        _endpoint_qn(kk._single(member.source)),
+                        _endpoint_qn(kk._single(member.target)),
                     )
                 )
             elif isinstance(member, sysml2.PartDefinition):
@@ -331,17 +327,28 @@ def canonical_form(root: kerml.Namespace) -> frozenset[tuple[str, ...]]:
     return frozenset(entries)
 
 
+def _endpoint_qn(end: kerml.Element | None) -> str:
+    """Canonical text of a connector endpoint: a plain end's qualified name, or a
+    feature chain's ordered chaining-feature qualified names joined by `.` (Phase
+    5e) -- so a chain endpoint fingerprints by its PATH, not by the anonymous chain
+    feature's (empty) name. Empty when the end is unset."""
+    if end is None:
+        return ""
+    if kk.is_feature_chain(end):
+        return ".".join(kk.qualified_name(step) for step in kk.chaining_features(end))
+    return kk.qualified_name(end)
+
+
 def _connector_entry(tag: str, member: kerml.Element) -> tuple[str, ...]:
     """Canonical entry for a binary connector usage (succession / flow): its
-    qualified name plus the resolved source/target qualified names (empty when an
-    end is unset), so the connector and its ends round-trip (Phase 7)."""
-    source = kk._single(member.source)
-    target = kk._single(member.target)
+    qualified name plus the resolved source/target endpoints (a chain endpoint by
+    its path), empty when an end is unset, so the connector and its ends round-trip
+    (Phase 7/5e)."""
     return (
         tag,
         kk.qualified_name(member),
-        kk.qualified_name(source) if source is not None else "",
-        kk.qualified_name(target) if target is not None else "",
+        _endpoint_qn(kk._single(member.source)),
+        _endpoint_qn(kk._single(member.target)),
     )
 
 

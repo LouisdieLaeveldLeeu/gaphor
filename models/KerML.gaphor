@@ -240,6 +240,17 @@
 <owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
 <package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
 </UML:Class>
+<UML:Class id="64ee4994-5409-5f00-ad30-0852749615a7">
+<name><val>FeatureChaining</val></name>
+<ownedAttribute><reflist>
+<ref refid="415165c4-fba3-5c5d-a05d-2efd5ebedf0d"/>
+</reflist></ownedAttribute>
+<generalization><reflist>
+<ref refid="11cf15a7-2f0c-570d-a442-71544ac90f56"/>
+</reflist></generalization>
+<owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
+<package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
+</UML:Class>
 <UML:Class id="4edb0c4a-d4d1-5413-8685-2bd89b4d1be3">
 <name><val>FeatureMembership</val></name>
 <ownedAttribute><reflist>
@@ -571,6 +582,10 @@
 <general><ref refid="8d9234aa-97e6-529b-8f71-14939a9c6434"/></general>
 <specific><ref refid="36130c41-b738-56bc-bca7-fb3bd3191b46"/></specific>
 </UML:Generalization>
+<UML:Generalization id="11cf15a7-2f0c-570d-a442-71544ac90f56">
+<general><ref refid="5c95ffa6-87d9-50b9-a00c-ad8747e39649"/></general>
+<specific><ref refid="64ee4994-5409-5f00-ad30-0852749615a7"/></specific>
+</UML:Generalization>
 <UML:Generalization id="ef3b81b4-b598-514c-93c5-fee59c17e4b9">
 <general><ref refid="b872179f-a3d0-527d-b1f1-5b33c13a5a88"/></general>
 <specific><ref refid="4edb0c4a-d4d1-5413-8685-2bd89b4d1be3"/></specific>
@@ -788,6 +803,17 @@
 <structuredClassifier><ref refid="36130c41-b738-56bc-bca7-fb3bd3191b46"/></structuredClassifier>
 <type><ref refid="4672a5b5-c39c-5c65-bbb8-1b9312d14af8"/></type>
 <lowerValue><ref refid="1f494749-e4ad-510b-8b6e-5831ec230d8b"/></lowerValue>
+</UML:Property>
+<UML:Property id="415165c4-fba3-5c5d-a05d-2efd5ebedf0d">
+<association><ref refid="7bc0e9c6-4cad-516d-8d32-c2f0c5a046a6"/></association>
+<name><val>chainingFeature</val></name>
+<structuredClassifier><ref refid="64ee4994-5409-5f00-ad30-0852749615a7"/></structuredClassifier>
+<type><ref refid="36130c41-b738-56bc-bca7-fb3bd3191b46"/></type>
+</UML:Property>
+<UML:Property id="f547cf87-8c01-5a32-9dcf-942e03a81a37">
+<name><val>FeatureChaining_chainingFeature_of</val></name>
+<type><ref refid="64ee4994-5409-5f00-ad30-0852749615a7"/></type>
+<owningAssociation><ref refid="7bc0e9c6-4cad-516d-8d32-c2f0c5a046a6"/></owningAssociation>
 </UML:Property>
 <UML:Property id="245da090-7cee-5218-ba32-717b81d8270c">
 <association><ref refid="b5ffddbf-6637-5602-bcdc-543f75fbb3ff"/></association>
@@ -1042,6 +1068,11 @@
 </UML:Association>
 <UML:Association id="7c2f8dbc-f0f1-596e-9f6f-9655c086f50e">
 <memberEnd><reflist><ref refid="228b6df7-532c-5b42-8a29-cdc8fa4366ba"/><ref refid="c5d1dccb-267f-56a7-9a1e-ce067a0facf5"/></reflist></memberEnd>
+<owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
+<package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
+</UML:Association>
+<UML:Association id="7bc0e9c6-4cad-516d-8d32-c2f0c5a046a6">
+<memberEnd><reflist><ref refid="415165c4-fba3-5c5d-a05d-2efd5ebedf0d"/><ref refid="f547cf87-8c01-5a32-9dcf-942e03a81a37"/></reflist></memberEnd>
 <owningPackage><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></owningPackage>
 <package><ref refid="68f2c451-0d8b-53d9-a917-5f004109d6b4"/></package>
 </UML:Association>

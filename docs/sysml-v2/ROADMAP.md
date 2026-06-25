@@ -526,13 +526,44 @@ Exit: implicit specializations participate in resolution per the (universal-root
 spec, and are invisible to text -- done and tested
 (`test_implicit_specialization.py`). No support-matrix construct cell moves.
 
-### Phase 5e -- Feature Chains -- PLANNED
+### Phase 5e -- Feature Chains -- DONE
 
-Add feature-chain syntax (`a.b.c`) and resolve a chain step-by-step through
-feature types. Prerequisite: feature-chain grammar + the chain-resolution
-contract. Exit: feature chains resolve along their feature types. Also enables
-feature-chain connector endpoints (`connect a.b to c.d`), the explicit extension
-deferred by Phase 9's non-chain endpoint scope.
+Added feature-chain CONNECTOR ENDPOINTS (`connect a.b to c.d`, + succession
+`first/then`, flow `from/to`) -- the chosen scope, the explicit extension deferred
+by Phase 9's non-chain endpoints. One new kernel class: `FeatureChaining` (kernel
+37 -> 38).
+
+- **metamodel**: seeded `FeatureChaining` (a Relationship whose target,
+  `chainingFeature`, is one of the chain feature's ordered steps; `featureChained`
+  the derived source) and regenerated;
+- **grammar/AST/parser**: `connection_end: qualified_name ("." NAME)*` -- a `.`-chained
+  endpoint becomes `ast.FeatureChain(head, rest)`, distinct from the `::` namespace
+  separator; a plain endpoint stays a tuple;
+- **resolution**: a chain resolves step-by-step -- the HEAD nearest-first (imports
+  included), then each `.step` as a member of the previous feature's TYPE (own member,
+  else its SOLE inherited member). A resolved chain becomes a synthesized anonymous
+  Feature owning an ordered FeatureChaining per step, owned by the connector and set
+  as its source/target. The chain feature is created only after BOTH ends resolve, so
+  a half-broken connection leaves no orphan and the ends stay atomic; a step that does
+  not resolve is reported `broken-connection-end`;
+- **invisible as a user member**: the synthesized chain feature gets no implicit base
+  (`is_feature_chain` skip in the 5d pass), is not exported as a member, and is
+  recognized by `kk.is_feature_chain`;
+- **validation**: model-derived `broken-feature-chain` (a FeatureChaining whose
+  chainingFeature was cleared);
+- **export/round-trip/persist**: a chain endpoint renders as the dotted path `a.b.c`
+  (head by the usual endpoint rule, then each step's simple name); the canonical form
+  fingerprints a chain endpoint by its chaining features' qualified names (not the
+  anonymous chain feature); chains survive `.gaphor` save/reload.
+
+OUT of scope (deferred): feature chains in non-endpoint positions (typing /
+subsetting / redefinition targets), and FeatureChainExpression (expression-level
+chains).
+
+Exit: feature chains resolve along their feature types and feature-chain connector
+endpoints work -- done and tested (`test_feature_chains.py`). The
+SuccessionAsUsage/FlowUsage/ConnectionUsage/InterfaceUsage rows gain feature-chain
+endpoints (no status change).
 
 ### Phase 6 -- Constraint And Requirement Semantics
 

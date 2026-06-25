@@ -401,7 +401,13 @@ class _ASTBuilder(Transformer):
         return ast.ConnectionDefinition(name=str(name), line=name.line)
 
     def connection_end(self, items):
-        return items[0]  # qualified_name tuple
+        # `qualified_name ("." NAME)*` -- a plain endpoint is just the qualified_name
+        # tuple; a `.`-chained endpoint is a FeatureChain (head + step names, 5e).
+        if len(items) == 1:
+            return items[0]  # qualified_name tuple (no chain)
+        return ast.FeatureChain(
+            head=items[0], rest=tuple(str(name) for name in items[1:])
+        )
 
     def connect_clause(self, items):
         return _Connect(items[0], items[1])

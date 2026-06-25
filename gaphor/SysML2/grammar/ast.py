@@ -99,14 +99,31 @@ class ActionUsage:
 
 
 @dataclass(frozen=True)
+class FeatureChain:
+    """A connector-endpoint FEATURE CHAIN `a.b.c` (Phase 5e).
+
+    `head` is the first feature's (qualified) name, resolved nearest-first; `rest`
+    is the ordered dot-chained step names, each resolved as a member of the previous
+    feature's TYPE. A connector endpoint is either a plain qualified-name tuple (no
+    chain) or a `FeatureChain`."""
+
+    head: tuple[str, ...]  # first feature's qualified name
+    rest: tuple[str, ...]  # subsequent `.step` names
+
+
+# A connector endpoint is a plain (qualified) name or a feature chain.
+ConnectionEnd = "tuple[str, ...] | FeatureChain"
+
+
+@dataclass(frozen=True)
 class SuccessionUsage:
     """`succession [<name>] first <end> then <end> ;` (Phase 7).
 
     A binary control-flow connector usage: `source`/`target` are the two step
-    references (qualified-name segments)."""
+    endpoints (a qualified-name tuple, or a `FeatureChain` since Phase 5e)."""
 
-    source: tuple[str, ...]  # the `first` end
-    target: tuple[str, ...]  # the `then` end
+    source: "tuple[str, ...] | FeatureChain"  # the `first` end
+    target: "tuple[str, ...] | FeatureChain"  # the `then` end
     name: str | None = None
     visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line
@@ -116,11 +133,11 @@ class SuccessionUsage:
 class FlowUsage:
     """`flow [<name>] from <end> to <end> ;` (Phase 7).
 
-    A binary item-flow connector usage: `source`/`target` are the two feature
-    references (qualified-name segments)."""
+    A binary item-flow connector usage: `source`/`target` are the two endpoints (a
+    qualified-name tuple, or a `FeatureChain` since Phase 5e)."""
 
-    source: tuple[str, ...]  # the `from` end
-    target: tuple[str, ...]  # the `to` end
+    source: "tuple[str, ...] | FeatureChain"  # the `from` end
+    target: "tuple[str, ...] | FeatureChain"  # the `to` end
     name: str | None = None
     visibility: str | None = None  # "public" / "private", or None (unmarked)
     line: int | None = _line

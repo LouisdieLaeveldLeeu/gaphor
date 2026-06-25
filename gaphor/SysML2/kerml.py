@@ -134,6 +134,10 @@ class Documentation(Comment):
     pass
 
 
+class FeatureChaining(Relationship):
+    chainingFeature: relation_many[Feature]
+
+
 class Membership(Relationship):
     memberElement: relation_many[Element]
     memberName: _attribute[str] = _attribute("memberName", str)
@@ -222,6 +226,7 @@ Relationship.owningRelatedElement = association("owningRelatedElement", Element)
 Relationship.ownedRelatedElement = association("ownedRelatedElement", Element, composite=True)
 Conjugation.originalType = association("originalType", Type)
 Conjugation.conjugatedType = association("conjugatedType", Type)
+FeatureChaining.chainingFeature = association("chainingFeature", Feature)
 Membership.memberElement = association("memberElement", Element)
 Specialization.general = association("general", Type)
 Specialization.specific = association("specific", Type)

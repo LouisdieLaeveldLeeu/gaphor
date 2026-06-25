@@ -523,6 +523,13 @@ KERNEL_SEED = (
     # Connector) -- no new stored closure.
     "Succession",
     "Flow",
+    # FeatureChaining is the KerML Relationship that makes its target Feature one of
+    # the chainingFeatures of its owning (chain) Feature, seeded in Phase 5e for
+    # feature-chain connector endpoints (`connect a.b to c.d`). -> Relationship
+    # (already in the kernel); it redefines target/source as chainingFeature
+    # (stored) and the DERIVED featureChained, so it adds the stored chainingFeature
+    # end.
+    "FeatureChaining",
 )
 
 

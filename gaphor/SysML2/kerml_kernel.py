@@ -26,6 +26,7 @@ from gaphor.SysML2.kerml import (
     DataType,
     Element,
     Feature,
+    FeatureChaining,
     FeatureTyping,
     Import,
     Membership,
@@ -310,6 +311,41 @@ def redefinitions(feature: Feature) -> Iterator[Redefinition]:
     for relationship in feature.ownedRelationship:
         if isinstance(relationship, Redefinition):
             yield relationship
+
+
+def add_feature_chaining(chain: Feature, step: Feature) -> FeatureChaining:
+    """Append `step` as the next chaining feature of the chain Feature `chain`
+    (`a.b.c`, Phase 5e).
+
+    A FeatureChaining is a Relationship owned by the chain feature (`featureChained`,
+    derived) whose target is one chaining feature (`chainingFeature`, a NON-owning
+    reference). Appending preserves order, so `chaining_features` reads the chain
+    left-to-right.
+    """
+    chaining = chain.model.create(FeatureChaining)
+    chaining.chainingFeature = step
+    chain.ownedRelationship = chaining
+    chaining.owningRelatedElement = chain
+    return chaining
+
+
+def chaining_features(chain: Feature) -> Iterator[Feature]:
+    """The ordered chaining features of the chain Feature `chain` (Phase 5e)."""
+    for relationship in chain.ownedRelationship:
+        if isinstance(relationship, FeatureChaining):
+            step = _single(relationship.chainingFeature)
+            if step is not None:
+                yield step
+
+
+def is_feature_chain(feature: Element) -> bool:
+    """True for a synthesized feature chain: a Feature that owns FeatureChainings
+    (its chainingFeatures spell the `a.b.c` path) (Phase 5e). Such a feature is an
+    anonymous connector-end chain, not a user member, so it is skipped where user
+    members are iterated (implicit base, round-trip)."""
+    return isinstance(feature, Feature) and any(
+        isinstance(r, FeatureChaining) for r in feature.ownedRelationship
+    )
 
 
 def reference_subsettings(feature: Feature) -> Iterator[ReferenceSubsetting]:

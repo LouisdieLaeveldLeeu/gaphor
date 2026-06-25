@@ -182,7 +182,11 @@ connection_definition: "connection" "def" NAME ";"
 connection_usage: DIRECTION? "connection" NAME (":" type_ref)? connect_clause? ";"
 
 connect_clause: "connect" connection_end "to" connection_end
-connection_end: qualified_name
+// A connector endpoint is a (qualified) feature name, optionally a FEATURE CHAIN
+// `a.b.c` (Phase 5e): the head resolves nearest-first, then each `.step` resolves
+// as a member of the previous feature's TYPE. The `.` chain operator is distinct
+// from the `::` namespace separator in `qualified_name`.
+connection_end: qualified_name ("." NAME)*
 
 // `interface def <name> ;`
 interface_definition: "interface" "def" NAME ";"

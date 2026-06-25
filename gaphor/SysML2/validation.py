@@ -147,6 +147,7 @@ def validate(
     )
     diagnostics.extend(_check_self_redefinitions(self_redefinitions or {}))
     diagnostics.extend(_check_broken_specializations(factory))
+    diagnostics.extend(_check_broken_feature_chains(factory))
     return diagnostics
 
 
@@ -637,6 +638,24 @@ def _check_self_redefinitions(
             f"a feature cannot redefine itself ({name!r})",
             element_id,
         )
+
+
+def _check_broken_feature_chains(factory: ElementFactory) -> Iterator[Diagnostic]:
+    """A persisted FeatureChaining must reference a chaining feature (Phase 5e).
+
+    Model-derived (needs no mapping context): the mapper always sets the
+    chainingFeature when synthesizing a chain endpoint, so this catches a hand- or
+    API-mutated chain whose step was cleared -- which export would otherwise silently
+    drop from the `a.b.c` path.
+    """
+    for chaining in factory.select(kerml.FeatureChaining):
+        if kk._single(chaining.chainingFeature) is None:
+            yield Diagnostic(
+                Severity.ERROR,
+                "broken-feature-chain",
+                "feature chaining does not reference a chaining feature",
+                chaining.id,
+            )
 
 
 def _check_broken_specializations(factory: ElementFactory) -> Iterator[Diagnostic]:

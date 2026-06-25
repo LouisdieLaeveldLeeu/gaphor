@@ -1566,3 +1566,44 @@ review. No SysML construct behavior changes.
   So `result.provenance_of(<any mapper relationship>)` now resolves. The implicit-base
   relationships are intentionally NOT recorded (they have no source declaration). See
   `test_kpar_project_import.py` (heritage + framed-concern provenance).
+
+### Completion Phase 5e: Feature Chains (connector endpoints) (verified 2026-06-24)
+
+Feature-chain connector endpoints (`connect a.b to c.d`), the chosen scope (the
+Phase 9 deferred extension). One new metamodel class: `FeatureChaining` (kernel
+37 -> 38).
+
+- **Metamodel (regen).** Seeded `FeatureChaining` -- a `Relationship` whose target
+  `chainingFeature` (stored) is one step of its owning chain Feature, `featureChained`
+  the derived source. So a chain Feature owns an ordered FeatureChaining per step;
+  `chaining_features` reads them left-to-right.
+- **`.` is a distinct operator.** `connection_end: qualified_name ("." NAME)*`. A
+  `.`-chained endpoint parses to `ast.FeatureChain(head, rest)`; a plain endpoint
+  stays a tuple (unchanged). The `.` chain operator navigates FEATURE TYPES, distinct
+  from the `::` namespace separator in `qualified_name`.
+- **Step-by-step resolution through types.** `_resolve_chain_features` resolves the
+  head with the import-aware nearest-first `_resolve_type`, then each `.step` as a
+  member of the PREVIOUS feature's `feature_type` (own member, else its sole inherited
+  member; an untyped previous feature or an unresolved/ambiguous step fails the chain).
+- **Synthesis deferred + atomic.** A connector's ends are resolved first; only when
+  BOTH resolve is the chain Feature synthesized (`_make_chain_feature`: a Feature
+  owning the FeatureChainings, owned by the connector via FeatureMembership) and set
+  as source/target. A half-broken connection leaves NO orphan chain feature and NO end
+  set -- the same atomic contract as the Phase 9 plain ends.
+- **Invisible as a user member.** The chain Feature is anonymous and synthetic, so the
+  Phase 5d implicit-base pass skips it (`kk.is_feature_chain`), export never renders it
+  as a member (a bare Feature has no member line), and the round-trip `visit` never
+  reaches it (it does not recurse into connector usages). It surfaces ONLY as the
+  connector's endpoint.
+- **Validation.** Mapping-context `broken-connection-end` already covers a broken
+  chain step (the chain display `a.b.c` is the recorded end); added model-derived
+  `broken-feature-chain` for a persisted/API-mutated FeatureChaining whose
+  chainingFeature was cleared (export would otherwise silently shorten the path).
+- **Export / round-trip.** A chain endpoint renders via `_end_name` as the dotted path
+  -- the head by the usual endpoint rule (bare in the connector's namespace, else
+  path), then each step's simple name (a step re-resolves by name as a member of the
+  previous step's type). The canonical form's shared `_endpoint_qn` fingerprints a
+  chain endpoint by its chaining features' qualified names, so a chain round-trips by
+  its PATH, not by the anonymous chain feature's empty name.
+- **Deferred (noted).** Feature chains in non-endpoint positions (typing / subsetting /
+  redefinition targets) and FeatureChainExpression. See `test_feature_chains.py`.
