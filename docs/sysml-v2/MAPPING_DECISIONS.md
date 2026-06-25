@@ -1635,3 +1635,33 @@ import. No metamodel or mapping change -- it reuses the textual exporter.
   finds its single bare root namespace, and writes the archive -- symmetric with
   `sysml2-kpar-import`. Deferred: multi-member export preserving file boundaries;
   `usage`-dependency export. See `test_kpar_export.py`.
+
+### Completion Phase 11: versioned spec-ingestion pipeline (verified 2026-06-25)
+
+Maintainer tooling (`codegen/spec_index.py`, `poe` tasks) to assess a NEW OMG
+SysML/KerML release MECHANICALLY before any human mapping decision. It reads the
+pinned XMI abstract syntax and changes neither the model nor the generator.
+
+- **The baseline IS the old version; the live XMI is the new one.** Rather than a
+  separate version argument, the committed JSON baseline indexes
+  (`codegen/spec_baseline/*.index.json`) are the "current pinned" snapshot, and
+  `poe sysml2-spec-diff` diffs them against the live XMI on disk. So the versioned
+  workflow needs no arguments: replace the pinned XMI, run the diff, decide, then
+  `poe sysml2-spec-index` to accept (regenerate the baseline). A test guards the
+  baseline against drift -- the same regen discipline as the generated code.
+- **A new STORED reference is the central review trigger.** Ownership (composite =
+  cascade on delete) is a human mapping decision recorded in
+  `xmi_adapter.COMPOSITE_REFS`. A newly added stored class-typed property is, by
+  definition, NOT yet in that whitelist, so `review_findings` always flags it for a
+  decision; derived (computed) references and primitive/enum attributes are INFO
+  only. `derived -> stored` flips and removed properties/classes/literals are also
+  REVIEW (breaking or stored-end-introducing); new enumerations/literals are INFO.
+- **Fail-fast.** `poe sysml2-spec-diff` exits non-zero if any finding is REVIEW, so a
+  release with unreviewed mapping changes cannot be silently adopted.
+- **Index granularity.** Per class: name, abstractness, generalization NAMES (idrefs
+  resolved), and owned properties as (name, type, kind in attribute/enum/reference,
+  derived). Enum literals are kept in document order (deterministic; the diff
+  compares literal sets). Deferred: diffing the CONTENT of the normative library
+  `.kpar`s (only the artifact set + hashes are tracked, via
+  `compute_manifest_rows`); auto-rewriting the manifest Markdown table.
+  See `test_spec_index.py`.

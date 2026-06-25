@@ -1,0 +1,2149 @@
+{
+  "source": "SysML.xmi",
+  "classes": [
+    {
+      "name": "AcceptActionUsage",
+      "abstract": false,
+      "generalizations": [
+        "ActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "payloadArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "payloadParameter",
+          "type": "ReferenceUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "receiverArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ActionDefinition",
+      "abstract": false,
+      "generalizations": [
+        "OccurrenceDefinition"
+      ],
+      "properties": [
+        {
+          "name": "action",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ActionUsage",
+      "abstract": false,
+      "generalizations": [
+        "OccurrenceUsage"
+      ],
+      "properties": [
+        {
+          "name": "actionDefinition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ActorMembership",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "ownedActorParameter",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "AllocationDefinition",
+      "abstract": false,
+      "generalizations": [
+        "ConnectionDefinition"
+      ],
+      "properties": [
+        {
+          "name": "allocation",
+          "type": "AllocationUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "AllocationUsage",
+      "abstract": false,
+      "generalizations": [
+        "ConnectionUsage"
+      ],
+      "properties": [
+        {
+          "name": "allocationDefinition",
+          "type": "AllocationDefinition",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "AnalysisCaseDefinition",
+      "abstract": false,
+      "generalizations": [
+        "CaseDefinition"
+      ],
+      "properties": [
+        {
+          "name": "resultExpression",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "AnalysisCaseUsage",
+      "abstract": false,
+      "generalizations": [
+        "CaseUsage"
+      ],
+      "properties": [
+        {
+          "name": "analysisCaseDefinition",
+          "type": "AnalysisCaseDefinition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "resultExpression",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "AssertConstraintUsage",
+      "abstract": false,
+      "generalizations": [
+        "ConstraintUsage"
+      ],
+      "properties": [
+        {
+          "name": "assertedConstraint",
+          "type": "ConstraintUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "AssignmentActionUsage",
+      "abstract": false,
+      "generalizations": [
+        "ActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "referent",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "targetArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "valueExpression",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "AttributeDefinition",
+      "abstract": false,
+      "generalizations": [
+        "Definition"
+      ],
+      "properties": []
+    },
+    {
+      "name": "AttributeUsage",
+      "abstract": false,
+      "generalizations": [
+        "Usage"
+      ],
+      "properties": [
+        {
+          "name": "attributeDefinition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isReference",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "BindingConnectorAsUsage",
+      "abstract": false,
+      "generalizations": [
+        "ConnectorAsUsage"
+      ],
+      "properties": []
+    },
+    {
+      "name": "CalculationDefinition",
+      "abstract": false,
+      "generalizations": [
+        "ActionDefinition"
+      ],
+      "properties": [
+        {
+          "name": "calculation",
+          "type": "CalculationUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "CalculationUsage",
+      "abstract": false,
+      "generalizations": [
+        "ActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "calculationDefinition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "CaseDefinition",
+      "abstract": false,
+      "generalizations": [
+        "CalculationDefinition"
+      ],
+      "properties": [
+        {
+          "name": "actorParameter",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "objectiveRequirement",
+          "type": "RequirementUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "subjectParameter",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "CaseUsage",
+      "abstract": false,
+      "generalizations": [
+        "CalculationUsage"
+      ],
+      "properties": [
+        {
+          "name": "actorParameter",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "caseDefinition",
+          "type": "CaseDefinition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "objectiveRequirement",
+          "type": "RequirementUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "subjectParameter",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ConcernDefinition",
+      "abstract": false,
+      "generalizations": [
+        "RequirementDefinition"
+      ],
+      "properties": []
+    },
+    {
+      "name": "ConcernUsage",
+      "abstract": false,
+      "generalizations": [
+        "RequirementUsage"
+      ],
+      "properties": [
+        {
+          "name": "concernDefinition",
+          "type": "ConcernDefinition",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ConjugatedPortDefinition",
+      "abstract": false,
+      "generalizations": [
+        "PortDefinition"
+      ],
+      "properties": [
+        {
+          "name": "originalPortDefinition",
+          "type": "PortDefinition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedPortConjugator",
+          "type": "PortConjugation",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ConjugatedPortTyping",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "conjugatedPortDefinition",
+          "type": "ConjugatedPortDefinition",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "portDefinition",
+          "type": "PortDefinition",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ConnectionDefinition",
+      "abstract": false,
+      "generalizations": [
+        "PartDefinition"
+      ],
+      "properties": [
+        {
+          "name": "connectionEnd",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isSufficient",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "ConnectionUsage",
+      "abstract": false,
+      "generalizations": [
+        "ConnectorAsUsage",
+        "PartUsage"
+      ],
+      "properties": [
+        {
+          "name": "connectionDefinition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ConnectorAsUsage",
+      "abstract": true,
+      "generalizations": [
+        "Usage"
+      ],
+      "properties": []
+    },
+    {
+      "name": "ConstraintDefinition",
+      "abstract": false,
+      "generalizations": [
+        "OccurrenceDefinition"
+      ],
+      "properties": []
+    },
+    {
+      "name": "ConstraintUsage",
+      "abstract": false,
+      "generalizations": [
+        "OccurrenceUsage"
+      ],
+      "properties": [
+        {
+          "name": "constraintDefinition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ControlNode",
+      "abstract": true,
+      "generalizations": [
+        "ActionUsage"
+      ],
+      "properties": []
+    },
+    {
+      "name": "DecisionNode",
+      "abstract": false,
+      "generalizations": [
+        "ControlNode"
+      ],
+      "properties": []
+    },
+    {
+      "name": "Definition",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "directedUsage",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isVariation",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "ownedAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedAllocation",
+          "type": "AllocationUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedAnalysisCase",
+          "type": "AnalysisCaseUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedAttribute",
+          "type": "AttributeUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedCalculation",
+          "type": "CalculationUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedCase",
+          "type": "CaseUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedConcern",
+          "type": "ConcernUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedConnection",
+          "type": "ConnectorAsUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedConstraint",
+          "type": "ConstraintUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedEnumeration",
+          "type": "EnumerationUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedFlow",
+          "type": "FlowUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedInterface",
+          "type": "InterfaceUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedItem",
+          "type": "ItemUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedMetadata",
+          "type": "MetadataUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedOccurrence",
+          "type": "OccurrenceUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedPart",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedPort",
+          "type": "PortUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedReference",
+          "type": "ReferenceUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedRendering",
+          "type": "RenderingUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedRequirement",
+          "type": "RequirementUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedState",
+          "type": "StateUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedTransition",
+          "type": "TransitionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedUsage",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedUseCase",
+          "type": "UseCaseUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedVerificationCase",
+          "type": "VerificationCaseUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedView",
+          "type": "ViewUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedViewpoint",
+          "type": "ViewpointUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "usage",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "variant",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "variantMembership",
+          "type": "VariantMembership",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "EnumerationDefinition",
+      "abstract": false,
+      "generalizations": [
+        "AttributeDefinition"
+      ],
+      "properties": [
+        {
+          "name": "enumeratedValue",
+          "type": "EnumerationUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isVariation",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "EnumerationUsage",
+      "abstract": false,
+      "generalizations": [
+        "AttributeUsage"
+      ],
+      "properties": [
+        {
+          "name": "enumerationDefinition",
+          "type": "EnumerationDefinition",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "EventOccurrenceUsage",
+      "abstract": false,
+      "generalizations": [
+        "OccurrenceUsage"
+      ],
+      "properties": [
+        {
+          "name": "eventOccurrence",
+          "type": "OccurrenceUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isReference",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ExhibitStateUsage",
+      "abstract": false,
+      "generalizations": [
+        "PerformActionUsage",
+        "StateUsage"
+      ],
+      "properties": [
+        {
+          "name": "exhibitedState",
+          "type": "StateUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Expose",
+      "abstract": true,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "isImportAll",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "visibility",
+          "type": "",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "FlowDefinition",
+      "abstract": false,
+      "generalizations": [
+        "ActionDefinition"
+      ],
+      "properties": [
+        {
+          "name": "flowEnd",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "FlowUsage",
+      "abstract": false,
+      "generalizations": [
+        "ActionUsage",
+        "ConnectorAsUsage"
+      ],
+      "properties": [
+        {
+          "name": "flowDefinition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ForLoopActionUsage",
+      "abstract": false,
+      "generalizations": [
+        "LoopActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "loopVariable",
+          "type": "ReferenceUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "seqArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ForkNode",
+      "abstract": false,
+      "generalizations": [
+        "ControlNode"
+      ],
+      "properties": []
+    },
+    {
+      "name": "FramedConcernMembership",
+      "abstract": false,
+      "generalizations": [
+        "RequirementConstraintMembership"
+      ],
+      "properties": [
+        {
+          "name": "kind",
+          "type": "RequirementConstraintKind",
+          "kind": "enum",
+          "derived": false
+        },
+        {
+          "name": "ownedConcern",
+          "type": "ConcernUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "referencedConcern",
+          "type": "ConcernUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "IfActionUsage",
+      "abstract": false,
+      "generalizations": [
+        "ActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "elseAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ifArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "thenAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "IncludeUseCaseUsage",
+      "abstract": false,
+      "generalizations": [
+        "PerformActionUsage",
+        "UseCaseUsage"
+      ],
+      "properties": [
+        {
+          "name": "useCaseIncluded",
+          "type": "UseCaseUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "InterfaceDefinition",
+      "abstract": false,
+      "generalizations": [
+        "ConnectionDefinition"
+      ],
+      "properties": [
+        {
+          "name": "interfaceEnd",
+          "type": "PortUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "InterfaceUsage",
+      "abstract": false,
+      "generalizations": [
+        "ConnectionUsage"
+      ],
+      "properties": [
+        {
+          "name": "interfaceDefinition",
+          "type": "InterfaceDefinition",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ItemDefinition",
+      "abstract": false,
+      "generalizations": [
+        "OccurrenceDefinition"
+      ],
+      "properties": []
+    },
+    {
+      "name": "ItemUsage",
+      "abstract": false,
+      "generalizations": [
+        "OccurrenceUsage"
+      ],
+      "properties": [
+        {
+          "name": "itemDefinition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "JoinNode",
+      "abstract": false,
+      "generalizations": [
+        "ControlNode"
+      ],
+      "properties": []
+    },
+    {
+      "name": "LoopActionUsage",
+      "abstract": true,
+      "generalizations": [
+        "ActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "bodyAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "MembershipExpose",
+      "abstract": false,
+      "generalizations": [
+        "Expose"
+      ],
+      "properties": []
+    },
+    {
+      "name": "MergeNode",
+      "abstract": false,
+      "generalizations": [
+        "ControlNode"
+      ],
+      "properties": []
+    },
+    {
+      "name": "MetadataDefinition",
+      "abstract": false,
+      "generalizations": [
+        "ItemDefinition"
+      ],
+      "properties": []
+    },
+    {
+      "name": "MetadataUsage",
+      "abstract": false,
+      "generalizations": [
+        "ItemUsage"
+      ],
+      "properties": [
+        {
+          "name": "metadataDefinition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "NamespaceExpose",
+      "abstract": false,
+      "generalizations": [
+        "Expose"
+      ],
+      "properties": []
+    },
+    {
+      "name": "ObjectiveMembership",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "ownedObjectiveRequirement",
+          "type": "RequirementUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "OccurrenceDefinition",
+      "abstract": false,
+      "generalizations": [
+        "Definition"
+      ],
+      "properties": [
+        {
+          "name": "isIndividual",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "OccurrenceUsage",
+      "abstract": false,
+      "generalizations": [
+        "Usage"
+      ],
+      "properties": [
+        {
+          "name": "individualDefinition",
+          "type": "OccurrenceDefinition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isIndividual",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "occurrenceDefinition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "portionKind",
+          "type": "PortionKind",
+          "kind": "enum",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "PartDefinition",
+      "abstract": false,
+      "generalizations": [
+        "ItemDefinition"
+      ],
+      "properties": []
+    },
+    {
+      "name": "PartUsage",
+      "abstract": false,
+      "generalizations": [
+        "ItemUsage"
+      ],
+      "properties": [
+        {
+          "name": "partDefinition",
+          "type": "PartDefinition",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "PerformActionUsage",
+      "abstract": false,
+      "generalizations": [
+        "ActionUsage",
+        "EventOccurrenceUsage"
+      ],
+      "properties": [
+        {
+          "name": "performedAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "PortConjugation",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "conjugatedPortDefinition",
+          "type": "ConjugatedPortDefinition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "originalPortDefinition",
+          "type": "PortDefinition",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "PortDefinition",
+      "abstract": false,
+      "generalizations": [
+        "OccurrenceDefinition"
+      ],
+      "properties": [
+        {
+          "name": "conjugatedPortDefinition",
+          "type": "ConjugatedPortDefinition",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "PortUsage",
+      "abstract": false,
+      "generalizations": [
+        "OccurrenceUsage"
+      ],
+      "properties": [
+        {
+          "name": "portDefinition",
+          "type": "PortDefinition",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ReferenceUsage",
+      "abstract": false,
+      "generalizations": [
+        "Usage"
+      ],
+      "properties": [
+        {
+          "name": "isReference",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "RenderingDefinition",
+      "abstract": false,
+      "generalizations": [
+        "PartDefinition"
+      ],
+      "properties": [
+        {
+          "name": "rendering",
+          "type": "RenderingUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "RenderingUsage",
+      "abstract": false,
+      "generalizations": [
+        "PartUsage"
+      ],
+      "properties": [
+        {
+          "name": "renderingDefinition",
+          "type": "RenderingDefinition",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "RequirementConstraintMembership",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "kind",
+          "type": "RequirementConstraintKind",
+          "kind": "enum",
+          "derived": false
+        },
+        {
+          "name": "ownedConstraint",
+          "type": "ConstraintUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "referencedConstraint",
+          "type": "ConstraintUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "RequirementDefinition",
+      "abstract": false,
+      "generalizations": [
+        "ConstraintDefinition"
+      ],
+      "properties": [
+        {
+          "name": "actorParameter",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "assumedConstraint",
+          "type": "ConstraintUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "framedConcern",
+          "type": "ConcernUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "reqId",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "requiredConstraint",
+          "type": "ConstraintUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "stakeholderParameter",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "subjectParameter",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "text",
+          "type": "str",
+          "kind": "attribute",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "RequirementUsage",
+      "abstract": false,
+      "generalizations": [
+        "ConstraintUsage"
+      ],
+      "properties": [
+        {
+          "name": "actorParameter",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "assumedConstraint",
+          "type": "ConstraintUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "framedConcern",
+          "type": "ConcernUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "reqId",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "requiredConstraint",
+          "type": "ConstraintUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "requirementDefinition",
+          "type": "RequirementDefinition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "stakeholderParameter",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "subjectParameter",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "text",
+          "type": "str",
+          "kind": "attribute",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "RequirementVerificationMembership",
+      "abstract": false,
+      "generalizations": [
+        "RequirementConstraintMembership"
+      ],
+      "properties": [
+        {
+          "name": "kind",
+          "type": "RequirementConstraintKind",
+          "kind": "enum",
+          "derived": false
+        },
+        {
+          "name": "ownedRequirement",
+          "type": "RequirementUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "verifiedRequirement",
+          "type": "RequirementUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "SatisfyRequirementUsage",
+      "abstract": false,
+      "generalizations": [
+        "AssertConstraintUsage",
+        "RequirementUsage"
+      ],
+      "properties": [
+        {
+          "name": "satisfiedRequirement",
+          "type": "RequirementUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "satisfyingFeature",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "SendActionUsage",
+      "abstract": false,
+      "generalizations": [
+        "ActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "payloadArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "receiverArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "senderArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "StakeholderMembership",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "ownedStakeholderParameter",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "StateDefinition",
+      "abstract": false,
+      "generalizations": [
+        "ActionDefinition"
+      ],
+      "properties": [
+        {
+          "name": "doAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "entryAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "exitAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isParallel",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "state",
+          "type": "StateUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "StateSubactionMembership",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "action",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "kind",
+          "type": "StateSubactionKind",
+          "kind": "enum",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "StateUsage",
+      "abstract": false,
+      "generalizations": [
+        "ActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "doAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "entryAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "exitAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isParallel",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "stateDefinition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "SubjectMembership",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "ownedSubjectParameter",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "SuccessionAsUsage",
+      "abstract": false,
+      "generalizations": [
+        "ConnectorAsUsage"
+      ],
+      "properties": []
+    },
+    {
+      "name": "SuccessionFlowUsage",
+      "abstract": false,
+      "generalizations": [
+        "FlowUsage"
+      ],
+      "properties": []
+    },
+    {
+      "name": "TerminateActionUsage",
+      "abstract": false,
+      "generalizations": [
+        "ActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "terminatedOccurrenceArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "TransitionFeatureMembership",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "kind",
+          "type": "TransitionFeatureKind",
+          "kind": "enum",
+          "derived": false
+        },
+        {
+          "name": "transitionFeature",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "TransitionUsage",
+      "abstract": false,
+      "generalizations": [
+        "ActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "effectAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "guardExpression",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "source",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "succession",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "target",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "triggerAction",
+          "type": "AcceptActionUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "TriggerInvocationExpression",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "kind",
+          "type": "TriggerKind",
+          "kind": "enum",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Usage",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "definition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "directedUsage",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isReference",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "isVariation",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "mayTimeVary",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "nestedAction",
+          "type": "ActionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedAllocation",
+          "type": "AllocationUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedAnalysisCase",
+          "type": "AnalysisCaseUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedAttribute",
+          "type": "AttributeUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedCalculation",
+          "type": "CalculationUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedCase",
+          "type": "CaseUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedConcern",
+          "type": "ConcernUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedConnection",
+          "type": "ConnectorAsUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedConstraint",
+          "type": "ConstraintUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedEnumeration",
+          "type": "EnumerationUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedFlow",
+          "type": "FlowUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedInterface",
+          "type": "InterfaceUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedItem",
+          "type": "ItemUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedMetadata",
+          "type": "MetadataUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedOccurrence",
+          "type": "OccurrenceUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedPart",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedPort",
+          "type": "PortUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedReference",
+          "type": "ReferenceUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedRendering",
+          "type": "RenderingUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedRequirement",
+          "type": "RequirementUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedState",
+          "type": "StateUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedTransition",
+          "type": "TransitionUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedUsage",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedUseCase",
+          "type": "UseCaseUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedVerificationCase",
+          "type": "VerificationCaseUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedView",
+          "type": "ViewUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "nestedViewpoint",
+          "type": "ViewpointUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningDefinition",
+          "type": "Definition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningUsage",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "usage",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "variant",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "variantMembership",
+          "type": "VariantMembership",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "UseCaseDefinition",
+      "abstract": false,
+      "generalizations": [
+        "CaseDefinition"
+      ],
+      "properties": [
+        {
+          "name": "includedUseCase",
+          "type": "UseCaseUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "UseCaseUsage",
+      "abstract": false,
+      "generalizations": [
+        "CaseUsage"
+      ],
+      "properties": [
+        {
+          "name": "includedUseCase",
+          "type": "UseCaseUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "useCaseDefinition",
+          "type": "UseCaseDefinition",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "VariantMembership",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "ownedVariantUsage",
+          "type": "Usage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "VerificationCaseDefinition",
+      "abstract": false,
+      "generalizations": [
+        "CaseDefinition"
+      ],
+      "properties": [
+        {
+          "name": "verifiedRequirement",
+          "type": "RequirementUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "VerificationCaseUsage",
+      "abstract": false,
+      "generalizations": [
+        "CaseUsage"
+      ],
+      "properties": [
+        {
+          "name": "verificationCaseDefinition",
+          "type": "VerificationCaseDefinition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "verifiedRequirement",
+          "type": "RequirementUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ViewDefinition",
+      "abstract": false,
+      "generalizations": [
+        "PartDefinition"
+      ],
+      "properties": [
+        {
+          "name": "satisfiedViewpoint",
+          "type": "ViewpointUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "view",
+          "type": "ViewUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "viewCondition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "viewRendering",
+          "type": "RenderingUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ViewRenderingMembership",
+      "abstract": false,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "ownedRendering",
+          "type": "RenderingUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "referencedRendering",
+          "type": "RenderingUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ViewUsage",
+      "abstract": false,
+      "generalizations": [
+        "PartUsage"
+      ],
+      "properties": [
+        {
+          "name": "exposedElement",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "satisfiedViewpoint",
+          "type": "ViewpointUsage",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "viewCondition",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "viewDefinition",
+          "type": "ViewDefinition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "viewRendering",
+          "type": "RenderingUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ViewpointDefinition",
+      "abstract": false,
+      "generalizations": [
+        "RequirementDefinition"
+      ],
+      "properties": [
+        {
+          "name": "viewpointStakeholder",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ViewpointUsage",
+      "abstract": false,
+      "generalizations": [
+        "RequirementUsage"
+      ],
+      "properties": [
+        {
+          "name": "viewpointDefinition",
+          "type": "ViewpointDefinition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "viewpointStakeholder",
+          "type": "PartUsage",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "WhileLoopActionUsage",
+      "abstract": false,
+      "generalizations": [
+        "LoopActionUsage"
+      ],
+      "properties": [
+        {
+          "name": "untilArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "whileArgument",
+          "type": "",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    }
+  ],
+  "enums": [
+    {
+      "name": "PortionKind",
+      "literals": [
+        "timeslice",
+        "snapshot"
+      ]
+    },
+    {
+      "name": "RequirementConstraintKind",
+      "literals": [
+        "assumption",
+        "requirement"
+      ]
+    },
+    {
+      "name": "StateSubactionKind",
+      "literals": [
+        "entry",
+        "do",
+        "exit"
+      ]
+    },
+    {
+      "name": "TransitionFeatureKind",
+      "literals": [
+        "trigger",
+        "guard",
+        "effect"
+      ]
+    },
+    {
+      "name": "TriggerKind",
+      "literals": [
+        "when",
+        "at",
+        "after"
+      ]
+    }
+  ]
+}

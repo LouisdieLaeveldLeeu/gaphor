@@ -1,0 +1,2007 @@
+{
+  "source": "KerML.xmi",
+  "classes": [
+    {
+      "name": "AnnotatingElement",
+      "abstract": false,
+      "generalizations": [
+        "Element"
+      ],
+      "properties": [
+        {
+          "name": "annotatedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "annotation",
+          "type": "Annotation",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedAnnotatingRelationship",
+          "type": "Annotation",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningAnnotatingRelationship",
+          "type": "Annotation",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Annotation",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "annotatedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "annotatingElement",
+          "type": "AnnotatingElement",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedAnnotatingElement",
+          "type": "AnnotatingElement",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningAnnotatedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningAnnotatingElement",
+          "type": "AnnotatingElement",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Association",
+      "abstract": false,
+      "generalizations": [
+        "Classifier",
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "associationEnd",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "relatedType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "sourceType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "targetType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "AssociationStructure",
+      "abstract": false,
+      "generalizations": [
+        "Association",
+        "Structure"
+      ],
+      "properties": []
+    },
+    {
+      "name": "Behavior",
+      "abstract": false,
+      "generalizations": [
+        "Class"
+      ],
+      "properties": [
+        {
+          "name": "parameter",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "step",
+          "type": "Step",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "BindingConnector",
+      "abstract": false,
+      "generalizations": [
+        "Connector"
+      ],
+      "properties": []
+    },
+    {
+      "name": "BooleanExpression",
+      "abstract": false,
+      "generalizations": [
+        "Expression"
+      ],
+      "properties": [
+        {
+          "name": "predicate",
+          "type": "Predicate",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Class",
+      "abstract": false,
+      "generalizations": [
+        "Classifier"
+      ],
+      "properties": []
+    },
+    {
+      "name": "Classifier",
+      "abstract": false,
+      "generalizations": [
+        "Type"
+      ],
+      "properties": [
+        {
+          "name": "ownedSubclassification",
+          "type": "Subclassification",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "CollectExpression",
+      "abstract": false,
+      "generalizations": [
+        "OperatorExpression"
+      ],
+      "properties": [
+        {
+          "name": "operator",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Comment",
+      "abstract": false,
+      "generalizations": [
+        "AnnotatingElement"
+      ],
+      "properties": [
+        {
+          "name": "body",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "locale",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Conjugation",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "conjugatedType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "originalType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "owningType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Connector",
+      "abstract": false,
+      "generalizations": [
+        "Feature",
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "association",
+          "type": "Association",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "connectorEnd",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "defaultFeaturingType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "relatedFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "sourceFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "targetFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ConstructorExpression",
+      "abstract": false,
+      "generalizations": [
+        "InstantiationExpression"
+      ],
+      "properties": []
+    },
+    {
+      "name": "CrossSubsetting",
+      "abstract": false,
+      "generalizations": [
+        "Subsetting"
+      ],
+      "properties": [
+        {
+          "name": "crossedFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "crossingFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "DataType",
+      "abstract": false,
+      "generalizations": [
+        "Classifier"
+      ],
+      "properties": []
+    },
+    {
+      "name": "Dependency",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "client",
+          "type": "Element",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "supplier",
+          "type": "Element",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Differencing",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "differencingType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "typeDifferenced",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Disjoining",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "disjoiningType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "owningType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "typeDisjoined",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Documentation",
+      "abstract": false,
+      "generalizations": [
+        "Comment"
+      ],
+      "properties": [
+        {
+          "name": "documentedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Element",
+      "abstract": true,
+      "generalizations": [],
+      "properties": [
+        {
+          "name": "aliasIds",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "declaredName",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "declaredShortName",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "documentation",
+          "type": "Documentation",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "elementId",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isImpliedIncluded",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isLibraryElement",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "ownedAnnotation",
+          "type": "Annotation",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedRelationship",
+          "type": "Relationship",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "owner",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningMembership",
+          "type": "OwningMembership",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningNamespace",
+          "type": "Namespace",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningRelationship",
+          "type": "Relationship",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "qualifiedName",
+          "type": "str",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "shortName",
+          "type": "str",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "textualRepresentation",
+          "type": "TextualRepresentation",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ElementFilterMembership",
+      "abstract": false,
+      "generalizations": [
+        "OwningMembership"
+      ],
+      "properties": [
+        {
+          "name": "condition",
+          "type": "Expression",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "EndFeatureMembership",
+      "abstract": false,
+      "generalizations": [
+        "FeatureMembership"
+      ],
+      "properties": [
+        {
+          "name": "ownedMemberFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Expression",
+      "abstract": false,
+      "generalizations": [
+        "Step"
+      ],
+      "properties": [
+        {
+          "name": "function",
+          "type": "Function",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isModelLevelEvaluable",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "result",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Feature",
+      "abstract": false,
+      "generalizations": [
+        "Type"
+      ],
+      "properties": [
+        {
+          "name": "chainingFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "crossFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "direction",
+          "type": "FeatureDirectionKind",
+          "kind": "enum",
+          "derived": false
+        },
+        {
+          "name": "endOwningType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "featureTarget",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "featuringType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isComposite",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isConstant",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isDerived",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isEnd",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isOrdered",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isPortion",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isUnique",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isVariable",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "ownedCrossSubsetting",
+          "type": "CrossSubsetting",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedFeatureChaining",
+          "type": "FeatureChaining",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedFeatureInverting",
+          "type": "FeatureInverting",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedRedefinition",
+          "type": "Redefinition",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedReferenceSubsetting",
+          "type": "ReferenceSubsetting",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedSubsetting",
+          "type": "Subsetting",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedTypeFeaturing",
+          "type": "TypeFeaturing",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedTyping",
+          "type": "FeatureTyping",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningFeatureMembership",
+          "type": "FeatureMembership",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "type",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "FeatureChainExpression",
+      "abstract": false,
+      "generalizations": [
+        "OperatorExpression"
+      ],
+      "properties": [
+        {
+          "name": "operator",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "targetFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "FeatureChaining",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "chainingFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "featureChained",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "FeatureInverting",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "featureInverted",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "invertingFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "owningFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "FeatureMembership",
+      "abstract": false,
+      "generalizations": [
+        "OwningMembership"
+      ],
+      "properties": [
+        {
+          "name": "ownedMemberFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "owningType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "FeatureReferenceExpression",
+      "abstract": false,
+      "generalizations": [
+        "Expression"
+      ],
+      "properties": [
+        {
+          "name": "referent",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "FeatureTyping",
+      "abstract": false,
+      "generalizations": [
+        "Specialization"
+      ],
+      "properties": [
+        {
+          "name": "owningFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "type",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "typedFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "FeatureValue",
+      "abstract": false,
+      "generalizations": [
+        "OwningMembership"
+      ],
+      "properties": [
+        {
+          "name": "featureWithValue",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isDefault",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isInitial",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "value",
+          "type": "Expression",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Flow",
+      "abstract": false,
+      "generalizations": [
+        "Connector",
+        "Step"
+      ],
+      "properties": [
+        {
+          "name": "flowEnd",
+          "type": "FlowEnd",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "interaction",
+          "type": "Interaction",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "payloadFeature",
+          "type": "PayloadFeature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "payloadType",
+          "type": "Classifier",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "sourceOutputFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "targetInputFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "FlowEnd",
+      "abstract": false,
+      "generalizations": [
+        "Feature"
+      ],
+      "properties": []
+    },
+    {
+      "name": "Function",
+      "abstract": false,
+      "generalizations": [
+        "Behavior"
+      ],
+      "properties": [
+        {
+          "name": "expression",
+          "type": "Expression",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isModelLevelEvaluable",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "result",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Import",
+      "abstract": true,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "importOwningNamespace",
+          "type": "Namespace",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "importedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isImportAll",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isRecursive",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "visibility",
+          "type": "VisibilityKind",
+          "kind": "enum",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "IndexExpression",
+      "abstract": false,
+      "generalizations": [
+        "OperatorExpression"
+      ],
+      "properties": [
+        {
+          "name": "operator",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "InstantiationExpression",
+      "abstract": true,
+      "generalizations": [
+        "Expression"
+      ],
+      "properties": [
+        {
+          "name": "argument",
+          "type": "Expression",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "instantiatedType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Interaction",
+      "abstract": false,
+      "generalizations": [
+        "Association",
+        "Behavior"
+      ],
+      "properties": []
+    },
+    {
+      "name": "Intersecting",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "intersectingType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "typeIntersected",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Invariant",
+      "abstract": false,
+      "generalizations": [
+        "BooleanExpression"
+      ],
+      "properties": [
+        {
+          "name": "isNegated",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "InvocationExpression",
+      "abstract": false,
+      "generalizations": [
+        "InstantiationExpression"
+      ],
+      "properties": []
+    },
+    {
+      "name": "LibraryPackage",
+      "abstract": false,
+      "generalizations": [
+        "Package"
+      ],
+      "properties": [
+        {
+          "name": "isStandard",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "LiteralBoolean",
+      "abstract": false,
+      "generalizations": [
+        "LiteralExpression"
+      ],
+      "properties": [
+        {
+          "name": "value",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "LiteralExpression",
+      "abstract": false,
+      "generalizations": [
+        "Expression"
+      ],
+      "properties": []
+    },
+    {
+      "name": "LiteralInfinity",
+      "abstract": false,
+      "generalizations": [
+        "LiteralExpression"
+      ],
+      "properties": []
+    },
+    {
+      "name": "LiteralInteger",
+      "abstract": false,
+      "generalizations": [
+        "LiteralExpression"
+      ],
+      "properties": [
+        {
+          "name": "value",
+          "type": "int",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "LiteralRational",
+      "abstract": false,
+      "generalizations": [
+        "LiteralExpression"
+      ],
+      "properties": [
+        {
+          "name": "value",
+          "type": "float",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "LiteralString",
+      "abstract": false,
+      "generalizations": [
+        "LiteralExpression"
+      ],
+      "properties": [
+        {
+          "name": "value",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Membership",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "memberElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "memberElementId",
+          "type": "str",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "memberName",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "memberShortName",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "membershipOwningNamespace",
+          "type": "Namespace",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "visibility",
+          "type": "VisibilityKind",
+          "kind": "enum",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "MembershipImport",
+      "abstract": false,
+      "generalizations": [
+        "Import"
+      ],
+      "properties": [
+        {
+          "name": "importedMembership",
+          "type": "Membership",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Metaclass",
+      "abstract": false,
+      "generalizations": [
+        "Structure"
+      ],
+      "properties": []
+    },
+    {
+      "name": "MetadataAccessExpression",
+      "abstract": false,
+      "generalizations": [
+        "Expression"
+      ],
+      "properties": [
+        {
+          "name": "referencedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "MetadataFeature",
+      "abstract": false,
+      "generalizations": [
+        "AnnotatingElement",
+        "Feature"
+      ],
+      "properties": [
+        {
+          "name": "metaclass",
+          "type": "Metaclass",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Multiplicity",
+      "abstract": false,
+      "generalizations": [
+        "Feature"
+      ],
+      "properties": []
+    },
+    {
+      "name": "MultiplicityRange",
+      "abstract": false,
+      "generalizations": [
+        "Multiplicity"
+      ],
+      "properties": [
+        {
+          "name": "bound",
+          "type": "Expression",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "lowerBound",
+          "type": "Expression",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "upperBound",
+          "type": "Expression",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Namespace",
+      "abstract": false,
+      "generalizations": [
+        "Element"
+      ],
+      "properties": [
+        {
+          "name": "importedMembership",
+          "type": "Membership",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "member",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "membership",
+          "type": "Membership",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedImport",
+          "type": "Import",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedMember",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedMembership",
+          "type": "Membership",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "NamespaceImport",
+      "abstract": false,
+      "generalizations": [
+        "Import"
+      ],
+      "properties": [
+        {
+          "name": "importedNamespace",
+          "type": "Namespace",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "NullExpression",
+      "abstract": false,
+      "generalizations": [
+        "Expression"
+      ],
+      "properties": []
+    },
+    {
+      "name": "OperatorExpression",
+      "abstract": false,
+      "generalizations": [
+        "InvocationExpression"
+      ],
+      "properties": [
+        {
+          "name": "operator",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "OwningMembership",
+      "abstract": false,
+      "generalizations": [
+        "Membership"
+      ],
+      "properties": [
+        {
+          "name": "ownedMemberElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedMemberElementId",
+          "type": "str",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "ownedMemberName",
+          "type": "str",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "ownedMemberShortName",
+          "type": "str",
+          "kind": "attribute",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Package",
+      "abstract": false,
+      "generalizations": [
+        "Namespace"
+      ],
+      "properties": [
+        {
+          "name": "filterCondition",
+          "type": "Expression",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ParameterMembership",
+      "abstract": false,
+      "generalizations": [
+        "FeatureMembership"
+      ],
+      "properties": [
+        {
+          "name": "ownedMemberParameter",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "PayloadFeature",
+      "abstract": false,
+      "generalizations": [
+        "Feature"
+      ],
+      "properties": []
+    },
+    {
+      "name": "Predicate",
+      "abstract": false,
+      "generalizations": [
+        "Function"
+      ],
+      "properties": []
+    },
+    {
+      "name": "Redefinition",
+      "abstract": false,
+      "generalizations": [
+        "Subsetting"
+      ],
+      "properties": [
+        {
+          "name": "redefinedFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "redefiningFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "ReferenceSubsetting",
+      "abstract": false,
+      "generalizations": [
+        "Subsetting"
+      ],
+      "properties": [
+        {
+          "name": "referencedFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "referencingFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Relationship",
+      "abstract": true,
+      "generalizations": [
+        "Element"
+      ],
+      "properties": [
+        {
+          "name": "isImplied",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "ownedRelatedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "owningRelatedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "relatedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "source",
+          "type": "Element",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "target",
+          "type": "Element",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "ResultExpressionMembership",
+      "abstract": false,
+      "generalizations": [
+        "FeatureMembership"
+      ],
+      "properties": [
+        {
+          "name": "ownedResultExpression",
+          "type": "Expression",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "ReturnParameterMembership",
+      "abstract": false,
+      "generalizations": [
+        "ParameterMembership"
+      ],
+      "properties": []
+    },
+    {
+      "name": "SelectExpression",
+      "abstract": false,
+      "generalizations": [
+        "OperatorExpression"
+      ],
+      "properties": [
+        {
+          "name": "operator",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Specialization",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "general",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "owningType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "specific",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Step",
+      "abstract": false,
+      "generalizations": [
+        "Feature"
+      ],
+      "properties": [
+        {
+          "name": "behavior",
+          "type": "Behavior",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "parameter",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Structure",
+      "abstract": false,
+      "generalizations": [
+        "Class"
+      ],
+      "properties": []
+    },
+    {
+      "name": "Subclassification",
+      "abstract": false,
+      "generalizations": [
+        "Specialization"
+      ],
+      "properties": [
+        {
+          "name": "owningClassifier",
+          "type": "Classifier",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "subclassifier",
+          "type": "Classifier",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "superclassifier",
+          "type": "Classifier",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Subsetting",
+      "abstract": false,
+      "generalizations": [
+        "Specialization"
+      ],
+      "properties": [
+        {
+          "name": "owningFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "subsettedFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "subsettingFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    },
+    {
+      "name": "Succession",
+      "abstract": false,
+      "generalizations": [
+        "Connector"
+      ],
+      "properties": []
+    },
+    {
+      "name": "SuccessionFlow",
+      "abstract": false,
+      "generalizations": [
+        "Flow",
+        "Succession"
+      ],
+      "properties": []
+    },
+    {
+      "name": "TextualRepresentation",
+      "abstract": false,
+      "generalizations": [
+        "AnnotatingElement"
+      ],
+      "properties": [
+        {
+          "name": "body",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "language",
+          "type": "str",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "representedElement",
+          "type": "Element",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Type",
+      "abstract": false,
+      "generalizations": [
+        "Namespace"
+      ],
+      "properties": [
+        {
+          "name": "differencingType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "directedFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "endFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "feature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "featureMembership",
+          "type": "FeatureMembership",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "inheritedFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "inheritedMembership",
+          "type": "Membership",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "input",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "intersectingType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "isAbstract",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "isConjugated",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": true
+        },
+        {
+          "name": "isSufficient",
+          "type": "bool",
+          "kind": "attribute",
+          "derived": false
+        },
+        {
+          "name": "multiplicity",
+          "type": "Multiplicity",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "output",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedConjugator",
+          "type": "Conjugation",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedDifferencing",
+          "type": "Differencing",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedDisjoining",
+          "type": "Disjoining",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedEndFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedFeature",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedFeatureMembership",
+          "type": "FeatureMembership",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedIntersecting",
+          "type": "Intersecting",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedSpecialization",
+          "type": "Specialization",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "ownedUnioning",
+          "type": "Unioning",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "unioningType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "TypeFeaturing",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "featureOfType",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "featuringType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        },
+        {
+          "name": "owningFeatureOfType",
+          "type": "Feature",
+          "kind": "reference",
+          "derived": true
+        }
+      ]
+    },
+    {
+      "name": "Unioning",
+      "abstract": false,
+      "generalizations": [
+        "Relationship"
+      ],
+      "properties": [
+        {
+          "name": "typeUnioned",
+          "type": "Type",
+          "kind": "reference",
+          "derived": true
+        },
+        {
+          "name": "unioningType",
+          "type": "Type",
+          "kind": "reference",
+          "derived": false
+        }
+      ]
+    }
+  ],
+  "enums": [
+    {
+      "name": "FeatureDirectionKind",
+      "literals": [
+        "in",
+        "inout",
+        "out"
+      ]
+    },
+    {
+      "name": "VisibilityKind",
+      "literals": [
+        "private",
+        "protected",
+        "public"
+      ]
+    }
+  ]
+}

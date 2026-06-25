@@ -905,19 +905,49 @@ file boundaries / per-file provenance; KPAR `usage`-dependency export.
 Exit: KPAR support is complete for the implemented SysML2 surface (export +
 round-trip, not just stdlib ingestion) -- done and tested (`test_kpar_export.py`).
 
-### Phase 11 -- Versioned Spec-Ingestion Pipeline
+### Phase 11 -- Versioned Spec-Ingestion Pipeline -- DONE
 
-Build the future-spec machinery:
+Added the future-spec machinery so a NEW OMG SysML/KerML release can be assessed
+MECHANICALLY before any human mapping decision. It is maintainer tooling
+(`gaphor/SysML2/codegen/spec_index.py`), surfaced as `poe` tasks (no user-facing
+CLI); it reads the pinned XMI abstract syntax and never changes the model or the
+generator.
 
-- generated metamodel indexes from XMI/KPAR inputs;
-- provenance/hash refresh tooling;
-- diffs for added/removed classes, properties, enum literals, derived/stored
-  changes, and library changes;
-- fail-fast review reports for unknown mapping changes, especially new stored
-  references without an ownership policy.
+- **metamodel index** (`index_xmi`): parses an OMG MOF XMI into a `MetamodelIndex`
+  -- every class (name, abstractness, generalizations, owned properties with type /
+  stored-vs-derived / attribute-vs-enum-vs-reference) and every enumeration's
+  literals. A committed JSON BASELINE of each pinned XMI
+  (`codegen/spec_baseline/*.index.json`) is the "current pinned" snapshot a new
+  release is diffed against; a test (`test_committed_baseline_matches_live_xmi`)
+  guards that the baseline still matches the live XMI -- the same regen discipline
+  the generated code uses;
+- **diff** (`diff_indexes`): added/removed classes, added/removed/changed
+  properties, derived<->stored flips, type/kind changes, and added/removed
+  enumerations and literals;
+- **fail-fast review report** (`review_findings`): turns a diff into REVIEW (needs a
+  human mapping decision) vs INFO findings. The central rule -- a NEW STORED
+  REFERENCE needs an ownership policy: it cascades on delete only if listed in
+  `xmi_adapter.COMPOSITE_REFS` (the containment whitelist), which a new reference is
+  NOT, so it is always flagged. Also flags new/removed classes, removed properties,
+  derived<->stored flips, type changes, and removed enumerations/literals;
+- **provenance/hash refresh** (`compute_manifest_rows`): SHA-256 + byte size for each
+  pinned artifact (XMI/KPAR), to refresh the manifest table when bumping the pin;
+- **workflow (no arguments)**: pin a new XMI (replace the file), run
+  `poe sysml2-spec-diff` to diff the committed baseline against the live XMI and get
+  the review report (NON-ZERO exit on a blocking finding), make the mapping
+  decisions, then run `poe sysml2-spec-index` to accept the new version (regenerate
+  the baseline). `poe sysml2-manifest-refresh` prints fresh hashes.
+
+The diff/review logic is exercised with small synthetic XMI version pairs
+(`test_spec_index.py`); the baseline drift guard and the hash-refresh tool are
+checked against the real pinned artifacts.
+
+OUT of scope (deferred): diffing library KPAR CONTENT (the elements inside the
+normative `.kpar` libraries) -- only the artifact set + hashes are tracked here;
+auto-rewriting the manifest Markdown table (the tool prints rows to paste).
 
 Exit: future OMG SysML/KerML releases can be assessed mechanically before human
-mapping decisions.
+mapping decisions -- done and tested.
 
 ### Phase 12 -- SysML v2 API Alignment
 
@@ -1017,7 +1047,7 @@ counted here.
 23. Phase 5d -- Implicit Specialization -- PLANNED
 24. Phase 5e -- Feature Chains -- PLANNED
 25. Phase 10 -- General KPAR Export And Round-Trip -- PLANNED
-26. Phase 11 -- Versioned Spec-Ingestion Pipeline -- PLANNED
+26. Phase 11 -- Versioned Spec-Ingestion Pipeline -- DONE
 27. Phase 12 -- SysML v2 API Alignment -- PLANNED
 28. Phase 13 -- Diagram Synthesis And User-Facing UI Grooming -- PLANNED
 29. Phase 14 -- CI And Release Hardening -- PLANNED

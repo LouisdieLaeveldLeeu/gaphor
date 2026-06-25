@@ -259,6 +259,14 @@ sysml2-classes.script = """gaphor.codegen.coder:main(
         ('Core', 'models/Core.gaphor')],
     nullable_optional_enums=True
     )"""
+# SysML v2 versioned spec-ingestion pipeline (Phase 11): assess a new OMG release
+# mechanically. `sysml2-spec-diff` diffs the committed baseline against the live
+# pinned XMI and reports changes needing human mapping decisions (non-zero exit on
+# a blocking finding); `sysml2-spec-index` accepts the current pin by regenerating
+# the baseline; `sysml2-manifest-refresh` prints fresh artifact hashes.
+sysml2-spec-index.script = "gaphor.SysML2.codegen.spec_index:main(['index'])"
+sysml2-spec-diff.script = "gaphor.SysML2.codegen.spec_index:main(['diff'])"
+sysml2-manifest-refresh.script = "gaphor.SysML2.codegen.spec_index:main(['manifest'])"
 lint = "pre-commit run --all-files"
 docs = { "cwd" = "docs", "shell" = "sphinx-build -W -b html . _build/html" }
 docs-gettext-pot = { "cwd" = "docs", "shell" = "sphinx-build -b gettext . locale" }
