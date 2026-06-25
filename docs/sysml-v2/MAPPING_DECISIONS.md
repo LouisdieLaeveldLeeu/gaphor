@@ -185,9 +185,11 @@ Keep these identities distinct:
 - Text import ids minted during import.
 - Canonical round-trip identity, based on structure and resolved references.
 
-Phase 12 amendment: the API-facing `elementId` is now POPULATED (a stable UUID minted
-at creation, persisted, distinct from `Base.id`, ignored by round-trip). The "only
-when required" rule was satisfied by the Phase 12 decision to implement the
+Phase 12 amendment: the API-facing `elementId` now DEFAULTS to `Base.id`
+(`element_id(e) = e.elementId or e.id`) rather than a separately-minted parallel id --
+so it is present from creation and stable for life via any path, with the generated
+`elementId` attribute kept as an optional override for an externally-assigned API id.
+The "only when required" rule was satisfied by the Phase 12 decision to implement the
 identity + API JSON export surface and close the REST client/service scope.
 
 ## Round-Trip Equivalence
@@ -1691,16 +1693,22 @@ Systems Modeling API & Services (REST repository client/server) as out of scope 
 a desktop modeling tool -- nothing implemented requires it, and KPAR is the realistic
 interchange.
 
-- **`elementId` is populated, not parallel.** KerML `Element::elementId` already
-  existed (generated from the XMI) but was a dead, empty slot. `element_id.py` mints a
-  stable UUID at element CREATION via `assign_element_ids`, called from the single
-  mapper resolve chokepoint so it covers BOTH text import and KPAR import. It is
-  persisted in `.gaphor` (stable across save/reload; `assign_element_ids` is idempotent
-  so a reloaded model keeps its ids), distinct in value and concept from `Base.id`
-  (the standing "keep identities distinct" rule), and IGNORED by `roundtrip.canonical_form`
-  (round-trip stays structural -- two structurally-equal models with different
-  elementIds still round-trip). There is no textual `<id>` syntax: a fresh text import
-  mints new ids, which is the correct API semantic (ids are assigned on creation).
+- **`elementId` defaults to `Base.id`, never a parallel id.** KerML `Element::elementId`
+  already existed (generated from the XMI) but was a dead, empty slot. The first cut
+  minted a separate UUID swept in from the mapper -- which a review correctly flagged:
+  the sweep only ran on the mapper/export paths, so an element created through the UI
+  or a bare `factory.create(...)` could persist with NO id and get a late, unstable one
+  only at export. Gaphor offers no clean per-element creation hook (a bare factory with
+  no event manager emits no `ElementCreated`; the generated `__init__` cannot be
+  hand-edited), and the standing rule forbids a PARALLEL repository id anyway. So
+  `element_id(e)` now returns an explicitly-assigned `elementId` if present, else
+  `e.id` -- Gaphor's creation-time `Base.id`. The API identity is therefore present
+  from creation and stable for the element's whole life via ANY path, with no minting
+  pass; it is IGNORED by `roundtrip.canonical_form` (round-trip stays structural -- two
+  structurally-equal models with different ids still round-trip). The generated
+  `elementId` attribute is the optional OVERRIDE slot (an id imported from an external
+  OMG API repository wins). There is no textual `<id>` syntax: a fresh text import gets
+  fresh `Base.id`s, the correct API semantic (ids assigned on creation).
 - **API element JSON export (`api_export.py`, `sysml2-api-export`).** A model -> the
   OMG Systems Modeling API element shape: each element `{"@id", "@type", <stored
   attributes>, <references as {"@id": ...} or lists>}`, built with Gaphor's generic

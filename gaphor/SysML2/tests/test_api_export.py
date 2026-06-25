@@ -12,10 +12,10 @@ import json
 
 import gaphor.storage as storage
 from gaphor.core.modeling import ElementFactory
-from gaphor.SysML2 import cli, kerml
+from gaphor.SysML2 import cli, kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2.api_export import api_document, export_api_json
-from gaphor.SysML2.element_id import assign_element_ids, element_id
+from gaphor.SysML2.element_id import element_id
 from gaphor.SysML2.grammar.parser import parse
 from gaphor.SysML2.kpar import read_kpar, write_kpar
 from gaphor.SysML2.mapping import map_package
@@ -43,40 +43,48 @@ def _one(factory, type_name: str):
 # --- elementId identity ------------------------------------------------------
 
 
-def test_element_id_is_minted_distinct_from_base_id():
+def test_element_id_defaults_to_base_id():
     factory, _root = _map(_MODEL)
     usage = _one(factory, "PartUsage")
-    eid = element_id(usage)
-    assert eid and eid != usage.id  # present, and a SEPARATE identity from Base.id
-    # Every element gets one (mapping assigns at creation).
-    assert all(e.elementId for e in factory.select(kerml.Element))
+    # The API identity defaults to Gaphor's creation-time Base.id (no parallel id).
+    assert element_id(usage) == usage.id
 
 
-def test_assign_element_ids_is_idempotent():
-    factory, _root = _map(_MODEL)
-    before = {e.id: e.elementId for e in factory.select(kerml.Element)}
-    assert assign_element_ids(factory) == 0  # nothing left to mint
-    after = {e.id: e.elementId for e in factory.select(kerml.Element)}
-    assert before == after  # existing ids are kept, never re-minted
+def test_element_id_present_for_direct_factory_creation():
+    # The finding's repro: an element created straight from a bare factory (no mapper,
+    # no event manager, no sweep) STILL has an API identity immediately -- it is its
+    # Base.id, present from creation.
+    factory = ElementFactory()
+    part_def = factory.create(sysml2.PartDefinition)
+    assert element_id(part_def) == part_def.id
 
 
-def test_element_id_persists_across_save_reload(element_factory, saver, loader):
+def test_explicit_element_id_override_wins():
+    # An explicitly-assigned API id (e.g. imported from an external OMG API repository)
+    # takes precedence over the Base.id default.
+    factory = ElementFactory()
+    part_def = factory.create(sysml2.PartDefinition)
+    part_def.elementId = "api-1234"
+    assert element_id(part_def) == "api-1234"
+
+
+def test_element_id_stable_across_save_reload(element_factory, saver, loader):
     map_package(parse(_MODEL), element_factory)
     usage = _one(element_factory, "PartUsage")
-    usage_id, eid = usage.id, usage.elementId
-    assert eid
+    usage_id, eid = usage.id, element_id(usage)
     loader(saver())
     reloaded = element_factory.lookup(usage_id)
-    assert reloaded is not None and reloaded.elementId == eid  # stable across .gaphor
+    assert reloaded is not None and element_id(reloaded) == eid  # stable across .gaphor
 
 
 def test_element_id_is_ignored_by_canonical_form():
-    # Two structurally-identical models have different elementIds yet the same
+    # Two structurally-identical models have different element ids yet the same
     # canonical form -- round-trip equivalence stays purely structural.
     _f1, root1 = _map(_MODEL)
     _f2, root2 = _map(_MODEL)
-    e1, e2 = kk.members(root1), kk.members(root2)
-    assert {m.elementId for m in e1}.isdisjoint({m.elementId for m in e2})
+    ids1 = {element_id(m) for m in kk.members(root1)}
+    ids2 = {element_id(m) for m in kk.members(root2)}
+    assert ids1.isdisjoint(ids2)
     assert canonical_form(root1) == canonical_form(root2)
 
 
@@ -162,6 +170,6 @@ def test_kpar_meta_carries_element_ids(tmp_path):
     with zipfile.ZipFile(path) as zf:
         meta = json.loads(zf.read(f"{archive.root}/.meta.json"))
     assert set(meta["elementIds"]) == {"P"}  # the single top-level member
-    # The recorded id matches the model element's elementId.
+    # The recorded id matches the model element's API identity.
     package = next(m for m in kk.members(root) if kk.effective_name(m) == "P")
-    assert meta["elementIds"]["P"] == package.elementId
+    assert meta["elementIds"]["P"] == element_id(package)

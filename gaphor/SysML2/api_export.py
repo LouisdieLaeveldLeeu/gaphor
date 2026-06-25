@@ -20,7 +20,7 @@ import json
 from gaphor.core.modeling import Base, ElementFactory
 from gaphor.core.modeling.collection import collection
 from gaphor.SysML2 import kerml
-from gaphor.SysML2.element_id import assign_element_ids, element_id
+from gaphor.SysML2.element_id import element_id
 
 #: Metamodel identifier echoed in the API document header.
 METAMODEL = "SysML2"
@@ -31,8 +31,10 @@ _EXCLUDED = frozenset({"elementId", "presentation"})
 
 
 def api_elements(factory: ElementFactory) -> list[dict]:
-    """Every KerML element as an API element payload, deterministically ordered."""
-    assign_element_ids(factory)
+    """Every KerML element as an API element payload, deterministically ordered.
+
+    Each element's `@id` is its `element_id` (an explicit override or its `Base.id`),
+    so it is always present -- no minting pass is needed."""
     payloads = [_element_payload(element) for element in factory.select(kerml.Element)]
     return sorted(payloads, key=lambda payload: (payload["@type"], payload["@id"]))
 

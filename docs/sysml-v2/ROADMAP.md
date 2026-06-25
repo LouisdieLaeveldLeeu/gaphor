@@ -965,13 +965,17 @@ explicitly CLOSED as out of proportion for a desktop modeling tool -- nothing
 implemented requires it, and KPAR (Phase 10) is the realistic interchange.
 
 - **API-facing identity (`elementId`)** -- `gaphor/SysML2/element_id.py`. KerML
-  `Element` already declared `elementId` (generated from the XMI) but it was never
-  populated. It is now minted as a stable UUID at element CREATION (`assign_element_ids`,
-  called from the mapper's resolve chokepoint, so it covers text import AND KPAR
-  import), PERSISTED into `.gaphor` (stable across save/reload, idempotent on reload),
-  kept DISTINCT in value and concept from Gaphor's internal `Base.id`, and IGNORED by
-  round-trip/canonical equivalence (which stays purely structural). It is never part
-  of the textual syntax -- a fresh text import mints new ids, the correct API semantic.
+  `Element` declares `elementId` (generated from the XMI). Rather than mint a PARALLEL
+  repository id (which the standing identity rule forbids, and for which Gaphor offers
+  no clean per-element creation hook), the API identity DEFAULTS to Gaphor's own
+  creation-time `Base.id`: `element_id(e)` returns an explicitly-assigned `elementId`
+  if present, else `e.id`. So it is present from CREATION and stable for the element's
+  whole life via ANY path (mapper, UI, a bare `factory.create(...)`) -- no late sweep,
+  no element can persist without an API identity -- yet round-trip/canonical stays
+  purely structural (it ignores the id). The generated `elementId` attribute is the
+  optional OVERRIDE slot: an id carried in from an external OMG API repository wins;
+  otherwise the identity is `Base.id`. There is no textual `<id>` syntax (a fresh text
+  import gets fresh `Base.id`s, the correct API semantic).
 - **API element JSON export** -- `gaphor/SysML2/api_export.py` +
   `sysml2-api-export <model.gaphor> [-o out.json]`. Serializes the model to the OMG
   Systems Modeling API element shape: every element as `{"@id": elementId, "@type":
