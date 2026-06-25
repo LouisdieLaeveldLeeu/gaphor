@@ -925,10 +925,12 @@ generator.
   that still exists (changed generalizations / abstractness -- inheritance drives the
   generated shape, so these are reported even when properties are unchanged),
   added/removed/changed properties, derived<->stored flips, type/kind changes, and
-  added/removed enumerations and literals. External cross-document supertypes (a
-  SysML class generalizing a KerML class via an href, e.g. FlowDefinition :>
-  Interaction) are resolved like the codegen (`xmi_adapter._href_class_name`), so the
-  baseline records the full inheritance;
+  added/removed enumerations and literals. External cross-document references -- both
+  a supertype (FlowDefinition :> Interaction) and a property TYPE (a SysML property
+  typed by a KerML class, e.g. AcceptActionUsage.payloadArgument : Expression) -- are
+  resolved via href like the codegen (`xmi_adapter._href_class_name`), so the baseline
+  records the full inheritance AND typing (no stored reference is left untyped) and a
+  type change between two external targets is detected;
 - **fail-fast review report** (`review_findings`): turns a diff into REVIEW (needs a
   human mapping decision) vs INFO findings. The central rule -- a NEW STORED
   REFERENCE needs an ownership policy: it cascades on delete only if listed in

@@ -110,6 +110,37 @@ def test_real_sysml_baseline_has_external_kerml_supers():
     assert set(flow_def.generalizations) >= {"ActionDefinition", "Interaction"}
 
 
+def _external_prop(name: str, fragment: str) -> str:
+    return (
+        f'<ownedAttribute xmi:id="p_{name}" name="{name}">'
+        f'<type href="https://www.omg.org/spec/KerML/20250201/KerML.xmi#{fragment}"/>'
+        "</ownedAttribute>"
+    )
+
+
+def test_external_href_property_types_are_indexed(tmp_path):
+    # A property typed by a cross-document KerML class (href) must record the class
+    # name, not collapse to "" -- else type changes between external targets vanish.
+    derived = _index(
+        tmp_path, _xmi_doc(extra=_external_prop("expr", "Kernel-Functions-Expression"))
+    ).class_("Derived")
+    prop = derived.property("expr")
+    assert prop.kind == si.REFERENCE and prop.type == "Expression" and prop.stored_reference
+
+
+def test_real_sysml_baseline_resolves_external_property_types():
+    # No stored reference in the committed SysML baseline is left untyped, and a known
+    # external-typed property resolves to its KerML class.
+    sysml = load_baseline("SysML.xmi")
+    assert not [
+        (c.name, p.name)
+        for c in sysml.classes
+        for p in c.properties
+        if p.kind == si.REFERENCE and not p.type
+    ]
+    assert sysml.class_("AcceptActionUsage").property("payloadArgument").type == "Expression"
+
+
 # --- diff --------------------------------------------------------------------
 
 
@@ -158,6 +189,21 @@ def test_diff_reports_class_level_changes_without_property_changes(tmp_path):
     kinds = {f.kind for f in findings}
     assert {"generalization-change", "abstractness-change"} <= kinds
     assert has_review_findings(findings)
+
+
+def test_diff_detects_external_property_type_change(tmp_path):
+    # Changing a stored property's EXTERNAL type (Expression -> Predicate) is a
+    # changed property and a type-change REVIEW finding (was invisible before).
+    old = _index(tmp_path, _xmi_doc(extra=_external_prop("e", "Kernel-Functions-Expression")), "old.xmi")
+    new = _index(tmp_path, _xmi_doc(extra=_external_prop("e", "Kernel-Functions-Predicate")), "new.xmi")
+    diff = diff_indexes(old, new)
+    assert not diff.is_empty
+    assert any(
+        cls == "Derived" and o.name == "e" and o.type == "Expression" and n.type == "Predicate"
+        for cls, o, n in diff.changed_properties
+    )
+    findings = review_findings(diff)
+    assert any(f.kind == "type-change" for f in findings) and has_review_findings(findings)
 
 
 def test_diff_reports_added_and_removed_classes_and_literals(tmp_path):

@@ -188,6 +188,21 @@ def index_xmi(path: str | Path) -> MetamodelIndex:
     )
 
 
+def _type_href(owned: ET.Element) -> str | None:
+    """The href of an ownedAttribute's type (direct or nested), or None -- the same
+    extraction `_owned_type_idref` uses, exposed so a NON-primitive external type
+    (a SysML property typed by a KerML class) can be resolved instead of dropped."""
+    type_child = owned.find("type")
+    if type_child is None:
+        return None
+    href = type_child.get("href")
+    if href is None:
+        nested = type_child.find("*")
+        if nested is not None:
+            href = nested.get("href")
+    return href
+
+
 def _index_class(
     element: ET.Element, name: str, id_to_name: dict[str, str], enum_ids: set[str]
 ) -> Class:
@@ -218,6 +233,12 @@ def _index_class(
             elif idref is not None:
                 kind = ENUM if idref in enum_ids else REFERENCE
                 type_name = id_to_name.get(idref, idref)
+            elif (href := _type_href(child)) is not None:
+                # A cross-document property type (a SysML property typed by a KerML
+                # class, e.g. ...#Kernel-Functions-Expression) -- resolve it like a
+                # generalization href, else a future change between two external
+                # targets (Expression -> Predicate) is invisible to the diff.
+                kind, type_name = REFERENCE, _href_class_name(href)
             else:
                 kind, type_name = REFERENCE, ""
             properties.append(

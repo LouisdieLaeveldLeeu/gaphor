@@ -1662,8 +1662,13 @@ pinned XMI abstract syntax and changes neither the model nor the generator.
   same-document `xmi:idref` supers AND cross-document `href` supers -- a SysML class
   generalizing a KerML class, e.g. `FlowDefinition :> Interaction` -- resolved via
   `xmi_adapter._href_class_name`, so the baseline records the FULL inheritance), and
-  owned properties as (name, type, kind in attribute/enum/reference, derived). Enum
-  literals are kept in document order (deterministic; the diff compares literal sets).
+  owned properties as (name, type, kind in attribute/enum/reference, derived). A
+  property TYPE reached by a cross-document href (a SysML property typed by a KerML
+  class, e.g. `AcceptActionUsage.payloadArgument : Expression`) is resolved the same
+  way -- otherwise it collapsed to `type=""` and a change between two external targets
+  (`Expression -> Predicate`) was invisible to the diff; the SysML baseline now leaves
+  no stored reference untyped. Enum literals are kept in document order (deterministic;
+  the diff compares literal sets).
 - **Class-level changes are diffed.** A class present in BOTH versions is compared for
   changed generalizations and abstractness, not just properties -- a superclass or
   abstract/concrete change is REVIEW even with unchanged properties, since inheritance

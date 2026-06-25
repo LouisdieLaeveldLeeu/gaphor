@@ -10,7 +10,7 @@
       "properties": [
         {
           "name": "payloadArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         },
@@ -22,7 +22,7 @@
         },
         {
           "name": "receiverArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         }
@@ -54,7 +54,7 @@
       "properties": [
         {
           "name": "actionDefinition",
-          "type": "",
+          "type": "Behavior",
           "kind": "reference",
           "derived": true
         }
@@ -114,7 +114,7 @@
       "properties": [
         {
           "name": "resultExpression",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         }
@@ -135,7 +135,7 @@
         },
         {
           "name": "resultExpression",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         }
@@ -166,19 +166,19 @@
       "properties": [
         {
           "name": "referent",
-          "type": "",
+          "type": "Feature",
           "kind": "reference",
           "derived": true
         },
         {
           "name": "targetArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         },
         {
           "name": "valueExpression",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         }
@@ -202,7 +202,7 @@
       "properties": [
         {
           "name": "attributeDefinition",
-          "type": "",
+          "type": "DataType",
           "kind": "reference",
           "derived": true
         },
@@ -249,7 +249,7 @@
       "properties": [
         {
           "name": "calculationDefinition",
-          "type": "",
+          "type": "Function",
           "kind": "reference",
           "derived": true
         }
@@ -412,7 +412,7 @@
       "properties": [
         {
           "name": "connectionDefinition",
-          "type": "",
+          "type": "AssociationStructure",
           "kind": "reference",
           "derived": true
         }
@@ -446,7 +446,7 @@
       "properties": [
         {
           "name": "constraintDefinition",
-          "type": "",
+          "type": "Predicate",
           "kind": "reference",
           "derived": true
         }
@@ -757,7 +757,7 @@
         },
         {
           "name": "visibility",
-          "type": "",
+          "type": "VisibilityKind",
           "kind": "reference",
           "derived": false
         }
@@ -790,7 +790,7 @@
       "properties": [
         {
           "name": "flowDefinition",
-          "type": "",
+          "type": "Interaction",
           "kind": "reference",
           "derived": true
         }
@@ -811,7 +811,7 @@
         },
         {
           "name": "seqArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         }
@@ -867,7 +867,7 @@
         },
         {
           "name": "ifArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         },
@@ -943,7 +943,7 @@
       "properties": [
         {
           "name": "itemDefinition",
-          "type": "",
+          "type": "Structure",
           "kind": "reference",
           "derived": true
         }
@@ -1008,7 +1008,7 @@
       "properties": [
         {
           "name": "metadataDefinition",
-          "type": "",
+          "type": "Metaclass",
           "kind": "reference",
           "derived": true
         }
@@ -1075,7 +1075,7 @@
         },
         {
           "name": "occurrenceDefinition",
-          "type": "",
+          "type": "Class",
           "kind": "reference",
           "derived": true
         },
@@ -1413,7 +1413,7 @@
         },
         {
           "name": "satisfyingFeature",
-          "type": "",
+          "type": "Feature",
           "kind": "reference",
           "derived": true
         }
@@ -1428,19 +1428,19 @@
       "properties": [
         {
           "name": "payloadArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         },
         {
           "name": "receiverArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         },
         {
           "name": "senderArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         }
@@ -1554,7 +1554,7 @@
         },
         {
           "name": "stateDefinition",
-          "type": "",
+          "type": "Behavior",
           "kind": "reference",
           "derived": true
         }
@@ -1602,7 +1602,7 @@
       "properties": [
         {
           "name": "terminatedOccurrenceArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         }
@@ -1623,7 +1623,7 @@
         },
         {
           "name": "transitionFeature",
-          "type": "",
+          "type": "Step",
           "kind": "reference",
           "derived": true
         }
@@ -1644,7 +1644,7 @@
         },
         {
           "name": "guardExpression",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         },
@@ -1656,7 +1656,7 @@
         },
         {
           "name": "succession",
-          "type": "",
+          "type": "Succession",
           "kind": "reference",
           "derived": true
         },
@@ -1698,7 +1698,7 @@
       "properties": [
         {
           "name": "definition",
-          "type": "",
+          "type": "Classifier",
           "kind": "reference",
           "derived": true
         },
@@ -2028,7 +2028,7 @@
         },
         {
           "name": "viewCondition",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         },
@@ -2070,7 +2070,7 @@
       "properties": [
         {
           "name": "exposedElement",
-          "type": "",
+          "type": "Element",
           "kind": "reference",
           "derived": true
         },
@@ -2082,7 +2082,7 @@
         },
         {
           "name": "viewCondition",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         },
@@ -2145,13 +2145,13 @@
       "properties": [
         {
           "name": "untilArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         },
         {
           "name": "whileArgument",
-          "type": "",
+          "type": "Expression",
           "kind": "reference",
           "derived": true
         }
