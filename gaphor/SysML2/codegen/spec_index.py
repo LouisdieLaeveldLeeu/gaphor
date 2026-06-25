@@ -39,6 +39,7 @@ from pathlib import Path
 from gaphor.SysML2.codegen.xmi_adapter import (
     COMPOSITE_REFS,
     _enum_literals,
+    _href_class_name,
     _owned_type_idref,
     _xmi,
 )
@@ -195,11 +196,17 @@ def _index_class(
     for child in element:
         if child.tag.endswith("generalization"):
             general = child.find("general")
+            # A SAME-document supertype is an xmi:idref; a CROSS-document one (a SysML
+            # class generalizing a KerML class) is an href -- resolve both, else the
+            # index silently drops external supers (e.g. FlowDefinition :> Interaction).
+            href = general.get("href") if general is not None else None
             gid = (
                 (_xmi(general, "idref") if general is not None else None)
                 or child.get("general")
             )
-            if gid:
+            if href:
+                generalizations.add(_href_class_name(href))
+            elif gid:
                 generalizations.add(id_to_name.get(gid, gid))
         elif child.tag.endswith("ownedAttribute"):
             prop_name = child.get("name")
@@ -236,6 +243,10 @@ class MetamodelDiff:
     source: str
     added_classes: tuple[Class, ...]
     removed_classes: tuple[str, ...]
+    # Class-level changes for a class that exists in BOTH (its generalizations or
+    # abstractness changed even if its properties did not): (class, old, new).
+    changed_generalizations: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...]
+    changed_abstractness: tuple[tuple[str, bool, bool], ...]
     added_properties: tuple[tuple[str, Property], ...]  # (class name, new property)
     removed_properties: tuple[tuple[str, str], ...]  # (class name, property name)
     changed_properties: tuple[tuple[str, Property, Property], ...]  # (class, old, new)
@@ -250,6 +261,8 @@ class MetamodelDiff:
             (
                 self.added_classes,
                 self.removed_classes,
+                self.changed_generalizations,
+                self.changed_abstractness,
                 self.added_properties,
                 self.removed_properties,
                 self.changed_properties,
@@ -271,10 +284,19 @@ def diff_indexes(old: MetamodelIndex, new: MetamodelIndex) -> MetamodelDiff:
     )
     removed_classes = tuple(sorted(old_classes.keys() - new_classes.keys()))
 
+    changed_generalizations: list[tuple[str, tuple[str, ...], tuple[str, ...]]] = []
+    changed_abstractness: list[tuple[str, bool, bool]] = []
     added_properties: list[tuple[str, Property]] = []
     removed_properties: list[tuple[str, str]] = []
     changed_properties: list[tuple[str, Property, Property]] = []
     for name in sorted(old_classes.keys() & new_classes.keys()):
+        old_class, new_class = old_classes[name], new_classes[name]
+        if old_class.generalizations != new_class.generalizations:
+            changed_generalizations.append(
+                (name, old_class.generalizations, new_class.generalizations)
+            )
+        if old_class.abstract != new_class.abstract:
+            changed_abstractness.append((name, old_class.abstract, new_class.abstract))
         old_props = {p.name: p for p in old_classes[name].properties}
         new_props = {p.name: p for p in new_classes[name].properties}
         for prop in sorted(new_props.keys() - old_props.keys()):
@@ -300,6 +322,8 @@ def diff_indexes(old: MetamodelIndex, new: MetamodelIndex) -> MetamodelDiff:
         source=new.source,
         added_classes=added_classes,
         removed_classes=removed_classes,
+        changed_generalizations=tuple(changed_generalizations),
+        changed_abstractness=tuple(changed_abstractness),
         added_properties=tuple(added_properties),
         removed_properties=tuple(removed_properties),
         changed_properties=tuple(changed_properties),
@@ -373,6 +397,25 @@ def review_findings(
                     + (" (derived, not stored)" if prop.derived else ""),
                 )
             )
+
+    for class_name, old_supers, new_supers in diff.changed_generalizations:
+        findings.append(
+            ReviewFinding(
+                REVIEW,
+                "generalization-change",
+                f"{class_name}: supertypes {', '.join(old_supers) or '(none)'} -> "
+                f"{', '.join(new_supers) or '(none)'} -- inheritance drives the "
+                "generated shape and mapping assumptions",
+            )
+        )
+    for class_name, _old, new_abstract in diff.changed_abstractness:
+        findings.append(
+            ReviewFinding(
+                REVIEW,
+                "abstractness-change",
+                f"{class_name}: {'concrete -> abstract' if new_abstract else 'abstract -> concrete'}",
+            )
+        )
 
     for class_name in diff.removed_classes:
         findings.append(

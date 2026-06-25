@@ -921,15 +921,21 @@ generator.
   release is diffed against; a test (`test_committed_baseline_matches_live_xmi`)
   guards that the baseline still matches the live XMI -- the same regen discipline
   the generated code uses;
-- **diff** (`diff_indexes`): added/removed classes, added/removed/changed
-  properties, derived<->stored flips, type/kind changes, and added/removed
-  enumerations and literals;
+- **diff** (`diff_indexes`): added/removed classes, CLASS-LEVEL changes for a class
+  that still exists (changed generalizations / abstractness -- inheritance drives the
+  generated shape, so these are reported even when properties are unchanged),
+  added/removed/changed properties, derived<->stored flips, type/kind changes, and
+  added/removed enumerations and literals. External cross-document supertypes (a
+  SysML class generalizing a KerML class via an href, e.g. FlowDefinition :>
+  Interaction) are resolved like the codegen (`xmi_adapter._href_class_name`), so the
+  baseline records the full inheritance;
 - **fail-fast review report** (`review_findings`): turns a diff into REVIEW (needs a
   human mapping decision) vs INFO findings. The central rule -- a NEW STORED
   REFERENCE needs an ownership policy: it cascades on delete only if listed in
   `xmi_adapter.COMPOSITE_REFS` (the containment whitelist), which a new reference is
-  NOT, so it is always flagged. Also flags new/removed classes, removed properties,
-  derived<->stored flips, type changes, and removed enumerations/literals;
+  NOT, so it is always flagged. Also flags new/removed classes, generalization and
+  abstractness changes, removed properties, derived<->stored flips, type changes, and
+  removed enumerations/literals;
 - **provenance/hash refresh** (`compute_manifest_rows`): SHA-256 + byte size for each
   pinned artifact (XMI/KPAR), to refresh the manifest table when bumping the pin;
 - **workflow (no arguments)**: pin a new XMI (replace the file), run

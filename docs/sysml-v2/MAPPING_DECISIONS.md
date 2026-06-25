@@ -1658,10 +1658,17 @@ pinned XMI abstract syntax and changes neither the model nor the generator.
   REVIEW (breaking or stored-end-introducing); new enumerations/literals are INFO.
 - **Fail-fast.** `poe sysml2-spec-diff` exits non-zero if any finding is REVIEW, so a
   release with unreviewed mapping changes cannot be silently adopted.
-- **Index granularity.** Per class: name, abstractness, generalization NAMES (idrefs
-  resolved), and owned properties as (name, type, kind in attribute/enum/reference,
-  derived). Enum literals are kept in document order (deterministic; the diff
-  compares literal sets). Deferred: diffing the CONTENT of the normative library
-  `.kpar`s (only the artifact set + hashes are tracked, via
+- **Index granularity.** Per class: name, abstractness, generalization NAMES (both
+  same-document `xmi:idref` supers AND cross-document `href` supers -- a SysML class
+  generalizing a KerML class, e.g. `FlowDefinition :> Interaction` -- resolved via
+  `xmi_adapter._href_class_name`, so the baseline records the FULL inheritance), and
+  owned properties as (name, type, kind in attribute/enum/reference, derived). Enum
+  literals are kept in document order (deterministic; the diff compares literal sets).
+- **Class-level changes are diffed.** A class present in BOTH versions is compared for
+  changed generalizations and abstractness, not just properties -- a superclass or
+  abstract/concrete change is REVIEW even with unchanged properties, since inheritance
+  drives the generated metamodel shape and mapping assumptions (a silent "no change"
+  here would defeat the pipeline). Deferred: diffing the CONTENT of the normative
+  library `.kpar`s (only the artifact set + hashes are tracked, via
   `compute_manifest_rows`); auto-rewriting the manifest Markdown table.
   See `test_spec_index.py`.

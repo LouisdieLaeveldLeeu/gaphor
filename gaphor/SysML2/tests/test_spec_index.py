@@ -28,15 +28,34 @@ _XMI_NS = "http://www.omg.org/spec/XMI/20161101"
 _STRING_HREF = "https://www.omg.org/spec/UML/20161101/PrimitiveTypes.xmi#String"
 
 
-def _xmi_doc(*, derived_kids: bool = True, extra: str = "", base_extra: str = "") -> str:
+#: An external (cross-document) supertype: a SysML class generalizing a KerML class
+#: is encoded as an href, not an xmi:idref. The fragment's last hyphen-segment is the
+#: class name (`...#Kernel-Things-Mixin` -> `Mixin`), per xmi_adapter._href_class_name.
+_EXTERNAL_MIXIN = (
+    '<generalization xmi:type="uml:Generalization">'
+    '<general href="https://www.omg.org/spec/KerML/20250201/KerML.xmi#Kernel-Things-Mixin"/>'
+    "</generalization>"
+)
+
+
+def _xmi_doc(
+    *,
+    derived_kids: bool = True,
+    abstract: bool = True,
+    extra: str = "",
+    extra_general: str = "",
+    base_extra: str = "",
+) -> str:
     """A minimal XMI: `Base`, abstract `Derived :> Base` with a primitive attribute,
     a STORED reference, a (optionally) derived reference, and an enum-typed property;
-    plus an enumeration. `extra`/`base_extra` inject changes for diff tests."""
+    plus an enumeration. `extra`/`extra_general`/`base_extra`/`abstract` inject
+    changes for diff tests."""
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <uml:Model xmlns:uml="https://www.omg.org/spec/UML/20161101" xmlns:xmi="{_XMI_NS}">
   <packagedElement xmi:type="uml:Class" xmi:id="Base" name="Base">{base_extra}</packagedElement>
-  <packagedElement xmi:type="uml:Class" xmi:id="Derived" name="Derived" isAbstract="true">
+  <packagedElement xmi:type="uml:Class" xmi:id="Derived" name="Derived"{' isAbstract="true"' if abstract else ''}>
     <generalization xmi:type="uml:Generalization"><general xmi:idref="Base"/></generalization>
+    {extra_general}
     <ownedAttribute xmi:id="p_label" name="label"><type href="{_STRING_HREF}"/></ownedAttribute>
     <ownedAttribute xmi:id="p_parent" name="parent"><type xmi:idref="Base"/></ownedAttribute>
     <ownedAttribute xmi:id="p_kids" name="kids"{' isDerived="true"' if derived_kids else ''}><type xmi:idref="Base"/></ownedAttribute>
@@ -78,6 +97,19 @@ def test_index_json_round_trips(tmp_path):
     assert MetamodelIndex.from_json(index.to_json()) == index
 
 
+def test_external_href_generalizations_are_indexed(tmp_path):
+    # A cross-document supertype (href, not xmi:idref) must not be dropped.
+    derived = _index(tmp_path, _xmi_doc(extra_general=_EXTERNAL_MIXIN)).class_("Derived")
+    assert derived.generalizations == ("Base", "Mixin")
+
+
+def test_real_sysml_baseline_has_external_kerml_supers():
+    # The committed SysML baseline records KerML supers reached via href, e.g.
+    # FlowDefinition :> ActionDefinition (internal) AND :> Interaction (external).
+    flow_def = load_baseline("SysML.xmi").class_("FlowDefinition")
+    assert set(flow_def.generalizations) >= {"ActionDefinition", "Interaction"}
+
+
 # --- diff --------------------------------------------------------------------
 
 
@@ -108,6 +140,24 @@ def test_diff_reports_every_change_kind(tmp_path):
         cls == "Derived" and o.name == "kids" and o.derived and not n.derived
         for cls, o, n in diff.changed_properties
     )
+
+
+def test_diff_reports_class_level_changes_without_property_changes(tmp_path):
+    # A generalization or abstractness change on a class whose PROPERTIES are
+    # unchanged must still be reported (inheritance drives the generated shape).
+    old = _index(tmp_path, _xmi_doc(abstract=True), "old.xmi")
+    new = _index(
+        tmp_path, _xmi_doc(abstract=False, extra_general=_EXTERNAL_MIXIN), "new.xmi"
+    )
+    diff = diff_indexes(old, new)
+    assert not diff.is_empty
+    assert diff.added_properties == () and diff.changed_properties == ()
+    assert ("Derived", ("Base",), ("Base", "Mixin")) in diff.changed_generalizations
+    assert ("Derived", True, False) in diff.changed_abstractness
+    findings = review_findings(diff)
+    kinds = {f.kind for f in findings}
+    assert {"generalization-change", "abstractness-change"} <= kinds
+    assert has_review_findings(findings)
 
 
 def test_diff_reports_added_and_removed_classes_and_literals(tmp_path):

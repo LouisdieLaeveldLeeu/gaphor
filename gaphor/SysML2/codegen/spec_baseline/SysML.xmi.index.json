@@ -32,6 +32,7 @@
       "name": "ActionDefinition",
       "abstract": false,
       "generalizations": [
+        "Behavior",
         "OccurrenceDefinition"
       ],
       "properties": [
@@ -47,7 +48,8 @@
       "name": "ActionUsage",
       "abstract": false,
       "generalizations": [
-        "OccurrenceUsage"
+        "OccurrenceUsage",
+        "Step"
       ],
       "properties": [
         {
@@ -61,7 +63,9 @@
     {
       "name": "ActorMembership",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "ParameterMembership"
+      ],
       "properties": [
         {
           "name": "ownedActorParameter",
@@ -141,7 +145,8 @@
       "name": "AssertConstraintUsage",
       "abstract": false,
       "generalizations": [
-        "ConstraintUsage"
+        "ConstraintUsage",
+        "Invariant"
       ],
       "properties": [
         {
@@ -183,6 +188,7 @@
       "name": "AttributeDefinition",
       "abstract": false,
       "generalizations": [
+        "DataType",
         "Definition"
       ],
       "properties": []
@@ -212,6 +218,7 @@
       "name": "BindingConnectorAsUsage",
       "abstract": false,
       "generalizations": [
+        "BindingConnector",
         "ConnectorAsUsage"
       ],
       "properties": []
@@ -220,7 +227,8 @@
       "name": "CalculationDefinition",
       "abstract": false,
       "generalizations": [
-        "ActionDefinition"
+        "ActionDefinition",
+        "Function"
       ],
       "properties": [
         {
@@ -235,7 +243,8 @@
       "name": "CalculationUsage",
       "abstract": false,
       "generalizations": [
-        "ActionUsage"
+        "ActionUsage",
+        "Expression"
       ],
       "properties": [
         {
@@ -353,7 +362,9 @@
     {
       "name": "ConjugatedPortTyping",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "FeatureTyping"
+      ],
       "properties": [
         {
           "name": "conjugatedPortDefinition",
@@ -373,6 +384,7 @@
       "name": "ConnectionDefinition",
       "abstract": false,
       "generalizations": [
+        "AssociationStructure",
         "PartDefinition"
       ],
       "properties": [
@@ -410,6 +422,7 @@
       "name": "ConnectorAsUsage",
       "abstract": true,
       "generalizations": [
+        "Connector",
         "Usage"
       ],
       "properties": []
@@ -418,7 +431,8 @@
       "name": "ConstraintDefinition",
       "abstract": false,
       "generalizations": [
-        "OccurrenceDefinition"
+        "OccurrenceDefinition",
+        "Predicate"
       ],
       "properties": []
     },
@@ -426,6 +440,7 @@
       "name": "ConstraintUsage",
       "abstract": false,
       "generalizations": [
+        "BooleanExpression",
         "OccurrenceUsage"
       ],
       "properties": [
@@ -456,7 +471,9 @@
     {
       "name": "Definition",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "Classifier"
+      ],
       "properties": [
         {
           "name": "directedUsage",
@@ -728,7 +745,9 @@
     {
       "name": "Expose",
       "abstract": true,
-      "generalizations": [],
+      "generalizations": [
+        "Import"
+      ],
       "properties": [
         {
           "name": "isImportAll",
@@ -748,7 +767,8 @@
       "name": "FlowDefinition",
       "abstract": false,
       "generalizations": [
-        "ActionDefinition"
+        "ActionDefinition",
+        "Interaction"
       ],
       "properties": [
         {
@@ -764,7 +784,8 @@
       "abstract": false,
       "generalizations": [
         "ActionUsage",
-        "ConnectorAsUsage"
+        "ConnectorAsUsage",
+        "Flow"
       ],
       "properties": [
         {
@@ -908,7 +929,8 @@
       "name": "ItemDefinition",
       "abstract": false,
       "generalizations": [
-        "OccurrenceDefinition"
+        "OccurrenceDefinition",
+        "Structure"
       ],
       "properties": []
     },
@@ -954,7 +976,8 @@
       "name": "MembershipExpose",
       "abstract": false,
       "generalizations": [
-        "Expose"
+        "Expose",
+        "MembershipImport"
       ],
       "properties": []
     },
@@ -970,7 +993,8 @@
       "name": "MetadataDefinition",
       "abstract": false,
       "generalizations": [
-        "ItemDefinition"
+        "ItemDefinition",
+        "Metaclass"
       ],
       "properties": []
     },
@@ -978,7 +1002,8 @@
       "name": "MetadataUsage",
       "abstract": false,
       "generalizations": [
-        "ItemUsage"
+        "ItemUsage",
+        "MetadataFeature"
       ],
       "properties": [
         {
@@ -993,14 +1018,17 @@
       "name": "NamespaceExpose",
       "abstract": false,
       "generalizations": [
-        "Expose"
+        "Expose",
+        "NamespaceImport"
       ],
       "properties": []
     },
     {
       "name": "ObjectiveMembership",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "FeatureMembership"
+      ],
       "properties": [
         {
           "name": "ownedObjectiveRequirement",
@@ -1014,6 +1042,7 @@
       "name": "OccurrenceDefinition",
       "abstract": false,
       "generalizations": [
+        "Class",
         "Definition"
       ],
       "properties": [
@@ -1100,7 +1129,9 @@
     {
       "name": "PortConjugation",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "Conjugation"
+      ],
       "properties": [
         {
           "name": "conjugatedPortDefinition",
@@ -1120,7 +1151,8 @@
       "name": "PortDefinition",
       "abstract": false,
       "generalizations": [
-        "OccurrenceDefinition"
+        "OccurrenceDefinition",
+        "Structure"
       ],
       "properties": [
         {
@@ -1194,7 +1226,9 @@
     {
       "name": "RequirementConstraintMembership",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "FeatureMembership"
+      ],
       "properties": [
         {
           "name": "kind",
@@ -1415,7 +1449,9 @@
     {
       "name": "StakeholderMembership",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "ParameterMembership"
+      ],
       "properties": [
         {
           "name": "ownedStakeholderParameter",
@@ -1467,7 +1503,9 @@
     {
       "name": "StateSubactionMembership",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "FeatureMembership"
+      ],
       "properties": [
         {
           "name": "action",
@@ -1525,7 +1563,9 @@
     {
       "name": "SubjectMembership",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "ParameterMembership"
+      ],
       "properties": [
         {
           "name": "ownedSubjectParameter",
@@ -1539,7 +1579,8 @@
       "name": "SuccessionAsUsage",
       "abstract": false,
       "generalizations": [
-        "ConnectorAsUsage"
+        "ConnectorAsUsage",
+        "Succession"
       ],
       "properties": []
     },
@@ -1547,7 +1588,8 @@
       "name": "SuccessionFlowUsage",
       "abstract": false,
       "generalizations": [
-        "FlowUsage"
+        "FlowUsage",
+        "SuccessionFlow"
       ],
       "properties": []
     },
@@ -1569,7 +1611,9 @@
     {
       "name": "TransitionFeatureMembership",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "FeatureMembership"
+      ],
       "properties": [
         {
           "name": "kind",
@@ -1633,7 +1677,9 @@
     {
       "name": "TriggerInvocationExpression",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "InvocationExpression"
+      ],
       "properties": [
         {
           "name": "kind",
@@ -1646,7 +1692,9 @@
     {
       "name": "Usage",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "Feature"
+      ],
       "properties": [
         {
           "name": "definition",
@@ -1911,7 +1959,9 @@
     {
       "name": "VariantMembership",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "OwningMembership"
+      ],
       "properties": [
         {
           "name": "ownedVariantUsage",
@@ -1993,7 +2043,9 @@
     {
       "name": "ViewRenderingMembership",
       "abstract": false,
-      "generalizations": [],
+      "generalizations": [
+        "FeatureMembership"
+      ],
       "properties": [
         {
           "name": "ownedRendering",
