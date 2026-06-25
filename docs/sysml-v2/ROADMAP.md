@@ -871,17 +871,39 @@ not need 5e to land first.
 Exit (reached): ConnectionDefinition and ConnectionUsage promoted from `alpha`
 for the non-chain endpoint surface (feature-chain endpoints follow with Phase 5e).
 
-### Phase 10 -- General KPAR Export And Round-Trip
+### Phase 10 -- General KPAR Export And Round-Trip -- DONE
 
-Export Gaphor SysML2 models to KPAR and prove interchange round-trips:
+Added the KPAR WRITER (the inverse of import) and proved interchange round-trips.
+SINGLE-MEMBER layout (the chosen scope): the whole model is exported to one
+`.sysml` member via the textual exporter, with `.project.json`/`.meta.json` and the
+member packaged as a KPAR -- the same layout `read_kpar`/`import_user_kpar` consume.
 
-- `.gaphor` SysML2 model -> KPAR;
-- KPAR -> Gaphor -> KPAR;
-- text -> Gaphor -> KPAR -> Gaphor -> text;
-- identity/provenance rules documented and tested.
+- **writer**: `kpar.write_kpar(path, root, *, project_name, version, description)`
+  serializes the model with `export_namespace` and zips a single project directory;
+  `.meta.json` indexes each REAL top-level member name to the member (library proxies
+  -- value types, the implicit `Anything`/`things` -- and anonymous members are
+  omitted, since the text exporter already omits them and a synthesized chain feature
+  is owned by its connector, not top-level);
+- **CLI**: `sysml2-kpar-export <model.gaphor> <out.kpar> [--name]`, symmetric with
+  `sysml2-kpar-import` / `sysml2-kpar-info`;
+- **round-trips (by canonical form, not byte-identity)**:
+  - `.gaphor` SysML2 model -> KPAR (a saved/reloaded model writes a valid archive);
+  - `KPAR -> Gaphor -> KPAR -> Gaphor` is canonical-form stable;
+  - `text -> Gaphor -> KPAR -> Gaphor` preserves the canonical form AND re-exports
+    identical text;
+  - the two CLIs compose (export then import back to a `.gaphor`);
+- **identity/provenance rules** documented in the writer module and
+  `KPAR_IMPORT_CONTRACT.md`: read-only proxies / chain features are never written;
+  interchange round-trips semantically (canonical form), since member naming and
+  ordering are the writer's choice; provenance on re-import traces to the single
+  exported member (the original per-source-file provenance of an imported KPAR is
+  not preserved across the single-member export).
 
-Exit: KPAR support is complete for the implemented SysML2 surface, not just
-stdlib ingestion.
+OUT of scope (deferred): per-source-file (multi-member) export preserving original
+file boundaries / per-file provenance; KPAR `usage`-dependency export.
+
+Exit: KPAR support is complete for the implemented SysML2 surface (export +
+round-trip, not just stdlib ingestion) -- done and tested (`test_kpar_export.py`).
 
 ### Phase 11 -- Versioned Spec-Ingestion Pipeline
 

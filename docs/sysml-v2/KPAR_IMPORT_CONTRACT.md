@@ -162,6 +162,30 @@ materialized, never whole libraries.
 - The `sysml2-kpar-import` CLI command ships in **Phase 3c** (general user KPAR
   import); GUI import is **Phase 3d**.
 
+## Export And Round-Trip (Phase 10)
+
+The writer (`kpar.write_kpar`) is the inverse of import, and the
+`sysml2-kpar-export` CLI mirrors `sysml2-kpar-import`.
+
+- **Single-member layout.** The whole model is exported to ONE `<root>/model.sysml`
+  member via the textual exporter, alongside `.project.json` and a `.meta.json`
+  whose `index` maps each real top-level member name to that member. A text-authored
+  model has no original per-file boundaries to preserve, and import re-merges members
+  into one root, so a single member is the honest representation.
+- **Identity: what is NOT written.** Read-only library proxies (standard-library
+  value types, the implicit-base `Anything`/`things`) and synthesized feature-chain
+  connector features are never serialized -- they are regenerable references or
+  structural artifacts, and the text exporter already omits them. The `.meta.json`
+  index therefore lists only real top-level user members.
+- **Round-trip is by CANONICAL FORM, not bytes.** Member naming and entry ordering
+  are the writer's choice, so interchange is proven semantically:
+  `text -> Gaphor -> KPAR -> Gaphor` preserves the canonical form (and re-exports
+  identical text), and `KPAR -> Gaphor -> KPAR -> Gaphor` is canonical-form stable.
+- **Provenance across export.** On re-import, provenance traces to the single
+  exported member; the original per-source-file provenance of an imported KPAR is
+  NOT preserved across the single-member export (an honest consequence of the chosen
+  layout). Multi-member export preserving original file boundaries is deferred.
+
 ## Verification
 
 - Phase 3a (this phase) is anchored by a design-contract consistency check

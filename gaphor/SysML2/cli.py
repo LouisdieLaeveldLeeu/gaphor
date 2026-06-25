@@ -226,6 +226,42 @@ def _run_kpar_import(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_kpar_export(args: argparse.Namespace) -> int:
+    """Export a `.gaphor` SysML2 model to a KPAR project archive (Phase 10).
+
+    Loads the model, finds its single SysML2 root namespace, and writes a KPAR with
+    the whole model as one `.sysml` member (the inverse of sysml2-kpar-import).
+    """
+    import gaphor.storage as storage
+    from gaphor.core.modeling import ElementFactory
+    from gaphor.SysML2 import kerml
+    from gaphor.SysML2.kpar import write_kpar
+
+    factory = ElementFactory()
+    with open(args.model, encoding="utf-8") as f:
+        storage.load(
+            f, element_factory=factory, modeling_language=_modeling_language()
+        )
+
+    roots = [
+        ns
+        for ns in factory.select(kerml.Namespace)
+        if type(ns) is kerml.Namespace
+        and kerml_kernel_owning_namespace(ns) is None
+    ]
+    if len(roots) != 1:
+        print(
+            f"kpar export: expected one SysML2 model root, found {len(roots)}",
+            file=sys.stderr,
+        )
+        return ERROR_EXIT_CODE
+
+    name = args.name or Path(args.model).stem or "Project"
+    write_kpar(args.archive, roots[0], project_name=name)
+    print(f"exported {args.model} to {args.archive}")
+    return 0
+
+
 def validate_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Validate SysML v2 text without importing it."
@@ -291,6 +327,20 @@ def kpar_import_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def kpar_export_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Export a Gaphor SysML2 model to a KPAR project archive."
+    )
+    parser.add_argument("model", help="path to a .gaphor SysML2 model")
+    parser.add_argument("archive", help="target .kpar archive")
+    parser.add_argument(
+        "--name",
+        help="project name (default: the model file's base name)",
+    )
+    parser.set_defaults(command=_run_kpar_export)
+    return parser
+
+
 def parser_names() -> Sequence[str]:
     return (
         "sysml2-validate",
@@ -299,4 +349,5 @@ def parser_names() -> Sequence[str]:
         "sysml2-round-trip",
         "sysml2-kpar-info",
         "sysml2-kpar-import",
+        "sysml2-kpar-export",
     )

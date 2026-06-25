@@ -38,6 +38,7 @@ from gaphor.SysML2.kpar.project_import import (
     UserKparImport,
     import_user_kpar,
 )
+from gaphor.SysML2.kpar.writer import write_kpar
 
 __all__ = [
     "KparArchive",
@@ -66,4 +67,5 @@ __all__ = [
     "UnresolvedTypeReference",
     "UserKparImport",
     "import_user_kpar",
+    "write_kpar",
 ]

@@ -17,6 +17,7 @@ def test_cli_parsers_are_registered_by_name():
         "sysml2-round-trip",
         "sysml2-kpar-info",
         "sysml2-kpar-import",
+        "sysml2-kpar-export",
     )
 
 

@@ -1607,3 +1607,31 @@ Phase 9 deferred extension). One new metamodel class: `FeatureChaining` (kernel
   its PATH, not by the anonymous chain feature's empty name.
 - **Deferred (noted).** Feature chains in non-endpoint positions (typing / subsetting /
   redefinition targets) and FeatureChainExpression. See `test_feature_chains.py`.
+
+### Completion Phase 10: KPAR export and round-trip (verified 2026-06-24)
+
+The KPAR WRITER (`kpar.write_kpar`) + `sysml2-kpar-export` CLI, the inverse of
+import. No metamodel or mapping change -- it reuses the textual exporter.
+
+- **Single-member layout (chosen scope).** The whole model is exported to one
+  `<project>/model.sysml` via `export_namespace`, with `.project.json` and a
+  `.meta.json` whose `index` maps each real top-level member name to that member. A
+  text-authored model has no original per-file boundaries, and import re-merges
+  members into one root, so a single member is the honest representation.
+- **Identity.** Read-only library proxies (value types, the implicit `Anything`/
+  `things`) and synthesized feature-chain features are NEVER written -- the text
+  exporter already omits them, and a chain feature is owned by its connector, not a
+  top-level member -- so the index lists only real top-level user members
+  (`kk.is_library_proxy` + `effective_name is not None` filter).
+- **Round-trip = canonical form, not bytes.** Member naming/ordering are the writer's
+  choice, so interchange is proven semantically with `roundtrip.canonical_form`:
+  `text -> Gaphor -> KPAR -> Gaphor` preserves the canonical form and re-exports
+  identical text; `KPAR -> Gaphor -> KPAR -> Gaphor` is canonical-form stable. Same
+  semantic definition the text round-trip uses.
+- **Provenance.** On re-import, relationships/elements trace to the single exported
+  member; the original per-source-file provenance of an imported KPAR is not
+  preserved across the single-member export (documented in KPAR_IMPORT_CONTRACT.md).
+- **CLI.** `sysml2-kpar-export <model.gaphor> <out.kpar> [--name]` loads the model,
+  finds its single bare root namespace, and writes the archive -- symmetric with
+  `sysml2-kpar-import`. Deferred: multi-member export preserving file boundaries;
+  `usage`-dependency export. See `test_kpar_export.py`.
