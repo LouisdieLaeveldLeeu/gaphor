@@ -102,6 +102,7 @@ documentation = "https://docs.gaphor.org/"
 "auto_layout" = "gaphor.plugins.autolayout:AutoLayoutService"
 "html_report" = "gaphor.plugins.htmlreport.report:HtmlReportExport"
 "sysml2_kpar_import" = "gaphor.plugins.sysml2kparimport:SysML2KparImport"
+"sysml2_diagram_synthesis" = "gaphor.plugins.sysml2diagrams:SysML2DiagramSynthesis"
 
 [project.entry-points."gaphor.modelinglanguages"]
 "Core" = "gaphor.core.modeling.modelinglanguage:CoreModelingLanguage"

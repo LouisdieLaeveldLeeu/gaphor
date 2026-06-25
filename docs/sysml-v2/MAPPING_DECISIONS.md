@@ -1725,3 +1725,40 @@ interchange.
   future concrete API consumer would build on this identity + JSON foundation. No
   support-matrix construct rows change (this is an identity/export surface, not a new
   construct). See `test_api_export.py`.
+
+### Completion Phase 13: diagram synthesis and browser grooming (verified 2026-06-25)
+
+A product-workflow phase on top of the proven projection core (no construct's
+`Diagram=yes` claim changes). Chosen slice (user decision): synthesis + browser
+grooming, Gaphor's graphviz auto-layout, ON-DEMAND only.
+
+- **Synthesis reuses projection, invents nothing.** `synthesis.synthesize_diagrams`
+  creates one `SysML2Diagram` per package/namespace and PROJECTS its content through
+  the same `drop` primitives the UI uses, in two passes: box items for groomable
+  members, then relationship LINES (`FeatureTyping`s + connector usages) that
+  materialize only when both endpoints are already on the diagram. Every item is a
+  subject-bound view (invariant 4). A `SysML2Diagram` (not a bare core `Diagram`) is
+  used so the synthesized view is browsable and carries the SysML2 diagram type.
+- **Idempotency by name.** The core `Diagram` has no owning-element association, so a
+  synthesized diagram is keyed by a qualified-name-based name (`Pkg (synthesized)`);
+  re-running returns the existing one and never duplicates diagrams or items. A
+  namespace with no projectable members produces no empty diagram.
+- **Auto-layout reuses Gaphor's own.** `gaphor.plugins.autolayout` (graphviz) places
+  the items. Tests assert layout INVARIANTS (boxes at distinct positions, off the
+  origin) rather than exact coordinates, since graphviz positions are version-specific.
+  Snapshotting `factory.select(...)` to a list before dropping is required, since
+  `drop` creates presentation elements as it runs (same hazard as `_apply_implicit_bases`).
+- **Grooming hides edges, keeps usages.** `treemodel._is_browser_element` now hides
+  structural plumbing by default -- relationship/membership EDGES (`Membership`,
+  `FeatureTyping`, `Specialization`, `Conjugation`, `FeatureChaining`, `Import`),
+  library proxies, implicit bases, feature-chain and conjugated-port helpers -- but
+  NOT user usages that happen to be relationships (a `ConnectionUsage` IS a Connector,
+  so it stays visible). The internal/debug view is a class-level `TreeModel.show_internal`
+  flag flipped by `set_show_internal`, which refreshes every live browser (a WeakSet
+  of instances) rather than re-emitting `ModelReady` (too broad).
+- **On-demand only; thin GUI.** `gaphor/plugins/sysml2diagrams/` adds **Tools ->
+  Synthesize SysML2 Diagrams** (one transaction) and **Tools -> Show Internal SysML2
+  Elements** (toggle); the cores are GTK-free and headless-tested, the service is a
+  smoke-tested binding. Import stays model-only. Deferred: per-domain specialized
+  diagram layouts and import-time diagram generation. See `test_synthesis.py`,
+  `test_browser_grooming.py`, `plugins/sysml2diagrams/tests/`.

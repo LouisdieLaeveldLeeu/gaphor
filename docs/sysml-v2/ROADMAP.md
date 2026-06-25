@@ -997,41 +997,51 @@ this identity + JSON foundation. Tested in `test_api_export.py`.
 Exit: API-related scope is implemented and tested (identity + JSON export) with the
 client/service scope explicitly closed and rationalized -- met.
 
-### Phase 13 -- Diagram Synthesis And User-Facing UI Grooming
+### Phase 13 -- Diagram Synthesis And User-Facing UI Grooming -- DONE
 
-Turn the proven semantic import/projection machinery into an evaluator-friendly
-workflow: imported text/KPAR content should produce useful initial diagrams and
-the UI should present SysML2 concepts rather than generated metamodel plumbing.
+Turned the proven projection machinery into an evaluator-friendly workflow: a model
+can be turned into useful initial diagrams on demand, and the browser presents SysML2
+concepts rather than metamodel plumbing. The `Diagram=yes` support-matrix meaning is
+unchanged (it proves a construct projects as a subject-bound item); this is the
+product workflow on top of that foundation, so no construct rows move.
 
-This phase does NOT change the `Diagram=yes` meaning used earlier in the support
-matrix: those cells prove that a construct can be projected as a subject-bound
-diagram item. This phase is the product workflow on top of that foundation.
+Delivered (the recommended slice: synthesis + browser grooming, pydot auto-layout,
+ON-DEMAND only):
 
-Work:
+- **diagram synthesis** (`gaphor/SysML2/synthesis.py`): `synthesize_diagrams(root)`
+  creates ONE diagram per package/namespace (a real `SysML2Diagram`, so it is
+  browsable). Two passes reuse the existing `drop` projection primitives -- box items
+  for groomable members first, then relationship LINES (`FeatureTyping`s and connector
+  usages) which materialize only when both ends are already on the diagram -- so every
+  item is a subject-bound VIEW (invariant 4), never invented. A namespace with no
+  projectable members yields no (empty) diagram;
+- **deterministic-enough layout**: Gaphor's own graphviz auto-layout
+  (`gaphor.plugins.autolayout`) places the items, so lines anchor to their endpoints
+  and boxes do not overlap (tested as layout INVARIANTS, since graphviz positions are
+  version-specific);
+- **idempotency**: a synthesized diagram is keyed by a qualified-name-based name, so
+  re-running returns the existing diagram and never duplicates diagrams or items;
+- **scope control (on-demand)**: import stays model-only; the user synthesizes
+  explicitly via the API or the **Tools -> Synthesize SysML2 Diagrams** action (one
+  undoable transaction);
+- **model-browser grooming** (`gaphor/SysML2/treemodel.py`): the browser hides
+  internal plumbing by default -- relationship/membership edges (`Membership`,
+  `FeatureTyping`, `Specialization`, `Conjugation`, `FeatureChaining`, `Import`),
+  library value-type proxies, implicit universal bases, feature-chain and
+  conjugated-port helpers -- while keeping user usages that happen to be relationships
+  (a `ConnectionUsage`). A **Tools -> Show Internal SysML2 Elements** toggle
+  (`TreeModel.set_show_internal`) reveals them for an internal/debug view;
+- **GUI binding** (`gaphor/plugins/sysml2diagrams/`): a thin `Service`/`ActionProvider`
+  exposing the two actions; the synthesis/grooming cores are GTK-free and unit-tested
+  headless (`test_synthesis.py`, `test_browser_grooming.py`), with service smoke tests.
 
-- model-browser grooming: hide, group, or de-emphasize internal implementation
-  elements such as `FeatureTyping`, generated membership relationships,
-  conjugation helper elements, library value-type proxies, and other relationship
-  plumbing unless the user explicitly asks for an internal/debug view;
-- diagram synthesis from imported or existing semantic content: create initial
-  package/structure, requirement/concern, action/flow, port/connection, and
-  interface-oriented diagrams for the implemented surface where the semantic
-  model contains enough information;
-- deterministic layout and routing heuristics good enough for human evaluation:
-  stable placement, readable labels, relation lines anchored to their semantic
-  endpoints, and no avoidable overlaps on normal-sized models;
-- idempotency rules: importing or regenerating diagrams must not duplicate
-  already-synthesized diagrams/items unless the user requests a new view;
-- scope controls: let users choose whether to generate diagrams during text/KPAR
-  import, generate them later from an existing model, or keep semantic import
-  model-only;
-- tests: headless synthesis tests proving subject binding, idempotency,
-  persistence/reload, delete cascade, and representative layout invariants, plus
-  focused GUI smoke tests for the generation entry point.
+OUT of scope (deferred): per-domain SPECIALIZED diagram layouts (dedicated
+requirement/action/flow/interface views), and generating diagrams DURING text/KPAR
+import (the on-demand API/menu is the chosen scope control).
 
-Exit: a human evaluator can import supported SysML2 text/KPAR content and get
-useful initial diagrams without manually dragging every element, while every
-generated diagram item remains a view of existing semantic model state.
+Exit: a human evaluator can synthesize useful initial diagrams from imported SysML2
+content without dragging every element, and every synthesized item remains a view of
+existing semantic state -- done and tested.
 
 ### Phase 14 -- CI And Release Hardening
 
@@ -1085,7 +1095,7 @@ counted here.
 25. Phase 10 -- General KPAR Export And Round-Trip -- PLANNED
 26. Phase 11 -- Versioned Spec-Ingestion Pipeline -- DONE
 27. Phase 12 -- SysML v2 API Alignment -- DONE
-28. Phase 13 -- Diagram Synthesis And User-Facing UI Grooming -- PLANNED
+28. Phase 13 -- Diagram Synthesis And User-Facing UI Grooming -- DONE
 29. Phase 14 -- CI And Release Hardening -- PLANNED
 
 Rationale: the project now intentionally resolves KPAR import architecture
