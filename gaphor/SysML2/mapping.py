@@ -18,6 +18,7 @@ with a `FeatureTyping` owned by the usage. An unresolved type name is recorded
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import lru_cache
 
@@ -123,78 +124,91 @@ class MappingResult:
     self_redefinitions: dict[str, str] = field(default_factory=dict)
 
 
+@dataclass
+class _MappingContext:
+    """Mutable mapping state threaded through the build (Phase 5d-review refactor).
+
+    Replaces the parallel positional lists that used to be passed to
+    `_build_members`: `factory`/`root`, the optional `on_element` provenance
+    callback, and the phase-2 collection lists the build APPENDS to and `resolve`
+    CONSUMES. One object means a new phase adds one field (not an argument in four
+    call sites), and `resolve` is the SINGLE copy of the phase-2 resolution sequence
+    -- it was previously duplicated verbatim in both orchestrators, the top drift
+    risk. Behavior is unchanged; this is purely a threading refactor.
+    """
+
+    factory: ElementFactory
+    root: kerml.Namespace
+    on_element: Callable[[kerml.Element, object], None] | None = None
+    typed_usages: list = field(default_factory=list)
+    connection_ends: list = field(default_factory=list)
+    subject_typings: list = field(default_factory=list)
+    frame_references: list = field(default_factory=list)
+    imports: list = field(default_factory=list)
+    aliases: list = field(default_factory=list)
+    subclassifications: list = field(default_factory=list)
+    subsettings: list = field(default_factory=list)
+    redefinitions: list = field(default_factory=list)
+
+    def resolve(self, top_level: dict[str, kerml.Element]) -> MappingResult:
+        """Run the phase-2 resolution sequence and build the MappingResult.
+
+        Order matters and is the single source of truth for both `map_package` and
+        `map_project_members`: imports FIRST (so the typed-usage/subject passes see
+        imported members, Phase 5a); aliases NEXT (alias targets + alias-to-alias
+        chains, Phase 5b); subclassifications BEFORE the member passes (so the
+        inherited-member lookup used by typing/subsetting/redefinition sees the
+        supertype links, Phase 5c/5c-2); then the member passes; and LAST the
+        implicit universal base for anything still un-specialized (Phase 5d).
+        """
+        _resolve_imports(self.imports)
+        ambiguous: dict[str, str] = {}
+        _resolve_aliases(self.aliases, ambiguous)
+        unresolved_supertypes = _resolve_subclassifications(
+            self.subclassifications, ambiguous
+        )
+        unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
+            self.root, self.typed_usages, ambiguous
+        )
+        unresolved_ends = _resolve_connection_ends(self.connection_ends, ambiguous)
+        unresolved_types.update(_resolve_subject_types(self.subject_typings, ambiguous))
+        unresolved_frame_refs = _resolve_frame_references(
+            self.frame_references, ambiguous
+        )
+        unresolved_subsettings = _resolve_subsettings(self.subsettings, ambiguous)
+        unresolved_redefinitions, self_redefinitions = _resolve_redefinitions(
+            self.redefinitions, ambiguous
+        )
+        _apply_implicit_bases(
+            self.root,
+            _explicitly_specialized(
+                self.subclassifications, self.subsettings, self.redefinitions
+            ),
+        )
+        return MappingResult(
+            root=self.root,
+            elements_by_name=top_level,
+            unresolved_types=unresolved_types,
+            mistyped=mistyped,
+            relationship_sources=relationship_sources,
+            ambiguous=ambiguous,
+            unresolved_ends=unresolved_ends,
+            unresolved_frame_refs=unresolved_frame_refs,
+            unresolved_supertypes=unresolved_supertypes,
+            unresolved_subsettings=unresolved_subsettings,
+            unresolved_redefinitions=unresolved_redefinitions,
+            self_redefinitions=self_redefinitions,
+        )
+
+
 def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     """Build semantic elements for a parsed package into `factory`."""
-    root = factory.create(kerml.Namespace)
-
-    # Phase 1: build the whole ownership tree (definitions, usages, nested
-    # packages) so every name exists before any type is resolved. Records each
-    # typed usage with its owning namespace for phase 2.
-    typed_usages: list[tuple[kerml.Feature, kerml.Namespace, tuple[str, ...]]] = []
-    connection_ends: list = []
-    subject_typings: list = []
-    frame_references: list = []
-    imports: list = []
-    aliases: list = []
-    subclassifications: list = []
-    subsettings: list = []
-    redefinitions: list = []
-    top_level = _build_members(
-        pkg.members,
-        root,
-        factory,
-        typed_usages,
-        connection_ends,
-        subject_typings,
-        frame_references,
-        imports,
-        aliases,
-        subclassifications,
-        subsettings,
-        redefinitions,
-    )
-
-    # Resolve imports FIRST so the typed-usage/subject passes can see imported
-    # members (Phase 5a); resolve aliases NEXT so a usage typed by an alias name
-    # sees the alias's target, and so alias-to-alias chains settle (Phase 5b);
-    # resolve subclassifications BEFORE the member passes so inherited-member lookup
-    # (used by typing, subsetting, and redefinition) sees the supertype links
-    # (Phase 5c/5c-2).
-    _resolve_imports(imports)
-    ambiguous: dict[str, str] = {}
-    _resolve_aliases(aliases, ambiguous)
-    unresolved_supertypes = _resolve_subclassifications(subclassifications, ambiguous)
-    unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
-        root, typed_usages, ambiguous
-    )
-    unresolved_ends = _resolve_connection_ends(connection_ends, ambiguous)
-    unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
-    unresolved_frame_refs = _resolve_frame_references(frame_references, ambiguous)
-    unresolved_subsettings = _resolve_subsettings(subsettings, ambiguous)
-    unresolved_redefinitions, self_redefinitions = _resolve_redefinitions(
-        redefinitions, ambiguous
-    )
-    # LAST: every definition/usage with no EXPLICIT specialization gets the implicit
-    # universal base (`Anything`/`things`). A declared-but-unresolved `:>`/`:>>`
-    # still counts as explicit and suppresses the implicit base (Phase 5d).
-    _apply_implicit_bases(
-        root,
-        _explicitly_specialized(subclassifications, subsettings, redefinitions),
-    )
-    return MappingResult(
-        root=root,
-        elements_by_name=top_level,
-        unresolved_types=unresolved_types,
-        mistyped=mistyped,
-        relationship_sources=relationship_sources,
-        ambiguous=ambiguous,
-        unresolved_ends=unresolved_ends,
-        unresolved_frame_refs=unresolved_frame_refs,
-        unresolved_supertypes=unresolved_supertypes,
-        unresolved_subsettings=unresolved_subsettings,
-        unresolved_redefinitions=unresolved_redefinitions,
-        self_redefinitions=self_redefinitions,
-    )
+    ctx = _MappingContext(factory, factory.create(kerml.Namespace))
+    # Phase 1: build the whole ownership tree (definitions, usages, nested packages)
+    # so every name exists before any type is resolved, recording phase-2 work on
+    # `ctx`. Phase 2 is `ctx.resolve` (the single resolution sequence).
+    top_level = _build_members(pkg.members, ctx.root, ctx)
+    return ctx.resolve(top_level)
 
 
 def map_project(packages, factory: ElementFactory) -> MappingResult:
@@ -219,16 +233,7 @@ def map_project_members(named_packages, factory: ElementFactory):
     ones). KPAR import uses the label (source member) and the AST node's source
     line to trace each imported element back to its declaration.
     """
-    root = factory.create(kerml.Namespace)
-    typed_usages: list[tuple[kerml.Feature, kerml.Namespace, tuple[str, ...]]] = []
-    connection_ends: list = []
-    subject_typings: list = []
-    frame_references: list = []
-    imports: list = []
-    aliases: list = []
-    subclassifications: list = []
-    subsettings: list = []
-    redefinitions: list = []
+    ctx = _MappingContext(factory, factory.create(kerml.Namespace))
     top_level: dict[str, kerml.Element] = {}
     provenance: dict[str, tuple] = {}
     for label, pkg in named_packages:
@@ -236,62 +241,16 @@ def map_project_members(named_packages, factory: ElementFactory):
         def record(element, node, _label=label):
             provenance[element.id] = (_label, node)
 
-        top_level.update(
-            _build_members(
-                pkg.members,
-                root,
-                factory,
-                typed_usages,
-                connection_ends,
-                subject_typings,
-                frame_references,
-                imports,
-                aliases,
-                subclassifications,
-                subsettings,
-                redefinitions,
-                record,
-            )
-        )
+        # All packages share one root and one ctx; only the provenance callback
+        # changes per package (it binds that package's label).
+        ctx.on_element = record
+        top_level.update(_build_members(pkg.members, ctx.root, ctx))
 
-    _resolve_imports(imports)
-    ambiguous: dict[str, str] = {}
-    _resolve_aliases(aliases, ambiguous)
-    unresolved_supertypes = _resolve_subclassifications(subclassifications, ambiguous)
-    unresolved_types, mistyped, relationship_sources = _resolve_typed_usages(
-        root, typed_usages, ambiguous
-    )
-    unresolved_ends = _resolve_connection_ends(connection_ends, ambiguous)
-    unresolved_types.update(_resolve_subject_types(subject_typings, ambiguous))
-    unresolved_frame_refs = _resolve_frame_references(frame_references, ambiguous)
-    unresolved_subsettings = _resolve_subsettings(subsettings, ambiguous)
-    unresolved_redefinitions, self_redefinitions = _resolve_redefinitions(
-        redefinitions, ambiguous
-    )
-    _apply_implicit_bases(
-        root,
-        _explicitly_specialized(subclassifications, subsettings, redefinitions),
-    )
-    for relationship_id, source_id in relationship_sources.items():
+    result = ctx.resolve(top_level)
+    for relationship_id, source_id in result.relationship_sources.items():
         if source_id in provenance:
             provenance[relationship_id] = provenance[source_id]
-    return (
-        MappingResult(
-            root=root,
-            elements_by_name=top_level,
-            unresolved_types=unresolved_types,
-            mistyped=mistyped,
-            relationship_sources=relationship_sources,
-            ambiguous=ambiguous,
-            unresolved_ends=unresolved_ends,
-            unresolved_frame_refs=unresolved_frame_refs,
-            unresolved_supertypes=unresolved_supertypes,
-            unresolved_subsettings=unresolved_subsettings,
-            unresolved_redefinitions=unresolved_redefinitions,
-            self_redefinitions=self_redefinitions,
-        ),
-        provenance,
-    )
+    return result, provenance
 
 
 def _resolve_typed_usages(
@@ -553,31 +512,27 @@ def _resolve_redefinitions(
     return unresolved, self_redefinitions
 
 
-def _build_requirement_body(
-    requirement,
-    member,
-    namespace,
-    factory,
-    typed_usages,
-    subject_typings,
-    frame_references,
-    on_element,
-):
+def _build_requirement_body(requirement, member, namespace, ctx: _MappingContext):
     """Build a requirement's subject/assume/require/actor/stakeholder parts and
     its reqId (Phase 6b/6c).
 
     The subject becomes a parameter `kerml.Feature` via a SubjectMembership (its
-    type resolved in phase 2 via `subject_typings`, where ANY Type matches -- a
+    type resolved in phase 2 via `ctx.subject_typings`, where ANY Type matches -- a
     subject parameter is not kind-specific). The actor/stakeholder become
     `sysml2.PartUsage` parameters (the pinned XMI types ActorMembership::
     ownedActorParameter and StakeholderMembership::ownedStakeholderParameter as
     PartUsage), so their types resolve through the SAME kind-checked path as every
-    other PartUsage (`typed_usages` -> PartDefinition); a wrong-kind type is
+    other PartUsage (`ctx.typed_usages` -> PartDefinition); a wrong-kind type is
     reported, not silently accepted. Each assumed/required constraint becomes a
     ConstraintUsage carrying an opaque 6a body, owned via a
     RequirementConstraintMembership with the matching kind. The reqId is stored as
     the requirement's declaredShortName.
     """
+    factory = ctx.factory
+    typed_usages = ctx.typed_usages
+    subject_typings = ctx.subject_typings
+    frame_references = ctx.frame_references
+    on_element = ctx.on_element
 
     def record(element):
         if on_element is not None:
@@ -662,31 +617,35 @@ def _resolve_subject_types(
 def _build_members(
     members: tuple,
     namespace: kerml.Namespace,
-    factory: ElementFactory,
-    typed_usages: list,
-    connection_ends: list,
-    subject_typings: list,
-    frame_references: list,
-    imports: list,
-    aliases: list,
-    subclassifications: list,
-    subsettings: list,
-    redefinitions: list,
-    on_element=None,
+    ctx: _MappingContext,
     owner_is_type: bool = False,
 ) -> dict[str, kerml.Element]:
     """Create each AST member as an owned member of `namespace`, recursing into
     sub-packages and definition bodies. Returns this level's elements by name.
 
-    Typed usages (including requirement actor/stakeholder PartUsages) are recorded
-    in `typed_usages`, connection endpoints in `connection_ends`, requirement
-    SUBJECT types in `subject_typings`, framed-concern references in
-    `frame_references`, import targets in `imports`, definition supertypes in
-    `subclassifications`, and usage subsetted features in `subsettings` for phase-2
-    resolution (Phase 5c). If
-    `on_element` is given, it is called as `on_element(element, ast_node)` for every
-    created element (including nested ones), so callers can record per-element
-    provenance from the AST node (e.g. its source line)."""
+    Phase-2 work is recorded on `ctx`: typed usages (including requirement
+    actor/stakeholder PartUsages) in `ctx.typed_usages`, connection endpoints in
+    `ctx.connection_ends`, requirement SUBJECT types in `ctx.subject_typings`,
+    framed-concern references in `ctx.frame_references`, import targets in
+    `ctx.imports`, definition supertypes in `ctx.subclassifications`, usage subsetted
+    features in `ctx.subsettings`, and redefined features in `ctx.redefinitions`
+    (Phase 5a-5c-2). If `ctx.on_element` is given, it is called as
+    `on_element(element, ast_node)` for every created element (including nested
+    ones), so callers can record per-element provenance from the AST node."""
+    # Unpack ctx into the local names the body uses, so the per-member build logic
+    # is unchanged (the lists are the SAME mutable objects -- appends are visible on
+    # ctx). Only the threading is refactored (Phase 5d-review).
+    factory = ctx.factory
+    typed_usages = ctx.typed_usages
+    connection_ends = ctx.connection_ends
+    imports = ctx.imports
+    aliases = ctx.aliases
+    subclassifications = ctx.subclassifications
+    subsettings = ctx.subsettings
+    redefinitions = ctx.redefinitions
+    on_element = ctx.on_element
+    # subject_typings / frame_references are consumed only by _build_requirement_body
+    # (it reads them from ctx), so they are not unpacked here.
     by_name: dict[str, kerml.Element] = {}
     for member in members:
         if isinstance(member, ast.Import):
@@ -773,32 +732,20 @@ def _build_members(
                 typed_usages.append((element, namespace, member.type_name, False))
         elif isinstance(member, ast.RequirementDefinition):
             element = factory.create(sysml2.RequirementDefinition)
-            _build_requirement_body(
-                element, member, namespace, factory, typed_usages, subject_typings,
-                frame_references, on_element,
-            )
+            _build_requirement_body(element, member, namespace, ctx)
         elif isinstance(member, ast.RequirementUsage):
             element = factory.create(sysml2.RequirementUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name, False))
-            _build_requirement_body(
-                element, member, namespace, factory, typed_usages, subject_typings,
-                frame_references, on_element,
-            )
+            _build_requirement_body(element, member, namespace, ctx)
         elif isinstance(member, ast.ConcernDefinition):
             element = factory.create(sysml2.ConcernDefinition)
-            _build_requirement_body(
-                element, member, namespace, factory, typed_usages, subject_typings,
-                frame_references, on_element,
-            )
+            _build_requirement_body(element, member, namespace, ctx)
         elif isinstance(member, ast.ConcernUsage):
             element = factory.create(sysml2.ConcernUsage)
             if member.type_name is not None:
                 typed_usages.append((element, namespace, member.type_name, False))
-            _build_requirement_body(
-                element, member, namespace, factory, typed_usages, subject_typings,
-                frame_references, on_element,
-            )
+            _build_requirement_body(element, member, namespace, ctx)
         elif isinstance(member, ast.PortDefinition):
             element = factory.create(sysml2.PortDefinition)
         elif isinstance(member, ast.PortUsage):
@@ -868,21 +815,7 @@ def _build_members(
         if on_element is not None:
             on_element(element, member)
         if isinstance(member, ast.PackageDefinition):
-            _build_members(
-                member.members,
-                element,
-                factory,
-                typed_usages,
-                connection_ends,
-                subject_typings,
-                frame_references,
-                imports,
-                aliases,
-                subclassifications,
-                subsettings,
-                redefinitions,
-                on_element,
-            )
+            _build_members(member.members, element, ctx)
         elif isinstance(
             member, (ast.ActionDefinition, ast.ActionUsage, ast.PartDefinition)
         ):
@@ -891,22 +824,7 @@ def _build_members(
             # flows) via FeatureMembership, nested definitions/packages via
             # OwningMembership (Phase 7/5c). `owner_is_type=True` selects that split.
             # A `part def`/action with no body has empty members, so this is a no-op.
-            _build_members(
-                member.members,
-                element,
-                factory,
-                typed_usages,
-                connection_ends,
-                subject_typings,
-                frame_references,
-                imports,
-                aliases,
-                subclassifications,
-                subsettings,
-                redefinitions,
-                on_element,
-                owner_is_type=True,
-            )
+            _build_members(member.members, element, ctx, owner_is_type=True)
         if member.name is not None:
             by_name[member.name] = element
     return by_name
