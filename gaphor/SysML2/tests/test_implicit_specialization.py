@@ -102,6 +102,32 @@ def test_implicit_anything_is_shared_and_not_duplicate():
     assert not any(d.rule == "duplicate-name" for d in _validate(factory, result))
 
 
+def test_implicit_base_does_not_mutate_foreign_roots():
+    factory = ElementFactory()
+    foreign_root = factory.create(kerml.Namespace)
+    foreign_definition = factory.create(sysml2.PartDefinition)
+    foreign_definition.declaredName = "Foreign"
+    kk.add_owned_member(
+        foreign_root, foreign_definition, factory.create(kerml.OwningMembership)
+    )
+    foreign_usage = factory.create(sysml2.PartUsage)
+    foreign_usage.declaredName = "foreign"
+    kk.add_owned_member(
+        foreign_root, foreign_usage, factory.create(kerml.FeatureMembership)
+    )
+
+    result = map_package(parse("part def Local;\npart local;"), factory)
+
+    assert not list(kk.supertypes(foreign_definition))
+    assert not list(kk.subsettings(foreign_usage))
+    assert [member.declaredName for member in kk.members(result.root)] == [
+        "Local",
+        "local",
+        "Anything",
+        "things",
+    ]
+
+
 # --- suppression by explicit specialization ----------------------------------
 
 

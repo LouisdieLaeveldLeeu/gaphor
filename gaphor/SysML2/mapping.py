@@ -178,7 +178,8 @@ def map_package(pkg: ast.Package, factory: ElementFactory) -> MappingResult:
     # universal base (`Anything`/`things`). A declared-but-unresolved `:>`/`:>>`
     # still counts as explicit and suppresses the implicit base (Phase 5d).
     _apply_implicit_bases(
-        root, factory, _explicitly_specialized(subclassifications, subsettings, redefinitions)
+        root,
+        _explicitly_specialized(subclassifications, subsettings, redefinitions),
     )
     return MappingResult(
         root=root,
@@ -268,7 +269,8 @@ def map_project_members(named_packages, factory: ElementFactory):
         redefinitions, ambiguous
     )
     _apply_implicit_bases(
-        root, factory, _explicitly_specialized(subclassifications, subsettings, redefinitions)
+        root,
+        _explicitly_specialized(subclassifications, subsettings, redefinitions),
     )
     for relationship_id, source_id in relationship_sources.items():
         if source_id in provenance:
@@ -1210,8 +1212,25 @@ def _explicitly_specialized(
     )
 
 
+def _root_members(root: kerml.Namespace) -> list[kerml.Element]:
+    """Elements owned below `root`, excluding the root itself.
+
+    A mapping run may add a new root to a factory that already contains unrelated
+    model roots. The implicit-base pass must stay within the current root so a later
+    import cannot mutate foreign elements.
+    """
+    out: list[kerml.Element] = []
+    stack = list(kk.members(root))
+    while stack:
+        element = stack.pop(0)
+        out.append(element)
+        if isinstance(element, kerml.Namespace):
+            stack.extend(kk.members(element))
+    return out
+
+
 def _apply_implicit_bases(
-    root: kerml.Namespace, factory: ElementFactory, explicit_specialized: set[str]
+    root: kerml.Namespace, explicit_specialized: set[str]
 ) -> None:
     """Add the KerML universal implicit specialization (Phase 5d).
 
@@ -1221,22 +1240,30 @@ def _apply_implicit_bases(
     implicitly subsets the root `things`. `explicit_specialized` holds the ids of
     elements that DECLARED a `:>`/`:>>` clause (even one that did not resolve), so a
     declared-but-broken specialization still SUPPRESSES the implicit base -- the user
-    expressed intent, and an implicit root would mask the error. Library proxies and
-    the bases themselves are skipped. The bases are read-only proxies, so the implicit
-    specializations never export or change the round-trip fingerprint.
+    expressed intent, and an implicit root would mask the error. Only elements owned
+    under `root` are considered; unrelated roots already present in the same factory
+    are not mutated. Library proxies and the bases themselves are skipped. The bases
+    are read-only proxies, so the implicit specializations never export or change the
+    round-trip fingerprint.
     """
-    # Snapshot the selections BEFORE creating any proxy: creating a base proxy
-    # mutates the factory, so iterating the live `select` generator would raise.
     anything: kerml.Element | None = None
     things: kerml.Element | None = None
-    for classifier in list(factory.select(kerml.Classifier)):
+    root_members = _root_members(root)
+    for classifier in root_members:
+        if not isinstance(classifier, kerml.Classifier):
+            continue
         if _is_library_proxy(classifier) or classifier.id in explicit_specialized:
             continue
-        if any(isinstance(r, kerml.Subclassification) for r in classifier.ownedRelationship):
+        if any(
+            isinstance(r, kerml.Subclassification)
+            for r in classifier.ownedRelationship
+        ):
             continue
         anything = anything or _implicit_base_proxy(root, kerml.Classifier, "Anything")
         kk.add_subclassification(classifier, anything)
-    for feature in list(factory.select(kerml.Feature)):
+    for feature in root_members:
+        if not isinstance(feature, kerml.Feature):
+            continue
         if _is_library_proxy(feature) or feature.id in explicit_specialized:
             continue
         if any(isinstance(r, kerml.Subsetting) for r in feature.ownedRelationship):
