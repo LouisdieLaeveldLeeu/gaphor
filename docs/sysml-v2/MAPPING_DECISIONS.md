@@ -155,6 +155,20 @@ The checked-in MOF XMI abstract-syntax inputs for M1a are under `docs/sysml-v2/o
 - `KerML.xmi` from `https://www.omg.org/spec/KerML/20250201/KerML.xmi` (`ptc/25-04-04`).
 - `SysML.xmi` from `https://www.omg.org/spec/SysML/20250201/SysML.xmi` (`ptc/25-02-15`).
 
+Graphical-notation authority (pinned 2026-07-01 for the Phase 15 faithful-notation
+work): the OMG FORMAL specification PDFs, also under `docs/sysml-v2/omg/20250201/`:
+
+- `SysML-v2-Language.pdf` from `https://www.omg.org/spec/SysML/2.0/Language/PDF`
+  (`formal/26-03-02`, 691 pp) -- the primary authority; clause 8.2.3 "Graphical
+  Notation" and the per-construct notation clauses.
+- `KerML.pdf` from `https://www.omg.org/spec/KerML/1.0/PDF` (`formal/26-03-01`) --
+  the kernel-layer notation (features, specialization/typing lines).
+
+These are REFERENCE documents for notation fidelity, not generator inputs (the XMI
+files remain the abstract-syntax source). They are downloaded, verified (HTTP 200,
+`application/pdf`, `%PDF` magic), and hash-pinned in the manifest + `test_omg_artifacts.py`
+exactly like the XMI/KPAR artifacts.
+
 Update policy: changing the pin requires a mapping decision update, support-matrix review, and focused regression fixtures for affected grammar, metamodel, library, and round-trip behavior.
 
 ## Test Environment

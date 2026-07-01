@@ -96,6 +96,10 @@ KPAR_ENTRIES = {
 # generator input).
 EXPECTED_XMI = {"KerML.xmi", "SysML.xmi"}
 
+# Formal spec PDFs: the authority for the SysML v2 GRAPHICAL NOTATION (Phase 15).
+# Reference documents, not generator inputs; pinned + hashed like the other artifacts.
+EXPECTED_SPEC_PDFS = {"SysML-v2-Language.pdf", "KerML.pdf"}
+
 
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -139,7 +143,7 @@ def _parse_markdown_tables(md_text: str) -> list[dict[str, str]]:
 
 def _artifact_rows() -> list[dict[str, str]]:
     rows = _parse_markdown_tables(MANIFEST.read_text(encoding="utf-8"))
-    return [r for r in rows if r.get("File", "").endswith((".kpar", ".xmi"))]
+    return [r for r in rows if r.get("File", "").endswith((".kpar", ".xmi", ".pdf"))]
 
 
 ARTIFACT_ROWS = _artifact_rows()
@@ -156,6 +160,7 @@ def test_manifest_and_structural_expectations_agree():
     listed_kpars = {f for f in listed if f.endswith(".kpar")}
 
     assert EXPECTED_XMI <= listed
+    assert EXPECTED_SPEC_PDFS <= listed
     assert listed_kpars == set(KPAR_ENTRIES)
 
 
@@ -168,10 +173,14 @@ def test_manifest_row_matches_pinned_file(row):
 
     assert path.exists(), f"manifest lists {row['File']} but the file is missing"
     assert _sha256(path) == row["SHA-256"]
-    # The KPAR table records byte sizes; fail closed if that column drifts.
-    if row["File"].endswith(".kpar"):
+    # The KPAR and PDF tables record byte sizes; fail closed if that column drifts.
+    if row["File"].endswith((".kpar", ".pdf")):
         assert row.get("Bytes", "").isdigit()
         assert path.stat().st_size == int(row["Bytes"])
+    # The pinned spec documents must be real PDFs (the notation authority).
+    if row["File"].endswith(".pdf"):
+        with path.open("rb") as f:
+            assert f.read(4) == b"%PDF"
 
 
 @pytest.mark.parametrize("filename", sorted(KPAR_ENTRIES))

@@ -38,6 +38,22 @@ uses ZIP structure and SHA-256 rather than MIME type.
 | `Quantities-and-Units-Domain-Library.kpar` | https://www.omg.org/spec/SysML/20250201/Quantities-and-Units-Domain-Library.kpar | `ptc/25-04-29` | HTTP 200, ZIP magic | 154748 | `81a6e7264a9f287e482ec5b35f8ef98725b81f393e0b2e82dae3599511c0adc7` |
 | `Requirement-Derivation-Domain-Library.kpar` | https://www.omg.org/spec/SysML/20250201/Requirement-Derivation-Domain-Library.kpar | `ptc/25-04-30` | HTTP 200, ZIP magic | 2650 | `a136e72ac6afbd96ede220cfec77fd54c75242d577d3f5ab9e5278b25baee6e5` |
 
+## Specification Documents (Graphical Notation Authority)
+
+Fetched on 2026-07-01 by direct `curl -L --fail` from the formal OMG URLs below.
+Each response was HTTP 200 with `content-type: application/pdf` and `%PDF` magic
+bytes. These are the OMG FORMAL specification PDFs and are the authority for the
+SysML v2 GRAPHICAL NOTATION -- the SysML Language spec clause 8.2.3 "Graphical
+Notation" and the per-construct notation clauses (e.g. 7.11.2 Part Definitions and
+Usages) -- used by the faithful diagram-notation work (Phase 15). They are reference
+documents for notation fidelity, NOT generator inputs (the XMI files remain the
+abstract-syntax source).
+
+| File | OMG URL | OMG file ID | Content-Type | Bytes | SHA-256 |
+| --- | --- | --- | --- | ---: | --- |
+| `SysML-v2-Language.pdf` | https://www.omg.org/spec/SysML/2.0/Language/PDF | `formal/26-03-02` | application/pdf | 3804140 | `46e6c0476a6f1f34f367d57e039d56659bff75e41d2e4b3d37ca4cadea84a83a` |
+| `KerML.pdf` | https://www.omg.org/spec/KerML/1.0/PDF | `formal/26-03-01` | application/pdf | 1821407 | `3bcc96f989bfa9d05cd28e026df3351b795fe8d494187b87bff3db7d96373697` |
+
 Use these files as immutable downloaded inputs. Do not edit them in place. If
 OMG publishes an updated artifact set, add or replace files deliberately,
 refresh this manifest, and update `docs/sysml-v2/MAPPING_DECISIONS.md`.
