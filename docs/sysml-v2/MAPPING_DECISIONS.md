@@ -1776,3 +1776,28 @@ grooming, Gaphor's graphviz auto-layout, ON-DEMAND only.
   smoke-tested binding. Import stays model-only. Deferred: per-domain specialized
   diagram layouts and import-time diagram generation. See `test_synthesis.py`,
   `test_browser_grooming.py`, `plugins/sysml2diagrams/tests/`.
+
+### Completion Phase 15 (foundation): faithful diagram-notation toolkit (verified 2026-07-01)
+
+First step of Phase 15 (faithful SysML v2 graphical notation): the spec-grounded
+notation-mapping table and the shared shape toolkit, before wiring the diagram items.
+
+- **Spec is the authority, mechanically.** The pinned SysML v2 Language spec clause
+  8.2.3 Graphical Notation fixes the notation: a definition's name compartment is
+  `«<keyword> def»`, a usage's `«<keyword>»` (8.2.3.6), over a `[direction] name
+  [: Type]` line, followed by labelled feature compartments shown only when non-empty.
+  `docs/sysml-v2/DIAGRAM_NOTATION.md` records one row per projectable construct with
+  its 8.2.3 sub-clause; a test guards that every keyword is documented.
+- **One toolkit, no drift.** `gaphor/SysML2/shapes.py` centralizes keyword + name +
+  compartment rendering so all items share it. `sysml_keyword` matches the metaclass
+  MRO (a `ConjugatedPortDefinition` -> `«port def»`); `name_label` reuses
+  `kk.feature_type` for the `: Type` suffix and the feature direction for the prefix.
+  It is pure view -- it reads the subject, never mutates the model (invariant 4).
+- **Tested in isolation.** `test_notation_shapes.py` pins the keyword per metaclass,
+  the name line (direction + typing), and the composed shape trees (name compartment
+  = «keyword» over name; feature compartment lists labelled lines, or None when empty;
+  `node_shape` = a bordered compartment stack) by walking the Box/CssNode/Text tree --
+  so the toolkit is proven before any item is rewired.
+- **Not yet wired.** The `diagramitems.py` items still render name-only boxes; wiring
+  them to `node_shape`, the compartment CONTENT, ports-on-boundary, faithful line
+  heads, and CSS are the remaining Phase 15 steps. See `test_notation_shapes.py`.

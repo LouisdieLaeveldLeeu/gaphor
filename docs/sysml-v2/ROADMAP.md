@@ -1062,6 +1062,38 @@ Make verification authoritative:
 Exit: final claims are backed by local and CI verification with no known
 environment-only ambiguity.
 
+### Phase 15 -- Faithful SysML v2 Diagram Notation -- IN PROGRESS
+
+Make rendered diagrams SELF-DESCRIBING and faithful to the OMG SysML v2 graphical
+notation: keyword-in-guillemets name compartments, labelled feature compartments, and
+construct-specific shapes -- so a reader can identify each element by sight, not just
+a name-only box. Pure view (invariant 4): no model/persistence/round-trip change.
+Authority: the pinned SysML v2 Language spec clause 8.2.3 Graphical Notation.
+
+Landed (the foundation, this step):
+
+- **notation authority pinned**: `SysML-v2-Language.pdf` (`formal/26-03-02`) +
+  `KerML.pdf`, hash-enforced in the manifest/tests;
+- **notation-mapping table** `docs/sysml-v2/DIAGRAM_NOTATION.md`: one row per
+  projectable construct -> keyword (def/usage), node shape, feature compartments, and
+  relationship-line notation, each citing its 8.2.3 sub-clause;
+- **shape toolkit** `gaphor/SysML2/shapes.py`: `sysml_keyword`/`keyword_label`
+  (metaclass -> keyword, MRO-matched, so `«part def»`/`«part»` etc.), `name_label`
+  (`[direction] name [: Type]`), `name_compartment`, `features_compartment`, and
+  `node_shape(item, *compartments)` -- the single place keyword/compartment rendering
+  lives, unit-tested by shape-tree assertions (`test_notation_shapes.py`) with a
+  table-coverage guard.
+
+Remaining (next steps of this phase): wire every `diagramitems.py` box item to
+`node_shape` + its feature compartments; requirement/action/constraint compartment
+CONTENT (id/text/subject, parameters, expression); ports as boundary squares on their
+owner; faithful relationship-line heads/tails; the SysML2 diagram CSS; and render
+fixtures for visual review.
+
+Exit: a rendered diagram of the implemented surface is self-describing and
+spec-faithful, every item's notation traceable to a pinned 8.2.3 clause, with no
+semantic regression.
+
 ## Execution Status And Order
 
 This roadmap is the planning source of truth. `DONE` means committed and
@@ -1097,6 +1129,7 @@ counted here.
 27. Phase 12 -- SysML v2 API Alignment -- DONE
 28. Phase 13 -- Diagram Synthesis And User-Facing UI Grooming -- DONE
 29. Phase 14 -- CI And Release Hardening -- PLANNED
+30. Phase 15 -- Faithful SysML v2 Diagram Notation -- IN PROGRESS (notation authority + table + shape toolkit landed)
 
 Rationale: the project now intentionally resolves KPAR import architecture
 before standard-library/value-type promotion. Phase 3a prevents import identity,
