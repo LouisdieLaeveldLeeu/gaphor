@@ -17,6 +17,7 @@ from gaphor.diagram.drop import diagram_has_presentation, drop
 from gaphor.diagram.presentation import Presentation, connect
 from gaphor.diagram.support import get_diagram_item, get_diagram_item_metadata
 from gaphor.SysML2 import kerml, sysml2
+from gaphor.SysML2 import kerml_kernel as kk
 
 # Importing diagramitems runs the @represents decorators (item registration) and
 # connectors runs the @Connector.register decorators (the FeatureTyping connector
@@ -157,7 +158,21 @@ def drop_port_definition(
 def drop_port_usage(
     element: sysml2.PortUsage, diagram: Diagram, x: float, y: float
 ) -> Presentation | None:
-    return _project_element(element, diagram, x, y)
+    """Project a PortUsage as a boundary square (spec 8.2.3.12): attached to its
+    owning part's item when that owner is already on the diagram, otherwise a
+    clearly-labelled standalone square (never a bare one). Visual attach only -- the
+    port's membership already exists in the model, so no subject is authored."""
+    item = _project_element(element, diagram, x, y)
+    if item is None:
+        return None
+    owner = kk.owning_namespace(element)
+    owner_item = (
+        diagram_has_presentation(diagram, owner) if owner is not None else None
+    )
+    if owner_item is not None:
+        connect(item, item._handle, owner_item)
+        item.change_parent(owner_item)
+    return item
 
 
 @drop.register(sysml2.ConnectionDefinition, Diagram)

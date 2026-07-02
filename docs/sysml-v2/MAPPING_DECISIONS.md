@@ -1854,3 +1854,37 @@ SPEC-SPECIFIC compartment content, not just a keyword + generic feature list.
   lives in `diagramitems.py`, so the pure toolkit does not depend on the semantic
   modules. Pure view; full suite green. Next: ports-on-boundary, faithful line heads,
   diagram CSS. See `test_notation_shapes.py`.
+
+### Completion Phase 15 (ports on boundary): PortDisplayMode (verified 2026-07-02)
+
+Fourth Phase 15 step, the hardest (a structural presentation change). Researched via a
+fan-out workflow; the user chose a diagram-level display mode over a global A/B/C rule.
+
+- **A PortUsage is one element; the DIAGRAM picks the presentation.** `PortDisplayMode`
+  (BOUNDARY default / COMPARTMENT / BOTH_DEBUG) is a persisted attribute on
+  `SysML2Diagram` -- NOT on Part/Port model elements. Switching it changes only the
+  view; `synthesis.set_port_display_mode` reconciles boundary squares (adds/removes
+  presentations) and rebuilds the box `ports` compartment, and NEVER creates, deletes,
+  or duplicates a PortUsage (a semantic-safety test asserts the count is invariant
+  across all mode switches).
+- **Reuse `AttachedPresentation`, don't reinvent.** `PortUsageItem` becomes a
+  `Named, AttachedPresentation[PortUsage]` (the proxy-port/pin base): 16x16 square, a
+  central boundary handle, four edge `LinePort`s, size constraints, and -- crucially --
+  built-in save/load/postload that persists the boundary CONNECTION. `update()` rebuilds
+  the shape lazily, so the label works without an event manager. Attachment is
+  `connect(item, item._handle, owner_item)` + `change_parent(owner_item)`; a new
+  `PortUsageBoundaryConnector` does the visual nesting only (the `connect()` helper
+  dispatches to it) and authors NO semantics (the port's membership already exists).
+- **Compartment vs. boundary, no duplication.** `feature_compartments(..., include_ports=False)`
+  drops ports from the box in boundary mode; synthesis Pass 1.5 attaches each boxed
+  owner's ports as squares only when `show_boundary_ports`. So a port shows once
+  (square) by default, as text in compartment mode, or both in both_debug.
+- **Owner-present rule.** Boundary squares attach only when the owner is on the diagram
+  (always true in synthesis, which boxes owners first). A dropped port whose owner is
+  absent renders as a clearly-labelled standalone square (it carries its name), never a
+  bare context-free one. Conjugation shows `~Original` via `conjugation.conjugated_type_name`.
+- **No regression.** Converting `PortUsageItem` from `ElementPresentation` to
+  `AttachedPresentation` left the existing port drop / conjugated-port / ui-edit /
+  persistence tests green; only one box-compartment test moved to compartment mode.
+  Deferred: a GUI toggle for the mode; faithful line heads; diagram CSS.
+  See `test_port_display.py`.

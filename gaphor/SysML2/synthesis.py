@@ -26,7 +26,12 @@ from gaphor.diagram.presentation import ElementPresentation
 from gaphor.diagram.support import get_diagram_item
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
-from gaphor.SysML2.diagramtype import SysML2Diagram
+from gaphor.SysML2 import sysml2
+from gaphor.SysML2.diagramtype import (
+    PortDisplayMode,
+    SysML2Diagram,
+    show_boundary_ports,
+)
 
 # Importing drop/connectors/diagramitems runs the registration decorators, so
 # synthesis works on the dispatch path without going through the GUI components.
@@ -67,12 +72,18 @@ def _projectable_members(namespace: kerml.Namespace) -> list[kerml.Element]:
 
 
 def synthesize_diagram(
-    namespace: kerml.Namespace, *, event_manager=None, layout: bool = True
+    namespace: kerml.Namespace,
+    *,
+    event_manager=None,
+    layout: bool = True,
+    port_display_mode: PortDisplayMode | str | None = None,
 ) -> Diagram | None:
     """Synthesize (or return the existing) diagram for `namespace`.
 
     Returns None when the namespace has no projectable members (no empty diagram is
     created). Idempotent: an existing synthesized diagram is returned unchanged.
+    `port_display_mode` sets how ports are shown (defaults to the diagram default,
+    BOUNDARY).
     """
     existing = synthesized_diagram_for(namespace)
     if existing is not None:
@@ -88,11 +99,23 @@ def synthesize_diagram(
     # toolbox/diagram type.
     diagram = factory.create(SysML2Diagram)
     diagram.name = _diagram_name(namespace)
+    if port_display_mode is not None:
+        diagram.portDisplayMode = PortDisplayMode(port_display_mode).value
 
     # Pass 1: box members (so relationship endpoints exist for pass 2).
     boxes = [m for m in members if _box_item_class(m) is not None]
     for member in boxes:
         drop(member, diagram, 0, 0)
+
+    # Pass 1.5: boundary ports -- attach each boxed owner's PortUsage members to its
+    # box as boundary squares (spec 8.2.3.12), when this diagram shows boundary ports.
+    # The owners are already boxed (Pass 1), so drop_port_usage attaches each square.
+    if show_boundary_ports(diagram):
+        for owner in boxes:
+            for port in [
+                m for m in kk.members(owner) if isinstance(m, sysml2.PortUsage)
+            ]:
+                drop(port, diagram, 0, 0)
 
     # Pass 2a: typing lines -- a FeatureTyping materializes only when BOTH its ends
     # are already on this diagram (drop_feature_typing enforces that). Snapshot the
@@ -128,6 +151,43 @@ def synthesize_diagrams(root: kerml.Namespace, *, event_manager=None) -> list[Di
         if diagram is not None:
             diagrams.append(diagram)
     return diagrams
+
+
+def set_port_display_mode(diagram: Diagram, mode: PortDisplayMode | str) -> None:
+    """Switch a diagram's PortDisplayMode and RECONCILE its presentation only.
+
+    Model-safe (invariant 4): the same PortUsage elements are untouched -- this only
+    adds/removes boundary port SQUARES (presentations) and rebuilds the box
+    compartments. Boundary modes add a square for every boxed owner's ports that lacks
+    one; non-boundary mode unlinks the squares; then the ports compartment is rebuilt
+    to appear/disappear per the mode. Idempotent.
+    """
+    diagram.portDisplayMode = PortDisplayMode(mode).value
+    existing = {
+        item.subject: item
+        for item in diagram.ownedPresentation
+        if isinstance(item, diagramitems.PortUsageItem)
+    }
+    if show_boundary_ports(diagram):
+        owners = [
+            item
+            for item in list(diagram.ownedPresentation)
+            if isinstance(item, ElementPresentation) and isinstance(item.subject, kerml.Type)
+        ]
+        for owner_item in owners:
+            for port in [
+                m
+                for m in kk.members(owner_item.subject)
+                if isinstance(m, sysml2.PortUsage) and m not in existing
+            ]:
+                drop(port, diagram, 0, 0)
+    else:
+        for item in list(existing.values()):
+            item.unlink()
+    # Rebuild box compartments so the `ports` compartment reflects the new mode.
+    for item in list(diagram.ownedPresentation):
+        if isinstance(item, ElementPresentation):
+            item.update_shapes()
 
 
 def _auto_layout(diagram: Diagram, event_manager) -> None:

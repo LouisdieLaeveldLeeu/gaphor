@@ -32,7 +32,42 @@ from gaphor.diagram.connectors import Connector, MetadataRelationConnect
 from gaphor.diagram.presentation import ElementPresentation
 from gaphor.diagram.support import get_diagram_item_metadata
 from gaphor.SysML2 import kerml
-from gaphor.SysML2.diagramitems import ConnectionUsageItem, FeatureTypingItem
+from gaphor.SysML2.diagramitems import (
+    ConnectionUsageItem,
+    FeatureTypingItem,
+    PartDefinitionItem,
+    PartUsageItem,
+    PortUsageItem,
+)
+
+
+@Connector.register(PartDefinitionItem, PortUsageItem)
+@Connector.register(PartUsageItem, PortUsageItem)
+class PortUsageBoundaryConnector:
+    """Attach a PortUsage boundary square to its owning part's item -- a VISUAL
+    nesting only. The PortUsage already exists in the model (a member of the part), so
+    this connector NEVER creates, deletes, or retypes a subject; it only sets the
+    diagram parent, so the square rides the part's boundary and moves with it. It is
+    used both by interactive drag and by the `connect()` helper that synthesis calls."""
+
+    def __init__(self, owner, port: PortUsageItem):
+        self.owner = owner
+        self.port = port
+
+    def allow(self, handle, port) -> bool:
+        return (
+            bool(self.owner.diagram)
+            and self.owner.diagram is self.port.diagram
+            and isinstance(self.owner.subject, kerml.Type)
+        )
+
+    def connect(self, handle, port) -> bool:
+        self.port.change_parent(self.owner)
+        return True
+
+    def disconnect(self, handle) -> None:
+        if self.port.diagram:
+            self.port.change_parent(None)
 
 
 @Connector.register(ElementPresentation, FeatureTypingItem)

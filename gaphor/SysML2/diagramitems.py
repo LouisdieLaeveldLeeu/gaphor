@@ -14,13 +14,23 @@ from __future__ import annotations
 
 from gaphor.core.modeling import DrawContext
 from gaphor.diagram.presentation import (
+    AttachedPresentation,
     ElementPresentation,
     LinePresentation,
     Named,
 )
-from gaphor.diagram.shapes import Box, Text, cairo_state, draw_border, stroke
+from gaphor.diagram.shapes import (
+    Box,
+    CssNode,
+    IconBox,
+    Text,
+    cairo_state,
+    draw_border,
+    stroke,
+)
 from gaphor.diagram.support import represents
-from gaphor.SysML2 import constraints, kerml, requirements, sysml2
+from gaphor.SysML2 import conjugation, constraints, kerml, requirements, sysml2
+from gaphor.SysML2.diagramtype import show_ports_compartment
 from gaphor.SysML2.shapes import (
     feature_compartments,
     features_compartment,
@@ -109,8 +119,30 @@ def _name_box(item):
     notation is consistent and traces to `docs/sysml-v2/DIAGRAM_NOTATION.md`."""
     compartments = _construct_compartments(item.subject)
     if compartments is None:
-        compartments = feature_compartments(item.subject)
+        # A part's ports render as boundary squares by default (PortDisplayMode);
+        # only list them in the `ports` compartment in compartment/both_debug mode.
+        compartments = feature_compartments(
+            item.subject, include_ports=show_ports_compartment(item.diagram)
+        )
     return node_shape(item, *compartments)
+
+
+def port_boundary_label(subject) -> str:
+    """The boundary port's label: `[direction] name [: Type]`, rendering a conjugated
+    port typing as `: ~Original` (spec 8.2.3.12; conjugation reused, not re-derived)."""
+    if subject is None:
+        return ""
+    original = (
+        conjugation.conjugated_type_name(subject)
+        if isinstance(subject, sysml2.PortUsage)
+        else None
+    )
+    if original is not None and original.declaredName:
+        name = subject.declaredName or ""
+        direction = getattr(subject, "direction", None)
+        prefix = f"{direction} " if direction is not None else ""
+        return f"{prefix}{name} : ~{original.declaredName}".strip()
+    return name_label(subject)
 
 
 def _package_box(item):
@@ -430,23 +462,32 @@ class ConcernUsageItem(Named, ElementPresentation[sysml2.ConcernUsage]):
 
 
 @represents(sysml2.PortUsage)
-class PortUsageItem(Named, ElementPresentation[sysml2.PortUsage]):
-    """A diagram view onto a SysML2 `PortUsage`."""
+class PortUsageItem(Named, AttachedPresentation[sysml2.PortUsage]):
+    """A SysML2 `PortUsage` as a small square attached to its owning part's boundary
+    (spec 8.2.3.12), labelled `[direction] name [: Type]` (`~Original` when conjugated).
+
+    Reuses gaphor's `AttachedPresentation` (the proxy-port/pin base): it provides the
+    central boundary handle, the four edge `LinePort`s, the size constraints, and
+    save/load/postload -- so the boundary attachment persists and reloads for free, and
+    `update()` rebuilds the shape lazily (no event manager needed for the label). When
+    its owner is not on the diagram it renders as a clearly-labelled standalone square,
+    never a bare one."""
 
     def __init__(self, diagram, id=None):
-        super().__init__(diagram, id=id)
-        self.watch("subject[Element].declaredName", self.update_shapes)
-        # Redraw when a usage's feature direction changes (no-op for definitions,
-        # whose subject is not a Feature, so the path matches nothing).
-        self.watch("subject[Feature].direction", self.update_shapes)
-        # Rebuild the shape when the subject attaches or its owned members change, so
-        # the feature compartments stay current (the event-driven rebuild every gaphor
-        # item relies on -- a live view needs an event manager, as in the app).
-        self.watch("subject[Element].ownedRelationship", self.update_shapes)
-        self.update_shapes()
+        super().__init__(diagram, id, width=16, height=16)
+        # The label is late-evaluated (a lambda), so it re-renders on name/direction/
+        # typing changes; a watch without a handler requests the redraw.
+        self.watch("subject[Element].declaredName").watch("subject[Feature].direction")
 
     def update_shapes(self, event=None):
-        self.shape = _name_box(self)
+        self.shape = IconBox(
+            Box(draw=draw_border),
+            CssNode(
+                "name",
+                self.subject,
+                Text(text=lambda: port_boundary_label(self.subject)),
+            ),
+        )
 
 
 @represents(

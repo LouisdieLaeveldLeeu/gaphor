@@ -1100,8 +1100,20 @@ Landed (the foundation, this step):
   reusing the semantic accessors (`requirements`, `constraints`) -- verified by a
   rendered PNG and item-level tests.
 
-Remaining (next steps of this phase): ports as boundary squares on their owner;
-faithful relationship-line heads/tails; and the SysML2 diagram CSS.
+- **ports on the boundary**: a `PortUsage` renders as a small square attached to its
+  owning part's box (spec 8.2.3.12), reusing gaphor's `AttachedPresentation`
+  (proxy-port/pin base -- boundary handle, edge ports, size constraints, and
+  save/load/postload, so the attachment persists). A per-diagram `PortDisplayMode`
+  (BOUNDARY default / COMPARTMENT / BOTH_DEBUG) chooses boundary squares vs. the box's
+  `ports` compartment vs. both -- PRESENTATION only, stored on `SysML2Diagram`; a
+  PortUsage is one semantic element, and `set_port_display_mode` reconciles the squares
+  without ever creating/deleting/duplicating it. Synthesis attaches each boxed owner's
+  ports (owner-present rule -- no bare floating squares); conjugation shows `~Original`;
+  the boundary connector is visual-only (no semantics). Tested across all three modes,
+  attachment, semantic safety, and persistence (`test_port_display.py`).
+
+Remaining (next steps of this phase): faithful relationship-line heads/tails; the
+SysML2 diagram CSS; and a small GUI toggle for the port display mode.
 
 Exit: a rendered diagram of the implemented surface is self-describing and
 spec-faithful, every item's notation traceable to a pinned 8.2.3 clause, with no

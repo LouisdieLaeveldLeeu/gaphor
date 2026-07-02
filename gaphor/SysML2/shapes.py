@@ -204,6 +204,14 @@ def group_feature_compartments(features: Sequence[Base]) -> list[CssNode]:
     return compartments
 
 
-def feature_compartments(subject: Base | None) -> list[CssNode]:
-    """The subject's owned features as labelled compartments grouped by kind."""
-    return group_feature_compartments(owned_features(subject))
+def feature_compartments(
+    subject: Base | None, *, include_ports: bool = True
+) -> list[CssNode]:
+    """The subject's owned features as labelled compartments grouped by kind.
+
+    `include_ports=False` drops PortUsages, for a diagram that shows ports as boundary
+    squares instead of a `ports` compartment (Phase 15 PortDisplayMode)."""
+    features = owned_features(subject)
+    if not include_ports:
+        features = [f for f in features if not isinstance(f, sysml2.PortUsage)]
+    return group_feature_compartments(features)

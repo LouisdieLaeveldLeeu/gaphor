@@ -178,8 +178,8 @@ def _wired_factory() -> ElementFactory:
 
 
 def test_box_item_renders_keyword_and_grouped_feature_compartments():
-    from gaphor.core.modeling import Diagram
     from gaphor.SysML2.diagramitems import PartDefinitionItem
+    from gaphor.SysML2.diagramtype import PortDisplayMode, SysML2Diagram
 
     factory = _wired_factory()
     map_package(
@@ -189,7 +189,11 @@ def test_box_item_renders_keyword_and_grouped_feature_compartments():
     engine = next(
         d for d in factory.select(sysml2.PartDefinition) if d.declaredName == "Engine"
     )
-    item = factory.create(Diagram).create(PartDefinitionItem)
+    # Compartment mode so the ports group appears as text (boundary is the default,
+    # which renders ports as boundary squares instead).
+    diagram = factory.create(SysML2Diagram)
+    diagram.portDisplayMode = PortDisplayMode.COMPARTMENT.value
+    item = diagram.create(PartDefinitionItem)
     item.subject = engine
 
     texts = _texts(item.shape)
