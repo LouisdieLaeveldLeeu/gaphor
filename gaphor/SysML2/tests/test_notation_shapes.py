@@ -156,6 +156,62 @@ def test_node_shape_is_a_bordered_compartment_stack():
 # --- notation table coverage -------------------------------------------------
 
 
+def _wired_factory() -> ElementFactory:
+    """A factory with an event manager + dispatcher, so diagram items rebuild their
+    shape when a subject attaches -- the app's path (a bare factory fires no watches)."""
+    from gaphor.core.eventmanager import EventManager
+    from gaphor.core.modeling.elementdispatcher import ElementDispatcher
+    from gaphor.core.modeling.modelinglanguage import (
+        CoreModelingLanguage,
+        MockModelingLanguage,
+    )
+    from gaphor.SysML2.modelinglanguage import (
+        KerMLModelingLanguage,
+        SysML2ModelingLanguage,
+    )
+
+    event_manager = EventManager()
+    languages = MockModelingLanguage(
+        CoreModelingLanguage(), KerMLModelingLanguage(), SysML2ModelingLanguage()
+    )
+    return ElementFactory(event_manager, ElementDispatcher(event_manager, languages))
+
+
+def test_box_item_renders_keyword_and_grouped_feature_compartments():
+    from gaphor.core.modeling import Diagram
+    from gaphor.SysML2.diagramitems import PartDefinitionItem
+
+    factory = _wired_factory()
+    map_package(
+        parse("part def Engine { attribute power : Real; port fuelIn; part cyl; }"),
+        factory,
+    )
+    engine = next(
+        d for d in factory.select(sysml2.PartDefinition) if d.declaredName == "Engine"
+    )
+    item = factory.create(Diagram).create(PartDefinitionItem)
+    item.subject = engine
+
+    texts = _texts(item.shape)
+    assert texts[:2] == ["«part def»", "Engine"]  # keyword over name
+    assert "attributes" in texts and "power : Real" in texts
+    assert "ports" in texts and "fuelIn" in texts
+    assert "parts" in texts and "cyl" in texts
+
+
+def test_usage_item_renders_keyword_and_typing():
+    from gaphor.core.modeling import Diagram
+    from gaphor.SysML2.diagramitems import PartUsageItem
+
+    factory = _wired_factory()
+    map_package(parse("part def Engine; part e : Engine;"), factory)
+    usage = next(u for u in factory.select(sysml2.PartUsage) if u.declaredName == "e")
+    item = factory.create(Diagram).create(PartUsageItem)
+    item.subject = usage
+
+    assert _texts(item.shape) == ["«part»", "e : Engine"]
+
+
 def test_every_keyword_is_documented_in_the_notation_table():
     table = (
         Path(__file__).resolve().parents[1] / ".." / ".." / "docs" / "sysml-v2" / "DIAGRAM_NOTATION.md"

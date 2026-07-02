@@ -1082,13 +1082,19 @@ Landed (the foundation, this step):
   (`[direction] name [: Type]`), `name_compartment`, `features_compartment`, and
   `node_shape(item, *compartments)` -- the single place keyword/compartment rendering
   lives, unit-tested by shape-tree assertions (`test_notation_shapes.py`) with a
-  table-coverage guard.
+  table-coverage guard;
+- **box items wired**: every `diagramitems.py` box item now renders through the toolkit
+  (one shared `_name_box`), so a definition shows `«part def» Engine` over grouped
+  feature compartments (`attributes` / `ports` / `parts` / …) and a usage shows
+  `«part» e : Engine`. `feature_compartments` groups a definition's owned features by
+  kind (8.2.3.7/.11/.12/…). The compartments are structural, so the item rebuilds its
+  shape on subject-attach / owned-member change via watches -- the event-driven rebuild
+  every gaphor item uses (a live view needs an event manager, as in the app); tested at
+  the item level with a wired factory, and shown by a rendered PNG.
 
-Remaining (next steps of this phase): wire every `diagramitems.py` box item to
-`node_shape` + its feature compartments; requirement/action/constraint compartment
+Remaining (next steps of this phase): requirement/action/constraint compartment
 CONTENT (id/text/subject, parameters, expression); ports as boundary squares on their
-owner; faithful relationship-line heads/tails; the SysML2 diagram CSS; and render
-fixtures for visual review.
+owner; faithful relationship-line heads/tails; and the SysML2 diagram CSS.
 
 Exit: a rendered diagram of the implemented surface is self-describing and
 spec-faithful, every item's notation traceable to a pinned 8.2.3 clause, with no

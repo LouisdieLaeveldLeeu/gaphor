@@ -19,7 +19,7 @@ from collections.abc import Sequence
 from gaphor.core.modeling import Base
 from gaphor.diagram.presentation import Presentation
 from gaphor.diagram.shapes import Box, CssNode, Text, draw_border, draw_top_separator
-from gaphor.SysML2 import kerml
+from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 
 # Metaclass name -> SysML v2 notation keyword (Language spec 8.2.3.7-.21). A
@@ -132,3 +132,54 @@ def node_shape(item: Presentation, *compartments: CssNode | None) -> Box:
     feature compartments, in a bordered box -- the compartment stack of 8.2.3.6."""
     stack = [name_compartment(item), *(c for c in compartments if c is not None)]
     return Box(*stack, draw=draw_border)
+
+
+# --- owned-feature compartments ----------------------------------------------
+
+# Owned features are grouped into the spec's labelled compartments by usage kind
+# (8.2.3.7 attributes, .11 parts, .12 ports, .17 actions, ...); anything unclassified
+# falls into a generic "features" compartment. Most-specific kinds come first.
+_FEATURE_KINDS: tuple[tuple[str, type], ...] = (
+    ("attributes", sysml2.AttributeUsage),
+    ("ports", sysml2.PortUsage),
+    ("parts", sysml2.PartUsage),
+    ("actions", sysml2.ActionUsage),
+    ("constraints", sysml2.ConstraintUsage),
+    ("requirements", sysml2.RequirementUsage),
+    ("concerns", sysml2.ConcernUsage),
+    ("connections", sysml2.ConnectionUsage),
+)
+
+
+def owned_features(subject: Base | None) -> list[kerml.Feature]:
+    """The subject's directly-owned feature usages (a definition's/usage's members that
+    are features), excluding library proxies and feature-chain helpers -- the elements
+    that populate its feature compartments."""
+    if not isinstance(subject, kerml.Type):
+        return []
+    return [
+        member
+        for member in kk.members(subject)
+        if isinstance(member, kerml.Feature)
+        and not kk.is_library_proxy(member)
+        and not kk.is_feature_chain(member)
+    ]
+
+
+def feature_compartments(subject: Base | None) -> list[CssNode]:
+    """The subject's owned features as labelled compartments grouped by kind (empty
+    groups omitted)."""
+    remaining = owned_features(subject)
+    compartments: list[CssNode] = []
+    for label, kind in _FEATURE_KINDS:
+        group = [f for f in remaining if isinstance(f, kind)]
+        if group:
+            compartment = features_compartment(label, group)
+            if compartment is not None:
+                compartments.append(compartment)
+            remaining = [f for f in remaining if f not in group]
+    if remaining:
+        leftover = features_compartment("features", remaining)
+        if leftover is not None:
+            compartments.append(leftover)
+    return compartments

@@ -21,6 +21,7 @@ from gaphor.diagram.presentation import (
 from gaphor.diagram.shapes import Box, Text, cairo_state, draw_border, stroke
 from gaphor.diagram.support import represents
 from gaphor.SysML2 import kerml, sysml2
+from gaphor.SysML2.shapes import feature_compartments, node_shape
 
 
 def _subject_label(item) -> str:
@@ -36,11 +37,11 @@ def _subject_label(item) -> str:
 
 
 def _name_box(item):
-    """A box shape showing the item's subject's declared name (and direction)."""
-    return Box(
-        Text(text=lambda: _subject_label(item)),
-        draw=draw_border,
-    )
+    """The faithful SysML v2 node shape (Phase 15): the «keyword» name compartment
+    (e.g. «part def» / «part» over `[direction] name : Type`) plus the subject's
+    owned-feature compartments grouped by kind. Shared by every box item, so their
+    notation is consistent and traces to `docs/sysml-v2/DIAGRAM_NOTATION.md`."""
+    return node_shape(item, *feature_compartments(item.subject))
 
 
 def _package_box(item):
@@ -61,6 +62,10 @@ class PackageItem(Named, ElementPresentation[kerml.Package]):
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -77,6 +82,10 @@ class PartDefinitionItem(Named, ElementPresentation[sysml2.PartDefinition]):
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -93,6 +102,10 @@ class AttributeDefinitionItem(Named, ElementPresentation[sysml2.AttributeDefinit
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -109,6 +122,10 @@ class ActionDefinitionItem(Named, ElementPresentation[sysml2.ActionDefinition]):
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -127,6 +144,10 @@ class ConstraintDefinitionItem(
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -145,6 +166,10 @@ class RequirementDefinitionItem(
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -162,6 +187,10 @@ class ConcernDefinitionItem(Named, ElementPresentation[sysml2.ConcernDefinition]
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -178,6 +207,10 @@ class PortDefinitionItem(Named, ElementPresentation[sysml2.PortDefinition]):
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -196,6 +229,10 @@ class ConnectionDefinitionItem(
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -212,6 +249,10 @@ class PartUsageItem(Named, ElementPresentation[sysml2.PartUsage]):
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -228,6 +269,10 @@ class AttributeUsageItem(Named, ElementPresentation[sysml2.AttributeUsage]):
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -244,6 +289,10 @@ class ActionUsageItem(Named, ElementPresentation[sysml2.ActionUsage]):
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -260,6 +309,10 @@ class ConstraintUsageItem(Named, ElementPresentation[sysml2.ConstraintUsage]):
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -276,6 +329,10 @@ class RequirementUsageItem(Named, ElementPresentation[sysml2.RequirementUsage]):
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -293,6 +350,10 @@ class ConcernUsageItem(Named, ElementPresentation[sysml2.ConcernUsage]):
         super().__init__(diagram, id=id)
         self.watch("subject[Element].declaredName", self.update_shapes)
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -309,6 +370,10 @@ class PortUsageItem(Named, ElementPresentation[sysml2.PortUsage]):
         # Redraw when a usage's feature direction changes (no-op for definitions,
         # whose subject is not a Feature, so the path matches nothing).
         self.watch("subject[Feature].direction", self.update_shapes)
+        # Rebuild the shape when the subject attaches or its owned members change, so
+        # the feature compartments stay current (the event-driven rebuild every gaphor
+        # item relies on -- a live view needs an event manager, as in the app).
+        self.watch("subject[Element].ownedRelationship", self.update_shapes)
         self.update_shapes()
 
     def update_shapes(self, event=None):

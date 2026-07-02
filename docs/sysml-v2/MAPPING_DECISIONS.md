@@ -241,7 +241,7 @@ M2 scope only:
 - simple qualified-name lookup,
 - unresolved-symbol diagnostic.
 
-Do not implement inheritance, visibility, aliases, or feature chains during the first tracer.
+
 
 ## Former Z2a Blocker: standard model libraries are KPAR-only (recorded 2026-06-18)
 
@@ -1801,3 +1801,27 @@ notation-mapping table and the shared shape toolkit, before wiring the diagram i
 - **Not yet wired.** The `diagramitems.py` items still render name-only boxes; wiring
   them to `node_shape`, the compartment CONTENT, ports-on-boundary, faithful line
   heads, and CSS are the remaining Phase 15 steps. See `test_notation_shapes.py`.
+
+### Completion Phase 15 (box items wired): keyword + feature compartments (verified 2026-07-02)
+
+Second Phase 15 step: every `diagramitems.py` box item now renders faithful notation
+via the toolkit -- the "immediate visible win" (keywords + compartments).
+
+- **One shared shape, all items.** The 16 box items already routed through `_name_box`;
+  it now returns `node_shape(item, *feature_compartments(item.subject))`, so a
+  definition renders `«part def» Engine` over grouped feature compartments and a usage
+  `«part» e : Engine` -- with zero per-item code (InterfaceDefinitionItem inherits).
+  `feature_compartments` groups owned features by kind (attributes/ports/parts/…, spec
+  8.2.3.7/.11/.12/…) into labelled compartments, omitting empty groups.
+- **Structural compartments need the event-driven rebuild.** The name/keyword are
+  late-evaluated lambdas, but feature compartments are STRUCTURAL (a fixed child list),
+  so the shape must be rebuilt after the subject attaches. Items now also watch
+  `subject[Element].ownedRelationship` (feature add/remove) alongside `declaredName`
+  and `direction`; the rebuild fires through the event manager, exactly as every gaphor
+  item works. A bare `ElementFactory` fires no watches (and `diagram.create` caches the
+  subject-less shape), so a LIVE, compartment-bearing view needs an event manager --
+  the app path, and the synthesis plugin passes one. Item-level tests therefore use a
+  wired factory (EventManager + ElementDispatcher); the pure toolkit tests do not.
+- **Pure view.** No model/persistence/round-trip change -- the full suite stays green.
+  Next: requirement/action/constraint compartment CONTENT, ports-on-boundary, faithful
+  line heads, and the diagram CSS. See `test_notation_shapes.py`.
