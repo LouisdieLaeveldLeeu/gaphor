@@ -1943,3 +1943,13 @@ faithfulness/test-strength issues; all fixed:
 - **(Low) Attachment persistence asserted only the parent relation.** The parent
   persists independently of the boundary connection, so the reload test now also
   asserts `connections.get_connection(square._handle).connected is owner`.
+
+### Completion Phase 15 (review fix, round 3): short-name encoding in the name line (verified 2026-07-02)
+
+- **(Medium) Special reqIds rendered raw.** `name_label` interpolated
+  `declaredShortName` directly, so `1.1.3` rendered `<1.1.3> R` where the declaration
+  syntax requires `<'1.1.3'> R` (and `A'B`, backslashes, spaces likewise). The label
+  now routes through `shortnames.encode` -- the SINGLE module that owns the short-name
+  quoting/escaping rules, shared with the parser and exporter, so the three surfaces
+  cannot drift. Parameterized notation tests cover the special-ID corpus (identifier,
+  dots, quote, backslash, space). See `test_notation_shapes.py`.

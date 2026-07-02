@@ -19,7 +19,7 @@ from collections.abc import Sequence
 from gaphor.core.modeling import Base
 from gaphor.diagram.presentation import Presentation
 from gaphor.diagram.shapes import Box, CssNode, Text, draw_border, draw_top_separator
-from gaphor.SysML2 import kerml, sysml2
+from gaphor.SysML2 import kerml, shortnames, sysml2
 from gaphor.SysML2 import kerml_kernel as kk
 
 # Metaclass name -> SysML v2 notation keyword (Language spec 8.2.3.7-.21). A
@@ -82,9 +82,10 @@ def name_label(subject: Base | None) -> str:
     name = getattr(subject, "declaredName", None) or ""
     # A declared short name renders in the DECLARATION line (`<M> R`), per the spec's
     # definition/usage name-with-alias -- e.g. a requirement's reqId. It is NOT a
-    # compartment (8.2.3.21 defines none for it).
+    # compartment (8.2.3.21 defines none for it). The value is encoded with the shared
+    # short-name quoting rules (`<'1.1.3'>`, `<'A\'B'>`), never interpolated raw.
     if short := getattr(subject, "declaredShortName", None):
-        name = f"<{short}> {name}".strip()
+        name = f"<{shortnames.encode(short)}> {name}".strip()
     direction = getattr(subject, "direction", None)
     label = f"{direction} {name}".strip() if direction else name
     if isinstance(subject, kerml.Feature):

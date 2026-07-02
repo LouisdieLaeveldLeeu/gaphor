@@ -122,6 +122,25 @@ def test_name_label_includes_direction_and_typing():
 # --- composed shapes ---------------------------------------------------------
 
 
+@pytest.mark.parametrize(
+    ("req_id", "rendered"),
+    [
+        ("M", "<M> R"),  # bare identifier: unquoted
+        ("1.1.3", "<'1.1.3'> R"),  # dots: quoted
+        ("A'B", "<'A\\'B'> R"),  # quote: escaped
+        ("A\\B", "<'A\\\\B'> R"),  # backslash: escaped
+        ("has space", "<'has space'> R"),  # space: quoted
+    ],
+)
+def test_name_label_encodes_special_short_names(req_id, rendered):
+    # The declaration line uses the shared short-name quoting rules (shortnames.encode),
+    # exactly as the parser/exporter do -- special reqIds are never interpolated raw.
+    element = ElementFactory().create(sysml2.RequirementDefinition)
+    element.declaredName = "R"
+    element.declaredShortName = req_id
+    assert name_label(element) == rendered
+
+
 def test_name_compartment_renders_keyword_over_name():
     part_def = ElementFactory().create(sysml2.PartDefinition)
     part_def.declaredName = "Engine"
