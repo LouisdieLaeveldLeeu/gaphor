@@ -55,14 +55,14 @@ def _subject_label(item) -> str:
 
 
 def _requirement_compartments(req):
-    """A requirement/concern's spec compartments (8.2.3.21): id, subject, actors,
+    """A requirement/concern's spec compartments (8.2.3.21): subject, actors,
     stakeholders, `frames` (framed concerns), and the `assume constraints` /
     `require constraints` expressions -- the exact compartment labels from the pinned
-    SysML v2 Language spec. Concerns are RequirementDefinition/Usage subtypes, so this
-    serves both."""
+    SysML v2 Language spec. The reqId is NOT a compartment: it renders as `<id>` in
+    the declaration/name line (see `name_label`). Concerns are RequirementDefinition/
+    Usage subtypes, so this serves both."""
     subj = requirements.subject(req)
     out = [
-        text_compartment("id", [requirements.reqId(req) or ""]),
         text_compartment("subject", [name_label(subj)] if subj is not None else []),
         features_compartment("actors", list(requirements.actors(req))),
         features_compartment("stakeholders", list(requirements.stakeholders(req))),

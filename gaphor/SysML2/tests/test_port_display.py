@@ -19,6 +19,7 @@ from gaphor.core.modeling.modelinglanguage import (
     CoreModelingLanguage,
     MockModelingLanguage,
 )
+from gaphor.diagram.presentation import connect
 from gaphor.diagram.shapes import Text
 from gaphor.SysML2 import kerml, sysml2
 from gaphor.SysML2.diagramitems import PartDefinitionItem, PortUsageItem
@@ -185,8 +186,13 @@ def test_boundary_attachment_persists_across_save_reload():
     reloaded.lookup(diagram.id).postload()  # rebuild connections (as the app does)
 
     square2 = reloaded.lookup(square_id)
+    owner2 = reloaded.lookup(owner_id)
     assert isinstance(square2, PortUsageItem)
-    assert square2.parent is reloaded.lookup(owner_id)  # still attached to its owner
+    assert square2.parent is owner2  # still visually nested under its owner
+    # ... AND the boundary HANDLE connection itself is restored (the parent relation
+    # persists independently, so it alone does not prove the attachment reloaded).
+    cinfo = square2.diagram.connections.get_connection(square2._handle)
+    assert cinfo is not None and cinfo.connected is owner2
 
 
 # --- finding fixes -----------------------------------------------------------
@@ -224,6 +230,18 @@ def test_port_cannot_attach_to_a_non_owning_part():
     assert wrong.connect(port_item._handle, None) is False
     assert port_item.parent is not other_item  # never re-parented to the wrong owner
 
+    # The REAL path: the aspect layer physically glues the handle BEFORE the adapter
+    # runs and ignores its return value, so the adapter must actively sever a
+    # wrong-owner connection. `connect()` here is the same helper drop/synthesis use.
+    connect(port_item, port_item._handle, other_item)
+    assert diagram.connections.get_connection(port_item._handle) is None  # severed
+    assert port_item.parent is None
+
+    connect(port_item, port_item._handle, engine_item)  # the true owner still works
+    cinfo = diagram.connections.get_connection(port_item._handle)
+    assert cinfo is not None and cinfo.connected is engine_item
+    assert port_item.parent is engine_item
+
 
 def test_hiding_ports_removes_every_square_including_duplicates():
     from gaphor.diagram.drop import drop
@@ -253,7 +271,13 @@ def test_compartment_refreshes_when_a_member_is_renamed():
     item = diagram.create(PartDefinitionItem)
     item.subject = engine
     assert "power" in _texts(item.shape)
+    shape_before = item.shape
 
     attr.declaredName = "torque"  # rename a contained member
+    # PROOF of invalidation: the nested watch must have re-run update_shapes, which
+    # builds a NEW shape object. (Merely reading the late-bound text lambda would
+    # show the new name even without any watcher -- that is not enough: without the
+    # rebuild the item is never marked dirty, so the canvas would not repaint.)
+    assert item.shape is not shape_before
     assert "torque" in _texts(item.shape)  # the owner box refreshed
     assert "power" not in _texts(item.shape)

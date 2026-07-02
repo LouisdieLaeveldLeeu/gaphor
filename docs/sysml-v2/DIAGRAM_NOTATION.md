@@ -26,7 +26,7 @@ compartments, and shape.
 | Attribute | `«attribute def»` | `«attribute»` | rectangle | `attributes` | 8.2.3.7 |
 | Action | `«action def»` | `«action»` | rounded rectangle | `parameters`, `actions`, steps | 8.2.3.17 |
 | Constraint | `«constraint def»` | `«constraint»` | rectangle | `parameters`, constraint expression | 8.2.3.20 |
-| Requirement | `«requirement def»` | `«requirement»` | rectangle | `id`, `subject`, `actors`, `stakeholders`, `frames`, `assume constraints`, `require constraints` (the spec compartment labels) | 8.2.3.21 |
+| Requirement | `«requirement def»` | `«requirement»` | rectangle | `subject`, `actors`, `stakeholders`, `frames`, `assume constraints`, `require constraints` (the spec compartment labels). The reqId is NOT a compartment: it renders as `<id>` in the declaration/name line, per the definition/usage declaration. | 8.2.3.21 |
 | Concern | `«concern def»` | `«concern»` | rectangle | framed `stakeholder`s, `subject` | 8.2.3.21 |
 | Port | `«port def»` | `«port»` | PortUsage: small square on the OWNER's boundary (`~Original` label when conjugated). Per-diagram `PortDisplayMode` (boundary default / compartment / both_debug) selects boundary squares vs. a `ports` compartment vs. both -- presentation only, one PortUsage. PortDefinition: a box. | flow features | 8.2.3.12 |
 | Connection | `«connection def»` | `«connection»` (usage rendered as a line) | rectangle / line | ends | 8.2.3.13 |

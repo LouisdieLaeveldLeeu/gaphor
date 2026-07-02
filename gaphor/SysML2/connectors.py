@@ -71,9 +71,16 @@ class PortUsageBoundaryConnector:
         return self._owns_port()
 
     def connect(self, handle, port) -> bool:
-        # Re-verify at connect time (belt-and-suspenders): only nest under the true
-        # owner; refuse to change the visual parent otherwise.
+        # Re-verify at connect time. Returning False is NOT enough: the aspect layer
+        # (`PresentationConnector.connect`) physically glues the handle BEFORE calling
+        # this adapter and ignores its return value, and the programmatic `connect()`
+        # helper never consults `allow()`. So on a wrong owner the just-made physical
+        # connection must be actively severed, or the square would ride a part that
+        # does not own it and the persisted diagram would misrepresent the model.
         if not self._owns_port():
+            connections = self.port.diagram.connections
+            if connections.get_connection(handle):
+                connections.disconnect_item(self.port, handle)
             return False
         self.port.change_parent(self.owner)
         return True

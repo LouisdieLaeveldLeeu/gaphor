@@ -80,6 +80,11 @@ def name_label(subject: Base | None) -> str:
     if subject is None:
         return ""
     name = getattr(subject, "declaredName", None) or ""
+    # A declared short name renders in the DECLARATION line (`<M> R`), per the spec's
+    # definition/usage name-with-alias -- e.g. a requirement's reqId. It is NOT a
+    # compartment (8.2.3.21 defines none for it).
+    if short := getattr(subject, "declaredShortName", None):
+        name = f"<{short}> {name}".strip()
     direction = getattr(subject, "direction", None)
     label = f"{direction} {name}".strip() if direction else name
     if isinstance(subject, kerml.Feature):

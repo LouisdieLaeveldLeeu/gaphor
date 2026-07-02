@@ -1916,3 +1916,30 @@ Review of the box-items/compartments/ports steps found five issues; all fixed:
 
 See `test_port_display.py` (owner-mismatch rejection, duplicate-square removal, member
 rename refresh, attachment persistence) and `test_notation_shapes.py`.
+
+### Completion Phase 15 (review fixes, round 2) (verified 2026-07-02)
+
+A second review found the first round's High fix incomplete, plus three
+faithfulness/test-strength issues; all fixed:
+
+- **(High) Returning False did not prevent a wrong-owner attachment.** The aspect layer
+  (`PresentationConnector.connect`, `gaphor/diagram/_connector.py`) physically glues
+  the handle BEFORE calling the adapter and ignores its return value -- and the
+  programmatic `connect()` helper never consults `allow()`. So the adapter's
+  `connect()` now actively SEVERS the just-made physical connection
+  (`connections.disconnect_item`) when the owner check fails; the `DisconnectHandle`
+  callback routes back through the adapter's `disconnect` (a no-op re-parent), so the
+  severing is clean. The regression test now goes through the REAL `connect()` helper
+  (the one drop/synthesis use) and asserts the handle ends up unconnected for a
+  non-owner and connected for the true owner.
+- **(Medium) `id` is not a spec compartment.** 8.2.3.21 defines no `id` compartment;
+  the reqId (KerML `declaredShortName`) belongs in the declaration. `name_label` now
+  renders `<M> R` in the name line for any element with a declared short name, and the
+  requirement's `id` compartment is removed.
+- **(Low) The rename test proved nothing.** The compartment text is a late-bound
+  lambda, so reading it passes even without watchers. The test now asserts the shape
+  OBJECT is rebuilt (`item.shape is not shape_before`) -- the invalidation that marks
+  the item dirty so the canvas repaints.
+- **(Low) Attachment persistence asserted only the parent relation.** The parent
+  persists independently of the boundary connection, so the reload test now also
+  asserts `connections.get_connection(square._handle).connected is owner`.

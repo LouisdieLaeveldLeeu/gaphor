@@ -239,8 +239,10 @@ def test_requirement_item_renders_spec_compartments():
     item.subject = req
 
     texts = _texts(item.shape)
-    assert texts[:2] == ["«requirement def»", "R"]
-    assert "id" in texts and "M" in texts
+    # The reqId renders as `<M>` in the DECLARATION line (8.2.3.21 defines no `id`
+    # compartment); the compartments carry the spec labels.
+    assert texts[:2] == ["«requirement def»", "<M> R"]
+    assert "id" not in texts  # not a compartment
     assert "subject" in texts and "v : Vehicle" in texts
     assert "actors" in texts and "driver" in texts
     assert "require constraints" in texts and _has(texts, "mass <= 1")  # spec 8.2.3.21
