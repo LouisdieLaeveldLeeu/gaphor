@@ -2043,3 +2043,15 @@ box keywords/compartments -> requirement/action/constraint compartment content -
 ports-on-boundary (PortDisplayMode) -> faithful relationship-line heads -> diagram
 CSS -> the port display-mode GUI, with four rounds of review fixes. A rendered SysML2
 diagram of the implemented surface is now self-describing and spec-faithful.
+
+### Completion Phase 15 (review fix): port display-mode dropdown undo/redo sync (verified 2026-07-02)
+
+- **(Medium) The dropdown was one-way (UI -> model).** Undo/redo of `portDisplayMode`
+  reconciled the diagram presentations correctly but left the control showing the old
+  mode. `PortDisplayModePropertyPage` now uses the two-way idiom the other pages use:
+  a `subject.watcher()` on `portDisplayMode` whose handler is wrapped by
+  `handler_blocking(dropdown, "notify::selected", self._on_mode_changed)` -- so a model
+  change updates the dropdown WITH the UI handler blocked (no re-transaction) -- and
+  `unsubscribe_all_on_destroy` tears the watcher down with the widget. Test drives a
+  UndoManager: after a dropdown edit, undo restores both the mode/presentations AND the
+  dropdown selection, and redo re-applies both. See `test_port_display.py`.

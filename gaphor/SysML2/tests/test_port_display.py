@@ -280,6 +280,38 @@ def test_port_display_mode_property_page_switches_the_diagram():
     assert _port_count(factory) == 1
 
 
+def test_port_display_mode_dropdown_syncs_on_undo_redo():
+    # The dropdown must follow the model: undo/redo of portDisplayMode reconciles the
+    # presentations AND updates the control (a one-way page would show a stale mode).
+    from gaphor.SysML2.propertypages import PortDisplayModePropertyPage
+    from gaphor.services.undomanager import UndoManager
+
+    factory, diagram = _synthesize(PortDisplayMode.BOUNDARY)
+    undo_manager = UndoManager(factory.event_manager, factory)
+    try:
+        page = PortDisplayModePropertyPage(diagram, factory.event_manager)
+        widget = page.construct()
+        dropdown = widget.get_first_child().get_next_sibling()
+
+        dropdown.set_selected(1)  # user -> Compartment (a recorded transaction)
+        assert port_display_mode(diagram) is PortDisplayMode.COMPARTMENT
+        assert dropdown.get_selected() == 1
+
+        undo_manager.undo_transaction()
+        assert port_display_mode(diagram) is PortDisplayMode.BOUNDARY
+        assert dropdown.get_selected() == 0  # THE FIX: control follows the model
+        assert len(_squares(diagram)) == 1  # presentations restored too
+        assert _port_count(factory) == 1
+
+        undo_manager.redo_transaction()
+        assert port_display_mode(diagram) is PortDisplayMode.COMPARTMENT
+        assert dropdown.get_selected() == 1
+        assert _squares(diagram) == []
+        assert _port_count(factory) == 1
+    finally:
+        undo_manager.shutdown()
+
+
 def test_compartment_refreshes_when_a_member_is_renamed():
     from gaphor.SysML2.diagramitems import PartDefinitionItem
     from gaphor.SysML2.diagramtype import PortDisplayMode as _PDM

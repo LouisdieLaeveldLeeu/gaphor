@@ -197,6 +197,10 @@ class PortDisplayModePropertyPage(PropertyPageBase):
         super().__init__()
         self.subject = subject
         self.event_manager = event_manager
+        self.watcher = subject.watcher()
+
+    def _index_of(self, value: str) -> int:
+        return next((n for n, (_, v) in enumerate(self._CHOICES) if v == value), 0)
 
     def construct(self):
         builder = new_builder("port-display-mode-editor")
@@ -206,14 +210,23 @@ class PortDisplayModePropertyPage(PropertyPageBase):
         for label, value in self._CHOICES:
             model.append(LabelValue(label, value))
         dropdown.set_model(model)
+        dropdown.set_selected(self._index_of(port_display_mode(self.subject).value))
 
-        current = port_display_mode(self.subject).value
-        dropdown.set_selected(
-            next((n for n, (_, v) in enumerate(self._CHOICES) if v == current), 0)
+        # Two-way: user edits (notify::selected) drive the model, AND model changes
+        # (e.g. undo/redo of portDisplayMode) drive the dropdown -- with the UI handler
+        # blocked during the model->UI update so it does not re-transaction.
+        @handler_blocking(dropdown, "notify::selected", self._on_mode_changed)
+        def mode_handler(event):
+            if event.element is self.subject:
+                index = self._index_of(port_display_mode(self.subject).value)
+                if dropdown.get_selected() != index:
+                    dropdown.set_selected(index)
+
+        self.watcher.watch("portDisplayMode", mode_handler)
+
+        return unsubscribe_all_on_destroy(
+            builder.get_object("port-display-mode-editor"), self.watcher
         )
-        dropdown.connect("notify::selected", self._on_mode_changed)
-
-        return builder.get_object("port-display-mode-editor")
 
     def _on_mode_changed(self, dropdown, _pspec):
         selected = dropdown.get_selected_item()
