@@ -360,6 +360,58 @@ property:not([aggregation="composite"]) {
   vertical-align: bottom;
 }
 
+/* SysML v2 */
+/* The keyword/compartment-label/feature CssNode names are produced ONLY by
+ * gaphor/SysML2/shapes.py, so the bare rules cannot leak into other languages
+ * (same exposure as the unscoped heading/stereotypes rules). Shared names
+ * (name, compartment, icon) are scoped by SysML2 item-type selectors. */
+
+keyword {
+  font-size: x-small;
+  font-style: italic;
+  text-align: center;
+}
+
+compartment-label {
+  padding: 0 0 4 0;
+  font-size: x-small;
+  font-style: italic;
+  text-align: center;
+}
+
+feature {
+  text-align: left;
+}
+
+partdefinition name,
+partusage name,
+attributedefinition name,
+attributeusage name,
+actiondefinition name,
+actionusage name,
+constraintdefinition name,
+constraintusage name,
+requirementdefinition name,
+requirementusage name,
+concerndefinition name,
+concernusage name,
+portdefinition name,
+connectiondefinition name,
+connectionusage name,
+interfacedefinition name,
+interfaceusage name {
+  font-weight: bold;
+}
+
+actiondefinition,
+actionusage {
+  border-radius: 15;
+}
+
+portusage > icon {
+  background-color: var(--opaque-background-color);
+}
+
 /* C4 model */
 
 c4container, c4person {

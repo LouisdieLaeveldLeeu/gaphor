@@ -1119,8 +1119,17 @@ Landed (the foundation, this step):
   name label. Synthesized succession/flow lines now anchor both handles to the
   projected step items (they previously projected unanchored).
 
-Remaining (next steps of this phase): the SysML2 diagram CSS; and a small GUI toggle
-for the port display mode.
+- **diagram CSS**: a `/* SysML v2 */` section in the system style sheet
+  (`gaphor/diagram.css`, the only injection point) styles the notation by default --
+  keyword and compartment-label lines x-small/italic/centered (the `compartment
+  heading` convention), feature lines left-aligned, bold names on SysML2 boxes
+  (port labels excluded), rounded action boxes (`border-radius`, pure CSS), and an
+  opaque port boundary square (the `proxyport > icon` idiom). Bare selectors are
+  leak-safe (the CssNode names are SysML2-only, verified); shared names are scoped by
+  item-type selectors; leak-guard tests pin that the general Line item and UML class
+  styling are untouched (`test_diagram_css.py`).
+
+Remaining (next steps of this phase): a small GUI toggle for the port display mode.
 
 Exit: a rendered diagram of the implemented surface is self-describing and
 spec-faithful, every item's notation traceable to a pinned 8.2.3 clause, with no

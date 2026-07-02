@@ -1991,3 +1991,32 @@ See `test_notation_shapes.py`, `test_synthesis.py`.
 - **(Low) Flow cited the wrong clause.** Flows Graphical Notation is 8.2.3.16 in the
   pinned spec (8.2.3.13 is Connections); fixed in the flow item docstring and both
   DIAGRAM_NOTATION rows.
+
+### Completion Phase 15 (diagram CSS) (verified 2026-07-02)
+
+Default styling for the SysML2 notation, researched via a fan-out workflow over
+Gaphor's CSS engine:
+
+- **Placement is forced: the system style sheet.** `gaphor/diagram.css` (loaded into
+  `SYSTEM_STYLE_SHEET`, layer 1 of every model's compiled sheet) is the only
+  injection point -- `ModelingLanguage` has no CSS-contribution hook and
+  `SysML2Diagram` cannot carry its own CSS. A `/* SysML v2 */` section is added.
+- **Leak-safety, verified.** `keyword`/`compartment-label`/`feature` CssNode names
+  are produced ONLY by `gaphor/SysML2/shapes.py`, so bare rules on them cannot match
+  other languages (same exposure as the shipped unscoped `heading`/`stereotypes`
+  rules). Shared names (`name`, `icon`) are scoped by SysML2 item-type selectors
+  (css_name = lowercased class name minus `Item`). Deliberately NO bare `line` rule
+  (the general-purpose Line item's css name) and NO `package` rule (shared with UML).
+- **The rules mirror shipped conventions.** keyword + compartment-label = the
+  `compartment heading` treatment (x-small/italic/centered; the explicit CENTER
+  beats the `text-align: left` inherited from `compartment + compartment`); bold
+  names = the UML bold list (portusage's label excluded, like proxy ports); action
+  `border-radius: 15` = UML's `action` (honored by `draw_border`, so rounding is
+  pure CSS); `portusage > icon` opaque fill = `proxyport > icon` (boundary lines no
+  longer show through the square). No `font-variant`/small-caps exists in the engine.
+- **Tests** (`test_diagram_css.py`): computed-style assertions against the shipped
+  file with the styling test-suite's `Node` fake (font-size compared to the computed
+  `compartment heading` size, so tests survive theme changes), an end-to-end
+  ActionUsageItem border-radius via `StyleSheet().compute_style(StyledItem(...))`,
+  and LEAK GUARDS pinning that the general `line` item and UML `class`/`class name`
+  styling are untouched.
