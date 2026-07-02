@@ -163,12 +163,15 @@ def set_port_display_mode(diagram: Diagram, mode: PortDisplayMode | str) -> None
     to appear/disappear per the mode. Idempotent.
     """
     diagram.portDisplayMode = PortDisplayMode(mode).value
-    existing = {
-        item.subject: item
-        for item in diagram.ownedPresentation
+    # ALL existing port squares (a list, not a subject-keyed dict -- a port may have
+    # more than one presentation, and every one must be removed when hiding).
+    port_items = [
+        item
+        for item in list(diagram.ownedPresentation)
         if isinstance(item, diagramitems.PortUsageItem)
-    }
+    ]
     if show_boundary_ports(diagram):
+        already = {item.subject for item in port_items}
         owners = [
             item
             for item in list(diagram.ownedPresentation)
@@ -178,11 +181,11 @@ def set_port_display_mode(diagram: Diagram, mode: PortDisplayMode | str) -> None
             for port in [
                 m
                 for m in kk.members(owner_item.subject)
-                if isinstance(m, sysml2.PortUsage) and m not in existing
+                if isinstance(m, sysml2.PortUsage) and m not in already
             ]:
                 drop(port, diagram, 0, 0)
     else:
-        for item in list(existing.values()):
+        for item in port_items:  # remove EVERY square, including any duplicates
             item.unlink()
     # Rebuild box compartments so the `ports` compartment reflects the new mode.
     for item in list(diagram.ownedPresentation):

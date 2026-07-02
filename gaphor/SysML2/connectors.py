@@ -32,6 +32,7 @@ from gaphor.diagram.connectors import Connector, MetadataRelationConnect
 from gaphor.diagram.presentation import ElementPresentation
 from gaphor.diagram.support import get_diagram_item_metadata
 from gaphor.SysML2 import kerml
+from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2.diagramitems import (
     ConnectionUsageItem,
     FeatureTypingItem,
@@ -54,14 +55,26 @@ class PortUsageBoundaryConnector:
         self.owner = owner
         self.port = port
 
-    def allow(self, handle, port) -> bool:
+    def _owns_port(self) -> bool:
+        """Whether `owner` is the port's ACTUAL owning namespace -- so a boundary
+        square can never be attached to a part that does not semantically own it (that
+        would make the persisted diagram misrepresent the model)."""
         return (
             bool(self.owner.diagram)
             and self.owner.diagram is self.port.diagram
-            and isinstance(self.owner.subject, kerml.Type)
+            and self.port.subject is not None
+            and self.owner.subject is not None
+            and kk.owning_namespace(self.port.subject) is self.owner.subject
         )
 
+    def allow(self, handle, port) -> bool:
+        return self._owns_port()
+
     def connect(self, handle, port) -> bool:
+        # Re-verify at connect time (belt-and-suspenders): only nest under the true
+        # owner; refuse to change the visual parent otherwise.
+        if not self._owns_port():
+            return False
         self.port.change_parent(self.owner)
         return True
 

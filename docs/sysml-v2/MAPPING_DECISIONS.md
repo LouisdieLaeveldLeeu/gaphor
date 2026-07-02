@@ -1888,3 +1888,31 @@ fan-out workflow; the user chose a diagram-level display mode over a global A/B/
   persistence tests green; only one box-compartment test moved to compartment mode.
   Deferred: a GUI toggle for the mode; faithful line heads; diagram CSS.
   See `test_port_display.py`.
+
+### Completion Phase 15 (ports/notation review fixes) (verified 2026-07-02)
+
+Review of the box-items/compartments/ports steps found five issues; all fixed:
+
+- **(High) A boundary port could attach to the wrong part.** `PortUsageBoundaryConnector`
+  accepted any Type and re-parented unconditionally, so a port owned by A could be
+  visually nested under B -- a persisted diagram misrepresenting ownership. Both `allow`
+  and `connect` now verify `kk.owning_namespace(port.subject) is owner.subject`, so a
+  square only nests under the port's ACTUAL owner (synthesis/drop already look up the
+  true owner, so they are unaffected).
+- **(Medium) Compartment mode could leave a duplicate square.** `set_port_display_mode`
+  keyed existing squares by subject, so removal missed a second presentation of one
+  port. It now removes EVERY `PortUsageItem` (a list, not a subject-keyed dict).
+- **(Medium) Compartments went stale after member edits.** Box items watched membership
+  add/remove but not contained-member properties. They now also watch (with type casts)
+  `ownedRelationship[OwningMembership].memberElement.declaredName`, `[Feature].direction`,
+  and `[Feature].ownedRelationship[FeatureTyping].type(.declaredName)`, so renaming/
+  retyping/redirecting a member refreshes its owner box.
+- **(Medium) Requirement labels were not spec-faithful.** Renamed to the pinned
+  8.2.3.21 labels: `concerns` -> `frames`, `assume` -> `assume constraints`,
+  `require` -> `require constraints`.
+- **(Low) Boundary-attachment persistence was untested.** Added a test that a BOUNDARY
+  diagram with an attached square reloads with the square still parented to its owner
+  (postload restores the connection).
+
+See `test_port_display.py` (owner-mismatch rejection, duplicate-square removal, member
+rename refresh, attachment persistence) and `test_notation_shapes.py`.

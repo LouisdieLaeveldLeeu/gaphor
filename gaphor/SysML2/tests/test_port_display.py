@@ -164,3 +164,96 @@ def test_mode_and_ports_persist_across_save_reload():
     diagram2 = reloaded.lookup(diagram_id)
     assert port_display_mode(diagram2) is PortDisplayMode.COMPARTMENT  # mode preserved
     assert len(list(reloaded.select(sysml2.PortUsage))) == 1  # one PortUsage
+
+
+def test_boundary_attachment_persists_across_save_reload():
+    # A BOUNDARY diagram with an attached port square reloads with the square still
+    # attached to its owner (parent + boundary connection restored).
+    factory, diagram = _synthesize(PortDisplayMode.BOUNDARY)
+    square = _squares(diagram)[0]
+    owner = _engine_box(diagram)
+    assert square.parent is owner
+    square_id, owner_id = square.id, owner.id
+
+    buffer = io.StringIO()
+    storage.save(buffer, factory)
+    reloaded = ElementFactory()
+    buffer.seek(0)
+    storage.load(
+        buffer, element_factory=reloaded, modeling_language=_modeling_language()
+    )
+    reloaded.lookup(diagram.id).postload()  # rebuild connections (as the app does)
+
+    square2 = reloaded.lookup(square_id)
+    assert isinstance(square2, PortUsageItem)
+    assert square2.parent is reloaded.lookup(owner_id)  # still attached to its owner
+
+
+# --- finding fixes -----------------------------------------------------------
+
+
+def test_port_cannot_attach_to_a_non_owning_part():
+    # A port owned by Engine must not be attachable to another part's box: the
+    # connector rejects it, so a persisted diagram cannot misrepresent ownership.
+    from gaphor.SysML2.connectors import PortUsageBoundaryConnector
+    from gaphor.SysML2.diagramitems import PartDefinitionItem
+    from gaphor.SysML2.diagramtype import SysML2Diagram
+
+    factory = _wired_factory()
+    map_package(
+        parse("package P { part def Engine { port p; } part def Other; }"), factory
+    )
+    engine = next(
+        d for d in factory.select(sysml2.PartDefinition) if d.declaredName == "Engine"
+    )
+    other = next(
+        d for d in factory.select(sysml2.PartDefinition) if d.declaredName == "Other"
+    )
+    port = next(factory.select(sysml2.PortUsage))
+    diagram = factory.create(SysML2Diagram)
+    engine_item = diagram.create(PartDefinitionItem)
+    engine_item.subject = engine
+    other_item = diagram.create(PartDefinitionItem)
+    other_item.subject = other
+    port_item = diagram.create(PortUsageItem)
+    port_item.subject = port
+
+    assert PortUsageBoundaryConnector(engine_item, port_item).allow(port_item._handle, None)
+    wrong = PortUsageBoundaryConnector(other_item, port_item)
+    assert not wrong.allow(port_item._handle, None)  # Other does not own p
+    assert wrong.connect(port_item._handle, None) is False
+    assert port_item.parent is not other_item  # never re-parented to the wrong owner
+
+
+def test_hiding_ports_removes_every_square_including_duplicates():
+    from gaphor.diagram.drop import drop
+
+    factory, diagram = _synthesize(PortDisplayMode.BOUNDARY)
+    port = next(factory.select(sysml2.PortUsage))
+    drop(port, diagram, 0, 0)  # a SECOND square for the same port
+    assert len(_squares(diagram)) == 2
+
+    set_port_display_mode(diagram, PortDisplayMode.COMPARTMENT)
+    assert _squares(diagram) == []  # ALL squares removed, not just one
+
+
+def test_compartment_refreshes_when_a_member_is_renamed():
+    from gaphor.SysML2.diagramitems import PartDefinitionItem
+    from gaphor.SysML2.diagramtype import PortDisplayMode as _PDM
+    from gaphor.SysML2.diagramtype import SysML2Diagram
+
+    factory = _wired_factory()
+    map_package(parse("part def Engine { attribute power; }"), factory)
+    engine = next(
+        d for d in factory.select(sysml2.PartDefinition) if d.declaredName == "Engine"
+    )
+    attr = next(a for a in factory.select(sysml2.AttributeUsage))
+    diagram = factory.create(SysML2Diagram)
+    diagram.portDisplayMode = _PDM.COMPARTMENT.value
+    item = diagram.create(PartDefinitionItem)
+    item.subject = engine
+    assert "power" in _texts(item.shape)
+
+    attr.declaredName = "torque"  # rename a contained member
+    assert "torque" in _texts(item.shape)  # the owner box refreshed
+    assert "power" not in _texts(item.shape)

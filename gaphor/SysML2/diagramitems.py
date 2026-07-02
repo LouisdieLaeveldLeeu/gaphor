@@ -56,17 +56,19 @@ def _subject_label(item) -> str:
 
 def _requirement_compartments(req):
     """A requirement/concern's spec compartments (8.2.3.21): id, subject, actors,
-    stakeholders, framed concerns, and the assume/require constraint expressions.
-    Concerns are RequirementDefinition/Usage subtypes, so this serves both."""
+    stakeholders, `frames` (framed concerns), and the `assume constraints` /
+    `require constraints` expressions -- the exact compartment labels from the pinned
+    SysML v2 Language spec. Concerns are RequirementDefinition/Usage subtypes, so this
+    serves both."""
     subj = requirements.subject(req)
     out = [
         text_compartment("id", [requirements.reqId(req) or ""]),
         text_compartment("subject", [name_label(subj)] if subj is not None else []),
         features_compartment("actors", list(requirements.actors(req))),
         features_compartment("stakeholders", list(requirements.stakeholders(req))),
-        features_compartment("concerns", list(requirements.framed_concerns(req))),
+        features_compartment("frames", list(requirements.framed_concerns(req))),
         text_compartment(
-            "assume",
+            "assume constraints",
             [
                 constraints.body_text(c) or ""
                 for c in requirements.requirement_constraints(
@@ -75,7 +77,7 @@ def _requirement_compartments(req):
             ],
         ),
         text_compartment(
-            "require",
+            "require constraints",
             [
                 constraints.body_text(c) or ""
                 for c in requirements.requirement_constraints(
@@ -167,6 +169,18 @@ class PackageItem(Named, ElementPresentation[kerml.Package]):
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -187,6 +201,18 @@ class PartDefinitionItem(Named, ElementPresentation[sysml2.PartDefinition]):
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -207,6 +233,18 @@ class AttributeDefinitionItem(Named, ElementPresentation[sysml2.AttributeDefinit
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -227,6 +265,18 @@ class ActionDefinitionItem(Named, ElementPresentation[sysml2.ActionDefinition]):
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -249,6 +299,18 @@ class ConstraintDefinitionItem(
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -271,6 +333,18 @@ class RequirementDefinitionItem(
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -292,6 +366,18 @@ class ConcernDefinitionItem(Named, ElementPresentation[sysml2.ConcernDefinition]
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -312,6 +398,18 @@ class PortDefinitionItem(Named, ElementPresentation[sysml2.PortDefinition]):
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -334,6 +432,18 @@ class ConnectionDefinitionItem(
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -354,6 +464,18 @@ class PartUsageItem(Named, ElementPresentation[sysml2.PartUsage]):
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -374,6 +496,18 @@ class AttributeUsageItem(Named, ElementPresentation[sysml2.AttributeUsage]):
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -394,6 +528,18 @@ class ActionUsageItem(Named, ElementPresentation[sysml2.ActionUsage]):
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -414,6 +560,18 @@ class ConstraintUsageItem(Named, ElementPresentation[sysml2.ConstraintUsage]):
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -434,6 +592,18 @@ class RequirementUsageItem(Named, ElementPresentation[sysml2.RequirementUsage]):
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
@@ -455,6 +625,18 @@ class ConcernUsageItem(Named, ElementPresentation[sysml2.ConcernUsage]):
         # the feature compartments stay current (the event-driven rebuild every gaphor
         # item relies on -- a live view needs an event manager, as in the app).
         self.watch("subject[Element].ownedRelationship", self.update_shapes)
+        # ... and when a CONTAINED member's name/direction/typing changes, so the
+        # feature compartments do not go stale after member edits (nested watches).
+        _m = "subject[Element].ownedRelationship[OwningMembership].memberElement"
+        self.watch(f"{_m}.declaredName", self.update_shapes)
+        self.watch(f"{_m}[Feature].direction", self.update_shapes)
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type", self.update_shapes
+        )
+        self.watch(
+            f"{_m}[Feature].ownedRelationship[FeatureTyping].type.declaredName",
+            self.update_shapes,
+        )
         self.update_shapes()
 
     def update_shapes(self, event=None):
