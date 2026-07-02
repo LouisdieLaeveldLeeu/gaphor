@@ -763,9 +763,9 @@ class FlowUsageItem(ConnectionUsageItem):
     a binary connector, so it projects as the connection line, not the action box
     (registered for FlowUsage exactly so it wins) (Phase 7).
 
-    Notation (DIAGRAM_NOTATION.md, 8.2.3.13): a solid line with an OPEN arrowhead at
-    the `to` (target) end; the middle label is the flow's name (payload items are not
-    in the implemented surface)."""
+    Notation (DIAGRAM_NOTATION.md, 8.2.3.16 Flows): a solid line with an OPEN
+    arrowhead at the `to` (target) end; the middle label is the flow's name (payload
+    items are not in the implemented surface)."""
 
     def draw_tail(self, context: DrawContext):
         draw_arrow_tail(context)

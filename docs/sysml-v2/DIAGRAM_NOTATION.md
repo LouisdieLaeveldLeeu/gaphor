@@ -31,7 +31,7 @@ compartments, and shape.
 | Port | `«port def»` | `«port»` | PortUsage: small square on the OWNER's boundary (`~Original` label when conjugated). Per-diagram `PortDisplayMode` (boundary default / compartment / both_debug) selects boundary squares vs. a `ports` compartment vs. both -- presentation only, one PortUsage. PortDefinition: a box. | flow features | 8.2.3.12 |
 | Connection | `«connection def»` | `«connection»` (usage rendered as a line) | rectangle / line | ends | 8.2.3.13 |
 | Interface | `«interface def»` | `«interface»` (usage rendered as a line between ports) | rectangle / line | ends | 8.2.3.13–.14 |
-| Flow | — | `«flow»` (rendered as a directed line) | line | — | 8.2.3.13 |
+| Flow | — | `«flow»` (rendered as a directed line) | line | — | 8.2.3.16 |
 | Succession | — | `«succession»` (rendered as an arrow) | line | — | 8.2.3.17 |
 
 ## Relationship lines
@@ -45,7 +45,7 @@ compartments, and shape.
 | Connection usage | solid line between the connected features, labelled with the connection name | 8.2.3.13 |
 | Interface usage | solid line between ports | 8.2.3.13–.14 |
 | Succession | solid line, filled arrowhead (control flow) | 8.2.3.17 |
-| Flow | solid line, open arrowhead, item label (payload) | 8.2.3.13 |
+| Flow | solid line, open arrowhead, item label (payload; the label is the flow's name -- payload items are not in the implemented surface) | 8.2.3.16 |
 
 ## Toolkit → items
 

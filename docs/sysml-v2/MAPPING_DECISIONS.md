@@ -1977,3 +1977,17 @@ Tests assert the tail overrides exist exactly where the table says (typing/succe
 flow yes; connection/interface no), the typing triangle CLOSES its path, and the
 succession/flow decorations leave real ink on a recording surface.
 See `test_notation_shapes.py`, `test_synthesis.py`.
+
+### Completion Phase 15 (review fixes, round 4) (verified 2026-07-02)
+
+- **(Medium) Arrow tests did not prove the visual distinction.** The ink-exists
+  assertions passed for open and filled heads alike. The tests now RASTERIZE each
+  `draw_tail` onto an image surface (incoming line drawn diagonally so its stroke
+  cannot fake a fill) and assert pixels: a succession head's triangle CENTROID is
+  inked (filled), a flow head's centroid is clean while its V outline is stroked
+  (open), and a typing head's centroid is clean while its outline INCLUDING the
+  closing base edge is stroked (hollow closed triangle) -- so each head kind fails
+  the others' assertions.
+- **(Low) Flow cited the wrong clause.** Flows Graphical Notation is 8.2.3.16 in the
+  pinned spec (8.2.3.13 is Connections); fixed in the flow item docstring and both
+  DIAGRAM_NOTATION rows.

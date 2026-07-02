@@ -331,24 +331,67 @@ def test_feature_typing_tail_is_a_hollow_closed_triangle():
     assert any(t == cairo.PATH_CLOSE_PATH for t, _ in cr.copy_path())
 
 
-def test_succession_tail_draws_a_filled_arrowhead():
+def _render_tail(item_cls, *, stroke_after=False):
+    """Rasterize `item_cls.draw_tail` onto an image surface.
+
+    The incoming line starts at logical (30, 30) -- diagonal, so its stroke cannot
+    ink the arrowhead interior and fake a fill. `stroke_after` performs the single
+    stroke LinePresentation applies to a tail that leaves its path (hollow heads)."""
+    import cairo
+
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 60, 60)
+    cr = cairo.Context(surface)
+    cr.translate(20, 30)  # logical (0,0) -> device (20,30); arrow fully in view
+    context = types.SimpleNamespace(cairo=cr, style={})
+    cr.move_to(30, 30)
+    item_cls.draw_tail(None, context)
+    if stroke_after:
+        cr.stroke()
+    surface.flush()
+    return surface
+
+
+def _alpha_at(surface, lx, ly):
+    """Max alpha in a 3x3 device-pixel neighborhood of logical (lx, ly).
+
+    FORMAT_ARGB32 is native-endian; on little-endian the bytes are B,G,R,A, so
+    alpha is at offset 3 (the test image ink is opaque black either way)."""
+    data, stride = surface.get_data(), surface.get_stride()
+    dx, dy = int(lx) + 20, int(ly) + 30
+    return max(
+        data[(dy + j) * stride + (dx + i) * 4 + 3]
+        for i in (-1, 0, 1)
+        for j in (-1, 0, 1)
+    )
+
+
+def test_succession_tail_arrowhead_is_filled():
     from gaphor.SysML2.diagramitems import SuccessionAsUsageItem
 
-    surface, cr, context = _tail_context()
-    cr.move_to(20, 0)
-    SuccessionAsUsageItem.draw_tail(None, context)
-    x, y, w, h = surface.ink_extents()
-    assert w > 0 and h > 0  # the filled triangle left real ink
+    surface = _render_tail(SuccessionAsUsageItem)
+    # The triangle spans (15,-6)-(0,0)-(15,6); its centroid (10,0) is inked ONLY
+    # if the head is genuinely filled (an open V would leave it clean).
+    assert _alpha_at(surface, 10, 0) > 0  # interior filled
+    assert _alpha_at(surface, 0, 0) > 0  # tip at the handle end
 
 
-def test_flow_tail_draws_an_open_arrowhead():
+def test_flow_tail_arrowhead_is_open_not_filled():
     from gaphor.SysML2.diagramitems import FlowUsageItem
 
-    surface, cr, context = _tail_context()
-    cr.move_to(20, 0)
-    FlowUsageItem.draw_tail(None, context)
-    x, y, w, h = surface.ink_extents()
-    assert w > 0 and h > 0  # the stroked open arrow left real ink
+    surface = _render_tail(FlowUsageItem)
+    assert _alpha_at(surface, 10, 0) == 0  # interior CLEAN: open, not filled
+    assert _alpha_at(surface, 8, -3) > 0  # ...but the V outline is stroked
+    assert _alpha_at(surface, 0, 0) > 0  # tip at the handle end
+
+
+def test_feature_typing_tail_triangle_is_hollow_not_filled():
+    from gaphor.SysML2.diagramitems import FeatureTypingItem
+
+    # The typing tail leaves its path for LinePresentation's single stroke.
+    surface = _render_tail(FeatureTypingItem, stroke_after=True)
+    assert _alpha_at(surface, 10, 0) == 0  # interior CLEAN: hollow, never filled
+    assert _alpha_at(surface, 8, -5) > 0  # the triangle outline is stroked
+    assert _alpha_at(surface, 15, 0) > 0  # the closing edge (base of the triangle)
 
 
 def test_line_head_overrides_match_the_notation_table():
