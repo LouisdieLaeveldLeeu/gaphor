@@ -1825,3 +1825,32 @@ via the toolkit -- the "immediate visible win" (keywords + compartments).
 - **Pure view.** No model/persistence/round-trip change -- the full suite stays green.
   Next: requirement/action/constraint compartment CONTENT, ports-on-boundary, faithful
   line heads, and the diagram CSS. See `test_notation_shapes.py`.
+
+### Completion Phase 15 (construct compartments): requirement/action/constraint content (verified 2026-07-02)
+
+Third Phase 15 step: the requirement, action, and constraint box items now render their
+SPEC-SPECIFIC compartment content, not just a keyword + generic feature list.
+
+- **Reuse the semantic accessors, don't re-derive.** `_construct_compartments` in
+  `diagramitems.py` dispatches by subject type to the existing semantic helpers:
+  requirement/concern -> `requirements.reqId/subject/actors/stakeholders/framed_concerns`
+  + `requirements.requirement_constraints(req, Assumption|Requirement)` with
+  `constraints.body_text` for the expressions (8.2.3.21); constraint ->
+  `constraints.body_text` (8.2.3.20); action -> its directed features as `parameters`
+  then the rest grouped (8.2.3.17). So the diagram shows exactly what the text export
+  shows, from one source of truth.
+- **Construct compartments REPLACE the generic feature list for those types.** A
+  requirement's subject/actor/stakeholder are ParameterMemberships (hence owned
+  features), so listing both the generic feature compartments AND the requirement
+  compartments would duplicate them. `_name_box` therefore uses the construct
+  compartments when present, else the generic `feature_compartments`. Actions are the
+  exception: parameters (directed) are shown separately, then the non-parameter
+  features are grouped, so nested steps still appear without duplicating parameters.
+- **Concerns are requirements.** `ConcernDefinition`/`Usage` are RequirementDefinition/
+  Usage subtypes, so one isinstance branch serves both (the keyword still differs,
+  «concern def» vs «requirement def», via `sysml_keyword`).
+- **Toolkit stays generic.** `shapes.py` gained only generic primitives
+  (`text_compartment`, `group_feature_compartments`); the construct-specific dispatch
+  lives in `diagramitems.py`, so the pure toolkit does not depend on the semantic
+  modules. Pure view; full suite green. Next: ports-on-boundary, faithful line heads,
+  diagram CSS. See `test_notation_shapes.py`.

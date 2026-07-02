@@ -212,6 +212,75 @@ def test_usage_item_renders_keyword_and_typing():
     assert _texts(item.shape) == ["«part»", "e : Engine"]
 
 
+def _has(texts, substring):
+    return any(substring in t for t in texts)
+
+
+def test_requirement_item_renders_spec_compartments():
+    from gaphor.core.modeling import Diagram
+    from gaphor.SysML2.diagramitems import RequirementDefinitionItem
+
+    factory = _wired_factory()
+    map_package(
+        parse(
+            "part def Vehicle; requirement def <M> R { subject v : Vehicle; "
+            "actor driver; require constraint { mass <= 1 } }"
+        ),
+        factory,
+    )
+    req = next(
+        r for r in factory.select(sysml2.RequirementDefinition) if r.declaredName == "R"
+    )
+    item = factory.create(Diagram).create(RequirementDefinitionItem)
+    item.subject = req
+
+    texts = _texts(item.shape)
+    assert texts[:2] == ["«requirement def»", "R"]
+    assert "id" in texts and "M" in texts
+    assert "subject" in texts and "v : Vehicle" in texts
+    assert "actors" in texts and "driver" in texts
+    assert "require" in texts and _has(texts, "mass <= 1")
+
+
+def test_constraint_item_renders_expression_body():
+    from gaphor.core.modeling import Diagram
+    from gaphor.SysML2.diagramitems import ConstraintDefinitionItem
+
+    factory = _wired_factory()
+    map_package(parse("constraint def Positive { x > 0 }"), factory)
+    constraint = next(
+        c
+        for c in factory.select(sysml2.ConstraintDefinition)
+        if c.declaredName == "Positive"
+    )
+    item = factory.create(Diagram).create(ConstraintDefinitionItem)
+    item.subject = constraint
+
+    texts = _texts(item.shape)
+    assert "«constraint def»" in texts and "constraint" in texts and _has(texts, "x > 0")
+
+
+def test_action_item_renders_parameters_and_steps():
+    from gaphor.core.modeling import Diagram
+    from gaphor.SysML2.diagramitems import ActionDefinitionItem
+
+    factory = _wired_factory()
+    map_package(
+        parse("action def Compute { in attribute x; out attribute y; action step; }"),
+        factory,
+    )
+    action = next(
+        a for a in factory.select(sysml2.ActionDefinition) if a.declaredName == "Compute"
+    )
+    item = factory.create(Diagram).create(ActionDefinitionItem)
+    item.subject = action
+
+    texts = _texts(item.shape)
+    assert "«action def»" in texts
+    assert "parameters" in texts and "in x" in texts and "out y" in texts
+    assert "actions" in texts and "step" in texts
+
+
 def test_every_keyword_is_documented_in_the_notation_table():
     table = (
         Path(__file__).resolve().parents[1] / ".." / ".." / "docs" / "sysml-v2" / "DIAGRAM_NOTATION.md"

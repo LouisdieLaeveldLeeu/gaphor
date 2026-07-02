@@ -1090,11 +1090,18 @@ Landed (the foundation, this step):
   kind (8.2.3.7/.11/.12/…). The compartments are structural, so the item rebuilds its
   shape on subject-attach / owned-member change via watches -- the event-driven rebuild
   every gaphor item uses (a live view needs an event manager, as in the app); tested at
-  the item level with a wired factory, and shown by a rendered PNG.
+  the item level with a wired factory, and shown by a rendered PNG;
+- **construct compartment content**: requirement/concern items show the spec
+  compartments (8.2.3.21) -- `id` (reqId), `subject`, `actors`, `stakeholders`, framed
+  `concerns`, and the `assume`/`require` constraint expressions; constraint items show
+  their expression body (8.2.3.20); action items show their `parameters` (directed
+  features) then remaining steps (8.2.3.17). These construct-specific compartments
+  replace the generic feature list for those types (so parameters are not duplicated),
+  reusing the semantic accessors (`requirements`, `constraints`) -- verified by a
+  rendered PNG and item-level tests.
 
-Remaining (next steps of this phase): requirement/action/constraint compartment
-CONTENT (id/text/subject, parameters, expression); ports as boundary squares on their
-owner; faithful relationship-line heads/tails; and the SysML2 diagram CSS.
+Remaining (next steps of this phase): ports as boundary squares on their owner;
+faithful relationship-line heads/tails; and the SysML2 diagram CSS.
 
 Exit: a rendered diagram of the implemented surface is self-describing and
 spec-faithful, every item's notation traceable to a pinned 8.2.3 clause, with no

@@ -166,10 +166,29 @@ def owned_features(subject: Base | None) -> list[kerml.Feature]:
     ]
 
 
-def feature_compartments(subject: Base | None) -> list[CssNode]:
-    """The subject's owned features as labelled compartments grouped by kind (empty
-    groups omitted)."""
-    remaining = owned_features(subject)
+def text_compartment(label: str, lines: Sequence[str]) -> CssNode | None:
+    """A labelled compartment of literal text lines (a constraint expression, a
+    requirement's subject/assume/require, ...), omitted when there is no content."""
+    content = [line for line in lines if line]
+    if not content:
+        return None
+    return CssNode(
+        "compartment",
+        None,
+        Box(
+            CssNode("compartment-label", None, Text(text=lambda: label)),
+            *[
+                CssNode("line", None, Text(text=(lambda line=line: line)))
+                for line in content
+            ],
+            draw=draw_top_separator,
+        ),
+    )
+
+
+def group_feature_compartments(features: Sequence[Base]) -> list[CssNode]:
+    """Group `features` into labelled compartments by kind (empty groups omitted)."""
+    remaining = list(features)
     compartments: list[CssNode] = []
     for label, kind in _FEATURE_KINDS:
         group = [f for f in remaining if isinstance(f, kind)]
@@ -183,3 +202,8 @@ def feature_compartments(subject: Base | None) -> list[CssNode]:
         if leftover is not None:
             compartments.append(leftover)
     return compartments
+
+
+def feature_compartments(subject: Base | None) -> list[CssNode]:
+    """The subject's owned features as labelled compartments grouped by kind."""
+    return group_feature_compartments(owned_features(subject))

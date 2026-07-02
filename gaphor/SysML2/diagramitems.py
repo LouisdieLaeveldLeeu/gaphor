@@ -20,8 +20,16 @@ from gaphor.diagram.presentation import (
 )
 from gaphor.diagram.shapes import Box, Text, cairo_state, draw_border, stroke
 from gaphor.diagram.support import represents
-from gaphor.SysML2 import kerml, sysml2
-from gaphor.SysML2.shapes import feature_compartments, node_shape
+from gaphor.SysML2 import constraints, kerml, requirements, sysml2
+from gaphor.SysML2.shapes import (
+    feature_compartments,
+    features_compartment,
+    group_feature_compartments,
+    name_label,
+    node_shape,
+    owned_features,
+    text_compartment,
+)
 
 
 def _subject_label(item) -> str:
@@ -36,12 +44,73 @@ def _subject_label(item) -> str:
     return f"{direction} {name}" if direction is not None else name
 
 
+def _requirement_compartments(req):
+    """A requirement/concern's spec compartments (8.2.3.21): id, subject, actors,
+    stakeholders, framed concerns, and the assume/require constraint expressions.
+    Concerns are RequirementDefinition/Usage subtypes, so this serves both."""
+    subj = requirements.subject(req)
+    out = [
+        text_compartment("id", [requirements.reqId(req) or ""]),
+        text_compartment("subject", [name_label(subj)] if subj is not None else []),
+        features_compartment("actors", list(requirements.actors(req))),
+        features_compartment("stakeholders", list(requirements.stakeholders(req))),
+        features_compartment("concerns", list(requirements.framed_concerns(req))),
+        text_compartment(
+            "assume",
+            [
+                constraints.body_text(c) or ""
+                for c in requirements.requirement_constraints(
+                    req, requirements.Assumption
+                )
+            ],
+        ),
+        text_compartment(
+            "require",
+            [
+                constraints.body_text(c) or ""
+                for c in requirements.requirement_constraints(
+                    req, requirements.Requirement
+                )
+            ],
+        ),
+    ]
+    return [c for c in out if c is not None]
+
+
+def _action_compartments(action):
+    """An action's parameters (its directed features, 8.2.3.17) followed by its other
+    owned features grouped by kind."""
+    features = owned_features(action)
+    parameters = [f for f in features if getattr(f, "direction", None) is not None]
+    rest = [f for f in features if getattr(f, "direction", None) is None]
+    out = [features_compartment("parameters", parameters)]
+    out += group_feature_compartments(rest)
+    return [c for c in out if c is not None]
+
+
+def _construct_compartments(subject):
+    """Construct-specific compartments for requirement/action/constraint subjects, or
+    None to fall back to the generic owned-feature compartments."""
+    if isinstance(subject, (sysml2.RequirementDefinition, sysml2.RequirementUsage)):
+        return _requirement_compartments(subject)
+    if isinstance(subject, (sysml2.ActionDefinition, sysml2.ActionUsage)):
+        return _action_compartments(subject)
+    if isinstance(subject, (sysml2.ConstraintDefinition, sysml2.ConstraintUsage)):
+        body = constraints.body_text(subject)
+        return [c for c in [text_compartment("constraint", [body or ""])] if c]
+    return None
+
+
 def _name_box(item):
     """The faithful SysML v2 node shape (Phase 15): the «keyword» name compartment
-    (e.g. «part def» / «part» over `[direction] name : Type`) plus the subject's
-    owned-feature compartments grouped by kind. Shared by every box item, so their
+    (e.g. «part def» / «part» over `[direction] name : Type`) plus compartments --
+    construct-specific for requirement/action/constraint (id/subject/expression/...),
+    else the subject's owned features grouped by kind. Shared by every box item, so the
     notation is consistent and traces to `docs/sysml-v2/DIAGRAM_NOTATION.md`."""
-    return node_shape(item, *feature_compartments(item.subject))
+    compartments = _construct_compartments(item.subject)
+    if compartments is None:
+        compartments = feature_compartments(item.subject)
+    return node_shape(item, *compartments)
 
 
 def _package_box(item):
