@@ -136,6 +136,31 @@ def test_deleting_a_subject_removes_its_synthesized_view():
     assert item not in list(diagram.ownedPresentation)  # view cascades with its subject
 
 
+def test_succession_and_flow_lines_anchor_to_their_step_items():
+    # Successions/flows are binary connector lines; synthesis must anchor both
+    # handles to the projected step items (they previously projected unanchored).
+    factory, root = _map(
+        "action def MakeTea { action heat; action steep; "
+        "succession s1 first heat then steep; flow f1 from heat to steep; }"
+    )
+    action_def = next(
+        a for a in factory.select(sysml2.ActionDefinition) if a.declaredName == "MakeTea"
+    )
+    diagram = synthesize_diagram(action_def, layout=False)
+    lines = [
+        i for i in diagram.ownedPresentation if isinstance(i, LinePresentation)
+    ]
+    assert {type(i).__name__ for i in lines} == {
+        "SuccessionAsUsageItem",
+        "FlowUsageItem",
+    }
+    for line in lines:
+        for handle in (line.head, line.tail):
+            cinfo = diagram.connections.get_connection(handle)
+            assert cinfo is not None, f"{type(line).__name__} handle unanchored"
+            assert cinfo.connected.subject.declaredName in ("heat", "steep")
+
+
 def test_synthesize_diagram_returns_existing_when_already_synthesized():
     factory, root = _map(_MODEL)
     package = next(p for p in factory.select(kerml.Package))

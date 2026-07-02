@@ -1112,8 +1112,15 @@ Landed (the foundation, this step):
   the boundary connector is visual-only (no semantics). Tested across all three modes,
   attachment, semantic safety, and persistence (`test_port_display.py`).
 
-Remaining (next steps of this phase): faithful relationship-line heads/tails; the
-SysML2 diagram CSS; and a small GUI toggle for the port display mode.
+- **relationship-line heads**: the projected line kinds are visually distinct per the
+  notation table -- FeatureTyping gets a hollow closed triangle at the type end
+  (generalization-style), a succession a FILLED arrowhead at the `then` end, a flow an
+  OPEN arrowhead at the `to` end, while connection/interface lines stay plain with the
+  name label. Synthesized succession/flow lines now anchor both handles to the
+  projected step items (they previously projected unanchored).
+
+Remaining (next steps of this phase): the SysML2 diagram CSS; and a small GUI toggle
+for the port display mode.
 
 Exit: a rendered diagram of the implemented surface is self-describing and
 spec-faithful, every item's notation traceable to a pinned 8.2.3 clause, with no

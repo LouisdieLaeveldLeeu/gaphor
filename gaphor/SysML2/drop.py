@@ -90,14 +90,17 @@ def drop_action_usage(
 def drop_succession(
     element: sysml2.SuccessionAsUsage, diagram: Diagram, x: float, y: float
 ) -> Presentation | None:
-    return _project_element(element, diagram, x, y)
+    # A succession is a binary connector line: anchor its handles to the projected
+    # step items exactly like a connection (else the line collapses unanchored).
+    return drop_connection_usage(element, diagram, x, y)
 
 
 @drop.register(sysml2.FlowUsage, Diagram)
 def drop_flow(
     element: sysml2.FlowUsage, diagram: Diagram, x: float, y: float
 ) -> Presentation | None:
-    return _project_element(element, diagram, x, y)
+    # A flow is a binary connector line: anchor its handles to the projected ends.
+    return drop_connection_usage(element, diagram, x, y)
 
 
 @drop.register(sysml2.ConstraintDefinition, Diagram)

@@ -1953,3 +1953,27 @@ faithfulness/test-strength issues; all fixed:
   quoting/escaping rules, shared with the parser and exporter, so the three surfaces
   cannot drift. Parameterized notation tests cover the special-ID corpus (identifier,
   dots, quote, backslash, space). See `test_notation_shapes.py`.
+
+### Completion Phase 15 (relationship-line heads) (verified 2026-07-02)
+
+Faithful line notation per the DIAGRAM_NOTATION table, so the four projected
+relationship kinds are visually distinct:
+
+- **FeatureTyping**: hollow CLOSED triangle at the type end (the generalization-style
+  head; the path is left for LinePresentation's single stroke so it is outlined,
+  never filled). The previous head was an open arrow -- indistinguishable from a flow.
+- **Succession**: FILLED arrowhead at the `then` end (control flow), drawn with the
+  stroke color after stroking the line dash-free.
+- **Flow**: OPEN arrowhead at the `to` end (reusing `draw_arrow_tail`); the middle
+  label stays the flow's name (payload items are not in the implemented surface).
+- **Connection/Interface**: intentionally plain solid lines with the name label.
+- **Anchoring fix surfaced by the render**: `drop_succession`/`drop_flow` projected via
+  the bare `_project_element`, so synthesized succession/flow lines collapsed
+  unanchored at the origin. They now route through `drop_connection_usage`, anchoring
+  both handles to the projected step items (test: every handle of a synthesized
+  succession/flow line is connected to a step item).
+
+Tests assert the tail overrides exist exactly where the table says (typing/succession/
+flow yes; connection/interface no), the typing triangle CLOSES its path, and the
+succession/flow decorations leave real ink on a recording surface.
+See `test_notation_shapes.py`, `test_synthesis.py`.

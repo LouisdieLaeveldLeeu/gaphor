@@ -306,6 +306,71 @@ def test_action_item_renders_parameters_and_steps():
     assert "actions" in texts and "step" in texts
 
 
+# --- relationship-line heads (DIAGRAM_NOTATION.md, Relationship lines) --------
+
+
+def _tail_context():
+    import cairo
+
+    surface = cairo.RecordingSurface(cairo.Content.COLOR_ALPHA, None)
+    cr = cairo.Context(surface)
+    context = types.SimpleNamespace(cairo=cr, style={})
+    return surface, cr, context
+
+
+def test_feature_typing_tail_is_a_hollow_closed_triangle():
+    import cairo
+
+    from gaphor.SysML2.diagramitems import FeatureTypingItem
+
+    _surface, cr, context = _tail_context()
+    cr.move_to(0, 0)
+    FeatureTypingItem.draw_tail(None, context)
+    # A CLOSED subpath = the triangle outline; left unstroked/unfilled for
+    # LinePresentation's single stroke -> hollow, generalization-style.
+    assert any(t == cairo.PATH_CLOSE_PATH for t, _ in cr.copy_path())
+
+
+def test_succession_tail_draws_a_filled_arrowhead():
+    from gaphor.SysML2.diagramitems import SuccessionAsUsageItem
+
+    surface, cr, context = _tail_context()
+    cr.move_to(20, 0)
+    SuccessionAsUsageItem.draw_tail(None, context)
+    x, y, w, h = surface.ink_extents()
+    assert w > 0 and h > 0  # the filled triangle left real ink
+
+
+def test_flow_tail_draws_an_open_arrowhead():
+    from gaphor.SysML2.diagramitems import FlowUsageItem
+
+    surface, cr, context = _tail_context()
+    cr.move_to(20, 0)
+    FlowUsageItem.draw_tail(None, context)
+    x, y, w, h = surface.ink_extents()
+    assert w > 0 and h > 0  # the stroked open arrow left real ink
+
+
+def test_line_head_overrides_match_the_notation_table():
+    from gaphor.SysML2.diagramitems import (
+        ConnectionUsageItem,
+        FeatureTypingItem,
+        FlowUsageItem,
+        InterfaceUsageItem,
+        SuccessionAsUsageItem,
+    )
+
+    # Typing / succession / flow define their own tails...
+    assert "draw_tail" in FeatureTypingItem.__dict__
+    assert "draw_tail" in SuccessionAsUsageItem.__dict__
+    assert "draw_tail" in FlowUsageItem.__dict__
+    # ...while connection and interface lines stay plain (no decoration), so the
+    # four relationship kinds are visually distinct.
+    assert "draw_tail" not in ConnectionUsageItem.__dict__
+    assert "draw_tail" not in InterfaceUsageItem.__dict__
+    assert "draw_head" not in ConnectionUsageItem.__dict__
+
+
 def test_every_keyword_is_documented_in_the_notation_table():
     table = (
         Path(__file__).resolve().parents[1] / ".." / ".." / "docs" / "sysml-v2" / "DIAGRAM_NOTATION.md"

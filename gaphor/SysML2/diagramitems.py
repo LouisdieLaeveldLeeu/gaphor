@@ -25,6 +25,7 @@ from gaphor.diagram.shapes import (
     IconBox,
     Text,
     cairo_state,
+    draw_arrow_tail,
     draw_border,
     stroke,
 )
@@ -731,7 +732,24 @@ class SuccessionAsUsageItem(ConnectionUsageItem):
     """A diagram view onto a `SuccessionAsUsage`: a line bound to its two step ends
     (head=source `first`, tail=target `then`). A binary connector usage, so it
     reuses the connection line via the same Relationship source/target ends
-    (Phase 7). The diagram registry is exact-type, so it needs its own item."""
+    (Phase 7). The diagram registry is exact-type, so it needs its own item.
+
+    Notation (DIAGRAM_NOTATION.md, 8.2.3.17): a solid line with a FILLED arrowhead
+    at the `then` (target) end -- control-flow direction."""
+
+    def draw_tail(self, context: DrawContext):
+        cr = context.cairo
+        cr.line_to(0, 0)
+        stroke(context, fill=False)
+        with cairo_state(cr):
+            cr.set_dash((), 0)
+            cr.move_to(15, -6)
+            cr.line_to(0, 0)
+            cr.line_to(15, 6)
+            cr.close_path()
+            if color := context.style.get("color"):
+                cr.set_source_rgba(*color)
+            cr.fill()
 
 
 @represents(
@@ -743,7 +761,14 @@ class FlowUsageItem(ConnectionUsageItem):
     """A diagram view onto a `FlowUsage`: a line bound to its two feature ends
     (head=source `from`, tail=target `to`). A FlowUsage IS an ActionUsage, but it is
     a binary connector, so it projects as the connection line, not the action box
-    (registered for FlowUsage exactly so it wins) (Phase 7)."""
+    (registered for FlowUsage exactly so it wins) (Phase 7).
+
+    Notation (DIAGRAM_NOTATION.md, 8.2.3.13): a solid line with an OPEN arrowhead at
+    the `to` (target) end; the middle label is the flow's name (payload items are not
+    in the implemented surface)."""
+
+    def draw_tail(self, context: DrawContext):
+        draw_arrow_tail(context)
 
 
 @represents(
@@ -752,7 +777,11 @@ class FlowUsageItem(ConnectionUsageItem):
     tail=kerml.FeatureTyping.type,  # the type (definition) end
 )
 class FeatureTypingItem(LinePresentation):
-    """A diagram view onto a `FeatureTyping`: a line from a usage to its type."""
+    """A diagram view onto a `FeatureTyping`: a line from a usage to its type.
+
+    Notation (DIAGRAM_NOTATION.md, KerML typing / 8.2.3.6): a solid line with a
+    HOLLOW (closed, unfilled) triangle at the type (definition) end -- the
+    generalization-style head, distinct from the open arrows of flow lines."""
 
     def __init__(self, diagram, id=None):
         super().__init__(diagram, id=id)
@@ -760,12 +789,14 @@ class FeatureTypingItem(LinePresentation):
         self._handles[1].pos = (30, 20)
 
     def draw_tail(self, context: DrawContext):
-        # Open arrowhead at the type (definition) end.
+        # Hollow closed triangle at the type (definition) end; the path is left for
+        # LinePresentation's single stroke, so the triangle is outlined, never filled.
         cr = context.cairo
         cr.line_to(15, 0)
         cr.move_to(15, -10)
         cr.line_to(0, 0)
         cr.line_to(15, 10)
+        cr.close_path()
 
 
 def draw_package(box, context: DrawContext, bounding_box):
