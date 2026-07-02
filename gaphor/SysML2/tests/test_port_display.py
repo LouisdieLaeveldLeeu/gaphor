@@ -255,6 +255,31 @@ def test_hiding_ports_removes_every_square_including_duplicates():
     assert _squares(diagram) == []  # ALL squares removed, not just one
 
 
+def test_port_display_mode_property_page_switches_the_diagram():
+    # The diagram property page (shown when the diagram is selected in the browser)
+    # switches the mode via its dropdown -- reconciling the presentation, never the
+    # model.
+    from gaphor.SysML2.propertypages import PortDisplayModePropertyPage
+
+    factory, diagram = _synthesize(PortDisplayMode.BOUNDARY)
+    assert len(_squares(diagram)) == 1
+
+    page = PortDisplayModePropertyPage(diagram, factory.event_manager)
+    widget = page.construct()
+    dropdown = widget.get_first_child().get_next_sibling()  # box: [label, dropdown]
+    assert dropdown.get_selected() == 0  # reflects the current BOUNDARY mode
+
+    dropdown.set_selected(1)  # Compartment text
+    assert port_display_mode(diagram) is PortDisplayMode.COMPARTMENT
+    assert _squares(diagram) == []  # squares removed (presentation only)...
+    assert _port_count(factory) == 1  # ...the model is untouched
+
+    dropdown.set_selected(2)  # Both (debug)
+    assert port_display_mode(diagram) is PortDisplayMode.BOTH_DEBUG
+    assert len(_squares(diagram)) == 1
+    assert _port_count(factory) == 1
+
+
 def test_compartment_refreshes_when_a_member_is_renamed():
     from gaphor.SysML2.diagramitems import PartDefinitionItem
     from gaphor.SysML2.diagramtype import PortDisplayMode as _PDM

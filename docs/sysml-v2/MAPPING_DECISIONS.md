@@ -2020,3 +2020,26 @@ Gaphor's CSS engine:
   ActionUsageItem border-radius via `StyleSheet().compute_style(StyledItem(...))`,
   and LEAK GUARDS pinning that the general `line` item and UML `class`/`class name`
   styling are untouched.
+
+### Completion Phase 15 (port display-mode GUI) -- Phase 15 DONE (verified 2026-07-02)
+
+The final Phase 15 increment: a GUI control for the per-diagram PortDisplayMode.
+
+- **Surface: a diagram property page.** `PortDisplayModePropertyPage` is registered on
+  `SysML2Diagram` and, per the element editor's `_model_selection_changed` path, shows
+  when the diagram is selected in the model browser (a diagram element gets property
+  pages). It is the idiomatic home for a per-diagram SETTING -- more so than a Tools
+  action, which would need the "current" diagram. Mirrors the existing
+  `FeatureDirectionPropertyPage` dropdown pattern (a `.ui` template + a
+  Gtk.DropDown of LabelValues + a `notify::selected` handler applying in a Transaction).
+- **Presentation only.** The handler calls `synthesis.set_port_display_mode`, which
+  reconciles boundary squares and the ports compartment without touching the model.
+  The headless test constructs the page and drives its dropdown through all three
+  modes, asserting the diagram reconciles each time and the PortUsage count never
+  changes. See `test_port_display.py`.
+
+Phase 15 is complete: pinned notation authority -> mapping table + shape toolkit ->
+box keywords/compartments -> requirement/action/constraint compartment content ->
+ports-on-boundary (PortDisplayMode) -> faithful relationship-line heads -> diagram
+CSS -> the port display-mode GUI, with four rounds of review fixes. A rendered SysML2
+diagram of the implemented surface is now self-describing and spec-faithful.

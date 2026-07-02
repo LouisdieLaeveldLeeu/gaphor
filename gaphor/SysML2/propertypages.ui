@@ -259,4 +259,27 @@
     </style>
   </object>
 
+  <object class="GtkBox" id="port-display-mode-editor">
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkLabel">
+        <property name="label" translatable="yes">Port display</property>
+        <property name="xalign">0</property>
+        <style>
+          <class name="title"/>
+        </style>
+      </object>
+    </child>
+    <child>
+      <object class="GtkDropDown" id="port-display-mode">
+        <property name="expression">
+          <lookup type="LabelValue" name="label"/>
+        </property>
+      </object>
+    </child>
+    <style>
+      <class name="propertypage"/>
+    </style>
+  </object>
+
 </interface>

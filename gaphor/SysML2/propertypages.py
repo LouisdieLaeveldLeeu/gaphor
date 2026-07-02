@@ -16,11 +16,17 @@ from gaphor.diagram.propertypages import (
 )
 from gaphor.SysML2 import conjugation
 from gaphor.SysML2 import constraints
+from gaphor.SysML2.diagramtype import (
+    PortDisplayMode,
+    SysML2Diagram,
+    port_display_mode,
+)
 from gaphor.SysML2 import kerml
 from gaphor.SysML2 import kerml_kernel as kk
 from gaphor.SysML2 import mapping
 from gaphor.SysML2 import requirements
 from gaphor.SysML2 import sysml2
+from gaphor.SysML2.synthesis import set_port_display_mode
 
 _LIBRARY_PREFIX = "library:"
 
@@ -167,6 +173,54 @@ class FeatureDirectionPropertyPage(PropertyPageBase):
             self.subject.direction = (
                 kerml.FeatureDirectionKind(value) if value is not None else None
             )
+
+
+@PropertyPages.register(SysML2Diagram)
+class PortDisplayModePropertyPage(PropertyPageBase):
+    """Choose how a SysML2 diagram presents ports (Phase 15).
+
+    A PortUsage is one semantic element; this is a per-DIAGRAM presentation choice
+    (`SysML2Diagram.portDisplayMode`), so switching it only adds/removes boundary
+    port squares and the box `ports` compartment -- never a model element. Surfaces
+    when the diagram is selected in the model browser (its element gets property
+    pages). `both_debug` is offered for diagnostics."""
+
+    order = 30
+
+    _CHOICES = (
+        (gettext("Boundary symbols"), PortDisplayMode.BOUNDARY.value),
+        (gettext("Compartment text"), PortDisplayMode.COMPARTMENT.value),
+        (gettext("Both (debug)"), PortDisplayMode.BOTH_DEBUG.value),
+    )
+
+    def __init__(self, subject: SysML2Diagram, event_manager):
+        super().__init__()
+        self.subject = subject
+        self.event_manager = event_manager
+
+    def construct(self):
+        builder = new_builder("port-display-mode-editor")
+
+        dropdown = builder.get_object("port-display-mode")
+        model = Gio.ListStore.new(LabelValue)
+        for label, value in self._CHOICES:
+            model.append(LabelValue(label, value))
+        dropdown.set_model(model)
+
+        current = port_display_mode(self.subject).value
+        dropdown.set_selected(
+            next((n for n, (_, v) in enumerate(self._CHOICES) if v == current), 0)
+        )
+        dropdown.connect("notify::selected", self._on_mode_changed)
+
+        return builder.get_object("port-display-mode-editor")
+
+    def _on_mode_changed(self, dropdown, _pspec):
+        selected = dropdown.get_selected_item()
+        if selected is None:
+            return
+        with Transaction(self.event_manager, context="editing"):
+            set_port_display_mode(self.subject, selected.value)
 
 
 @PropertyPages.register(sysml2.PartUsage)

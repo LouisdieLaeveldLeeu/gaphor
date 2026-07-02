@@ -1062,7 +1062,7 @@ Make verification authoritative:
 Exit: final claims are backed by local and CI verification with no known
 environment-only ambiguity.
 
-### Phase 15 -- Faithful SysML v2 Diagram Notation -- IN PROGRESS
+### Phase 15 -- Faithful SysML v2 Diagram Notation -- DONE
 
 Make rendered diagrams SELF-DESCRIBING and faithful to the OMG SysML v2 graphical
 notation: keyword-in-guillemets name compartments, labelled feature compartments, and
@@ -1127,13 +1127,16 @@ Landed (the foundation, this step):
   opaque port boundary square (the `proxyport > icon` idiom). Bare selectors are
   leak-safe (the CssNode names are SysML2-only, verified); shared names are scoped by
   item-type selectors; leak-guard tests pin that the general Line item and UML class
-  styling are untouched (`test_diagram_css.py`).
-
-Remaining (next steps of this phase): a small GUI toggle for the port display mode.
+  styling are untouched (`test_diagram_css.py`);
+- **port display-mode GUI**: a `PortDisplayModePropertyPage` registered on
+  `SysML2Diagram` (a dropdown: Boundary symbols / Compartment text / Both) surfaces
+  when the diagram is selected in the model browser; changing it runs
+  `set_port_display_mode` in a transaction -- presentation only, never a model
+  element (`test_port_display.py`).
 
 Exit: a rendered diagram of the implemented surface is self-describing and
 spec-faithful, every item's notation traceable to a pinned 8.2.3 clause, with no
-semantic regression.
+semantic regression -- MET.
 
 ## Execution Status And Order
 
@@ -1170,7 +1173,7 @@ counted here.
 27. Phase 12 -- SysML v2 API Alignment -- DONE
 28. Phase 13 -- Diagram Synthesis And User-Facing UI Grooming -- DONE
 29. Phase 14 -- CI And Release Hardening -- PLANNED
-30. Phase 15 -- Faithful SysML v2 Diagram Notation -- IN PROGRESS (notation authority + table + shape toolkit landed)
+30. Phase 15 -- Faithful SysML v2 Diagram Notation -- DONE
 
 Rationale: the project now intentionally resolves KPAR import architecture
 before standard-library/value-type promotion. Phase 3a prevents import identity,
